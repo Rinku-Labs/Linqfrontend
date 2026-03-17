@@ -1,0 +1,147 @@
+.chain-selector-container {
+    position: relative;
+}
+
+.chain-selector-button {
+    background: var(--input-bg);
+    padding: 8px 12px;
+    border-radius: 16px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 600;
+    font-size: 14px;
+    color: var(--text-main);
+    border: 1px solid transparent;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.chain-selector-button.open {
+    border-color: var(--primary);
+}
+
+.chain-selector-logo {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    object-fit: contain;
+}
+
+.chain-selector-chevron {
+    transition: transform 0.3s ease;
+}
+
+.chain-selector-chevron.open {
+    transform: rotate(180deg);
+}
+
+.chain-selector-dropdown {
+    position: absolute;
+    top: calc(100% + 8px);
+    right: 0;
+    min-width: 60px;
+    width: max-content;
+    background: var(--surface-elevated);
+    border-radius: 16px;
+    padding: 8px;
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+    border: 1px solid var(--border-color);
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(-8px) scale(0.92);
+    transition: opacity 0.25s cubic-bezier(0.16, 1, 0.3, 1),
+        visibility 0.25s cubic-bezier(0.16, 1, 0.3, 1),
+        transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+    z-index: 50;
+    transform-origin: top right;
+}
+
+.chain-selector-dropdown.open {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0) scale(1);
+}
+
+.chain-selector-label {
+    margin-bottom: 8px;
+    padding: 0 8px;
+    font-size: 12px;
+    color: var(--text-secondary);
+    font-weight: 600;
+}
+
+.chain-selector-item {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 12px;
+    background: transparent;
+    border-radius: 12px;
+    border: none;
+    cursor: pointer;
+    color: var(--text-main);
+    font-weight: 500;
+    font-size: 14px;
+    transition: background-color 0.2s ease, transform 0.15s ease;
+    margin-bottom: 4px;
+    opacity: 0;
+    transform: translateY(-4px);
+    transition: background-color 0.2s ease, opacity 0.2s ease, transform 0.2s ease;
+}
+
+.chain-selector-dropdown.open .chain-selector-item {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+.chain-selector-dropdown.open .chain-selector-item:nth-child(1) {
+    transition-delay: 0.03s;
+}
+
+.chain-selector-dropdown.open .chain-selector-item:nth-child(2) {
+    transition-delay: 0.06s;
+}
+
+.chain-selector-dropdown.open .chain-selector-item:nth-child(3) {
+    transition-delay: 0.09s;
+}
+
+.chain-selector-dropdown.open .chain-selector-item:nth-child(4) {
+    transition-delay: 0.12s;
+}
+
+.chain-selector-dropdown.open .chain-selector-item:nth-child(5) {
+    transition-delay: 0.15s;
+}
+
+.chain-selector-dropdown.open .chain-selector-item:nth-child(6) {
+    transition-delay: 0.18s;
+}
+
+.chain-selector-item:hover {
+    background-color: var(--surface);
+    transform: translateY(0) scale(1.02);
+}
+
+.chain-selector-item:active {
+    transform: translateY(0) scale(0.98);
+}
+
+.chain-selector-item.selected {
+    background: var(--input-bg);
+}
+
+.chain-selector-item-content {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.chain-selector-item-logo {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    object-fit: contain;
+}

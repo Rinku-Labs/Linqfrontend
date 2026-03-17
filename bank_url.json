@@ -1,0 +1,198 @@
+{
+    "status": "success",
+    "message": "OK",
+    "data": [
+        {
+            "name": "Access Bank",
+            "code": "ABNGNGLA",
+            "type": "bank",
+            "logo": "https://nigerianbanklogos.xyz/library/accesscorp.svg"
+        },
+        {
+            "name": "Diamond Bank",
+            "code": "DBLNNGLA",
+            "type": "bank",
+            "logo": "https://nigerianbanklogos.xyz/library/accesscorp.svg"
+        },
+        {
+            "name": "Fidelity Bank",
+            "code": "FIDTNGLA",
+            "type": "bank",
+            "logo": "https://nigerianbanklogos.xyz/library/fidelity.svg"
+        },
+        {
+            "name": "FCMB",
+            "code": "FCMBNGLA",
+            "type": "bank",
+            "logo": "https://nigerianbanklogos.xyz/library/fcmb.svg"
+        },
+        {
+            "name": "First Bank Of Nigeria",
+            "code": "FBNINGLA",
+            "type": "bank",
+            "logo": "https://nigerianbanklogos.xyz/library/firstholdco.svg"
+        },
+        {
+            "name": "Guaranty Trust Bank",
+            "code": "GTBINGLA",
+            "type": "bank",
+            "logo": "https://nigerianbanklogos.xyz/library/gtco.svg"
+        },
+        {
+            "name": "Polaris Bank",
+            "code": "PRDTNGLA",
+            "type": "bank",
+            "logo": "https://nigerianbanks.xyz/logo/polaris-bank.png"
+        },
+        {
+            "name": "Union Bank",
+            "code": "UBNINGLA",
+            "type": "bank",
+            "logo": ""
+        },
+        {
+            "name": "United Bank for Africa",
+            "code": "UNAFNGLA",
+            "type": "bank",
+            "logo": "https://nigerianbanklogos.xyz/library/uba.svg"
+        },
+        {
+            "name": "Citibank",
+            "code": "CITINGLA",
+            "type": "bank",
+            "logo": "https://nigerianbanks.xyz/logo/citibank-nigeria.png"
+        },
+        {
+            "name": "Ecobank Bank",
+            "code": "ECOCNGLA",
+            "type": "bank",
+            "logo": "https://nigerianbanklogos.xyz/library/eti.svg"
+        },
+        {
+            "name": "Heritage",
+            "code": "HBCLNGLA",
+            "type": "bank",
+            "logo": "https://nigerianbanks.xyz/logo/heritage-bank.png"
+        },
+        {
+            "name": "Keystone Bank",
+            "code": "PLNINGLA",
+            "type": "bank",
+            "logo": "https://nigerianbanks.xyz/logo/keystone-bank.png"
+        },
+        {
+            "name": "Stanbic IBTC Bank",
+            "code": "SBICNGLA",
+            "type": "bank",
+            "logo": "https://nigerianbanklogos.xyz/library/stanbic.svg"
+        },
+        {
+            "name": "Standard Chartered Bank",
+            "code": "SCBLNGLA",
+            "type": "bank",
+            "logo": "https://nigerianbanks.xyz/logo/standard-chartered-bank.png"
+        },
+        {
+            "name": "Sterling Bank",
+            "code": "NAMENGLA",
+            "type": "bank",
+            "logo": "https://nigerianbanklogos.xyz/library/sterlingng.svg"
+        },
+        {
+            "name": "Unity Bank",
+            "code": "ICITNGLA",
+            "type": "bank",
+            "logo": "https://nigerianbanklogos.xyz/library/unitybnk.svg"
+        },
+        {
+            "name": "Suntrust Bank",
+            "code": "SUTGNGLA",
+            "type": "bank",
+            "logo": "https://nigerianbanks.xyz/logo/default-image.png"
+        },
+        {
+            "name": "Providus Bank",
+            "code": "PROVNGLA",
+            "type": "bank",
+            "logo": "https://nigerianbanks.xyz/logo/default-image.png"
+        },
+        {
+            "name": "FBNQuest Merchant Bank",
+            "code": "KDHLNGLA",
+            "type": "bank",
+            "logo": "https://nigerianbanklogos.xyz/library/firstholdco.svg"
+        },
+        {
+            "name": "Greenwich Merchant Bank",
+            "code": "GMBLNGLA",
+            "type": "bank",
+            "logo": null
+        },
+        {
+            "name": "FSDH Merchant Bank",
+            "code": "FSDHNGLA",
+            "type": "bank",
+            "logo": null
+        },
+        {
+            "name": "Rand Merchant Bank",
+            "code": "FIRNNGLA",
+            "type": "bank",
+            "logo": null
+        },
+        {
+            "name": "Jaiz Bank",
+            "code": "JAIZNGLA",
+            "type": "bank",
+            "logo": "https://nigerianbanklogos.xyz/library/jaizbank.svg"
+        },
+        {
+            "name": "Zenith Bank",
+            "code": "ZEIBNGLA",
+            "type": "bank",
+            "logo": "https://nigerianbanklogos.xyz/library/zenithbank.svg"
+        },
+        {
+            "name": "Wema Bank",
+            "code": "WEMANGLA",
+            "type": "bank",
+            "logo": "https://nigerianbanklogos.xyz/library/wemabank.svg"
+        },
+        {
+            "name": "Kuda Microfinance Bank",
+            "code": "KUDANGPC",
+            "type": "bank",
+            "logo": "https://nigerianbanks.xyz/logo/kuda-bank.png"
+        },
+        {
+            "name": "OPay",
+            "code": "OPAYNGPC",
+            "type": "bank",
+            "logo": "https://nigerianbanks.xyz/logo/paycom.png"
+        },
+        {
+            "name": "PalmPay",
+            "code": "PALMNGPC",
+            "type": "bank",
+            "logo": "https://nigerianbanks.xyz/logo/palmpay.png"
+        },
+        {
+            "name": "Paystack-Titan MFB",
+            "code": "PAYTNGPC",
+            "type": "bank",
+            "logo": "https://res.cloudinary.com/dbap4f1nd/image/upload/v1768037488/Paystack-CeruleanBlue-LM_p5cur6.png"
+        },
+        {
+            "name": "Moniepoint MFB",
+            "code": "MONINGPC",
+            "type": "bank",
+            "logo": "https://nigerianbanks.xyz/logo/moniepoint-mfb-ng.png"
+        },
+        {
+            "name": "Safe Haven MFB",
+            "code": "SAHVNGPC",
+            "type": "bank",
+            "logo": "https://res.cloudinary.com/dbap4f1nd/image/upload/v1768037488/logo1_enq5eb.svg"
+        }
+    ]
+}
