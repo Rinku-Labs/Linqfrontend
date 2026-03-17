@@ -27,6 +27,7 @@ import Swap from './pages/Swap';
 import Savings from './pages/Savings';
 import ScrollToTop from './components/ScrollToTop';
 import ErrorBoundary from './components/ErrorBoundary';
+import SEO from './components/SEO';
 
 import { useAuth } from './context/AuthContext';
 // import { SolanaWalletProvider } from './context/SolanaWalletProvider';
@@ -47,55 +48,56 @@ function App() {
       <ScrollToTop />
       <Routes>
         {/* Public Routes */}
-        <Route path="/onboarding" element={<Onboarding />} />
-        <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+        <Route path="/onboarding" element={<><SEO title="Welcome" description="Join Linq today." /><Onboarding /></>} />
+        <Route path="/privacy-policy" element={<><SEO title="Privacy Policy" /><PrivacyPolicy /></>} />
         
-        <Route path="/create-pin" element={<RequireAuth><CreatePin /></RequireAuth>} /> // Secured route
+        <Route path="/create-pin" element={<RequireAuth><SEO title="Create PIN" /><CreatePin /></RequireAuth>} /> // Secured route
 
 
-        <Route path="/verification" element={<RequireAuth><Verification /></RequireAuth>} /> // Secured route
+        <Route path="/verification" element={<RequireAuth><SEO title="Account Verification" /><Verification /></RequireAuth>} /> // Secured route
 
         <Route element={<RequireAuth><MainLayout /></RequireAuth>}>
           {/* Dashboard Home - now under a separate path or shared with RootRoute */}
-          <Route path="/" element={<Home />} />
+          <Route path="/" element={<><SEO title="Home" /><Home /></>} />
 
           {/* Send Flow */}
-          <Route path="/send/details" element={<AccountDetails />} />
-          <Route path="/send/amount" element={<InputAmount />} />
-          <Route path="/send/confirm" element={<Confirm />} />
-          <Route path="/send/payment" element={<Payment />} />
-          <Route path="/send/success" element={<Success />} />
+          <Route path="/send/details" element={<><SEO title="Send Money - Recipient Details" /><AccountDetails /></>} />
+          <Route path="/send/amount" element={<><SEO title="Send Money - Select Amount" /><InputAmount /></>} />
+          <Route path="/send/confirm" element={<><SEO title="Confirm Transfer" /><Confirm /></>} />
+          <Route path="/send/payment" element={<><SEO title="Sign Transaction" /><Payment /></>} />
+          <Route path="/send/success" element={<><SEO title="Transfer Successful" /><Success /></>} />
 
           {/* Transactions */}
-          <Route path="/transactions" element={<TransactionsList />} />
-          <Route path="/transactions/:id" element={<TransactionDetail />} />
-          <Route path="/transactions/analysis" element={<Analysis />} />
+          <Route path="/transactions" element={<><SEO title="Transaction History" /><TransactionsList /></>} />
+          <Route path="/transactions/:id" element={<><SEO title="Transaction Details" /><TransactionDetail /></>} />
+          <Route path="/transactions/analysis" element={<><SEO title="Spending Analysis" /><Analysis /></>} />
 
           {/* Savings */}
-          <Route path="/savings" element={<Savings />} />
+          <Route path="/savings" element={<><SEO title="Savings & Goals" /><Savings /></>} />
 
           {/* Settings */}
-          <Route path="/settings" element={<Settings />} />
-          <Route path="/settings/bank-details" element={<BankDetails />} />
+          <Route path="/settings" element={<><SEO title="Settings" /><Settings /></>} />
+          <Route path="/settings/bank-details" element={<><SEO title="Saved Bank Accounts" /><BankDetails /></>} />
 
           {/* Swap */}
           <Route path="/swap" element={
             <ErrorBoundary>
+              <SEO title="Swap Assets" />
               <Swap />
             </ErrorBoundary>
           } />
 
           {/* Bill Payments Flow */}
-          <Route path="/bills/topup" element={<Topup />} />
+          <Route path="/bills/topup" element={<><SEO title="Bill Payments" /><Topup /></>} />
           <Route path="/bills/airtime" element={<Navigate to="/bills/topup" replace />} />
           <Route path="/bills/data" element={<Navigate to="/bills/topup" replace />} />
-          <Route path="/bills/confirm" element={<BillConfirm />} />
-          <Route path="/bills/payment" element={<BillPayment />} />
+          <Route path="/bills/confirm" element={<><SEO title="Confirm Bill Payment" /><BillConfirm /></>} />
+          <Route path="/bills/payment" element={<><SEO title="Sign Bill Payment" /><BillPayment /></>} />
 
           {/* Deposit Flow */}
-          <Route path="/deposit" element={<DepositAmount />} />
-          <Route path="/deposit/payment" element={<DepositPayment />} />
-          <Route path="/deposit/status" element={<DepositStatus />} />
+          <Route path="/deposit" element={<><SEO title="Deposit Funds" /><DepositAmount /></>} />
+          <Route path="/deposit/payment" element={<><SEO title="Payment Instructions" /><DepositPayment /></>} />
+          <Route path="/deposit/status" element={<><SEO title="Deposit Status" /><DepositStatus /></>} />
 
           <Route path="*" element={<Navigate to="/" replace />} />
         </Route>
