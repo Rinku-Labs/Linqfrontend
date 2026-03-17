@@ -22,7 +22,6 @@ export const SolanaWalletProvider = ({ children }: Props) => {
     // You can also provide a custom RPC endpoint.
     const endpoint = useMemo(() => {
         const url = import.meta.env.VITE_SOLANA_RPC_URL || clusterApiUrl(network);
-        console.log("SolanaWalletProvider: Using RPC Endpoint:", url);
         return url;
     }, [network]);
 

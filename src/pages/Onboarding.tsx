@@ -54,16 +54,12 @@ export default function Onboarding() {
     useEffect(() => {
         const hash = location.hash; // Use router location consistently
         if (hash) {
-            console.log('[GoogleLogin] Hash detected:', hash);
             const params = new URLSearchParams(hash.substring(1)); // Remove #
             const idToken = params.get('id_token');
             if (idToken) {
-                console.log('[GoogleLogin] ID Token found. processing...');
                 handleGoogleResponse(idToken);
                 // Clean URL
                 window.history.replaceState(null, '', window.location.pathname);
-            } else {
-                console.log('[GoogleLogin] Hash present but no id_token found');
             }
         }
     }, [location]);
@@ -79,23 +75,16 @@ export default function Onboarding() {
 
             const derivedPassword = await derivePasswordFromSub(user.sub);
             const addr = await computeGoogleAddress(token);
-            console.log('[GoogleLogin] User Parsed:', user.email);
-            console.log('[GoogleLogin] Address Computed:', addr);
 
             if (addr) {
                 localStorage.setItem('zkLoginAddress', addr);
             }
 
-            const intent = localStorage.getItem('auth_intent');
-            console.log('[GoogleLogin] Intent:', intent);
-
             if (intent === 'signin') {
                 try {
                     await login(user.email, derivedPassword);
-                    console.log('[GoogleLogin] Sign-in successful, navigating home');
                     navigate('/');
                 } catch (e: any) {
-                    console.error('[GoogleLogin] Sign-in failed:', e.response?.data || e.message);
                     setError(e.response?.data?.message || "Google Sign In failed. Account might not exist.");
                 }
             } else {
@@ -106,18 +95,14 @@ export default function Onboarding() {
                 const lName = splitName.slice(1).join(' ') || 'User';
                 try {
                     await signup(user.email, name, fName, lName, derivedPassword, undefined, true); // OAuth verified
-                    console.log('[GoogleLogin] Sign-up successful, navigating home');
                     navigate('/');
                 } catch (e: any) {
-                    console.error('[GoogleLogin] Sign-up failed:', e.response?.data || e.message);
                     // If user already exists, try logging in
                     if (e.response?.data?.message?.includes('exist') || e.response?.status === 409) {
                         try {
                             await login(user.email, derivedPassword);
-                            console.log('[GoogleLogin] Fallback login successful, navigating home');
                             navigate('/');
                         } catch (loginErr: any) {
-                            console.error('[GoogleLogin] Fallback login also failed:', loginErr.response?.data || loginErr.message);
                             setError(loginErr.response?.data?.message || "Account exists but login failed.");
                         }
                     } else {
@@ -127,7 +112,6 @@ export default function Onboarding() {
             }
 
         } catch (e: any) {
-            console.error('[GoogleLogin] Critical Error:', e);
             setError(`Google Login Error: ${e.message || 'Unknown error'}`);
         } finally {
             setIsLoading(false);
@@ -146,7 +130,6 @@ export default function Onboarding() {
             await requestSignupOtp(email);
             setIsOtpSent(true);
         } catch (err: any) {
-            console.error(err);
             setError(err.response?.data?.message || 'Failed to send OTP');
         } finally {
             setIsRequestingOtp(false);
@@ -180,7 +163,6 @@ export default function Onboarding() {
             await signup(email, username, firstName, lastName, password, otp);
             navigate('/');
         } catch (err: any) {
-            console.error(err);
             setError(err.response?.data?.message || 'Failed to sign up');
         } finally {
             setIsLoading(false);
@@ -203,7 +185,6 @@ export default function Onboarding() {
             await requestPasswordResetOtp(resetEmail);
             setIsResetOtpSent(true);
         } catch (err: any) {
-            console.error(err);
             setError(err.response?.data?.message || 'Failed to send OTP');
         } finally {
             setIsRequestingResetOtp(false);
@@ -240,7 +221,6 @@ export default function Onboarding() {
                 setIsResetOtpSent(false);
             }, 2000);
         } catch (err: any) {
-            console.error(err);
             setError(err.response?.data?.message || 'Failed to reset password');
         } finally {
             setIsLoading(false);

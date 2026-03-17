@@ -91,7 +91,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 localStorage.removeItem('linqIsVerified');
             }
         } catch (error) {
-            console.error("Failed to check verification status", error);
             // Default to false on error to be safe, or just keep previous state
             // If already verified, we shouldn't necessarily block them if the server glitches.
         } finally {
@@ -121,18 +120,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                         // Check common ID fields
                         const recoveredId = decoded.sub || decoded.id || decoded.user_id || decoded.userId;
                         if (recoveredId) {
-                            console.log("Recovered user ID from token:", recoveredId);
                             parsedUser.id = recoveredId;
                             // Update storage with fixed user
                             localStorage.setItem('linqUser', JSON.stringify(parsedUser));
                         }
                     } catch (decodeError) {
-                        console.error("Failed to decode token for user ID recovery", decodeError);
                     }
                 }
                 setUser(parsedUser);
             } catch (e) {
-                console.error("Failed to parse stored user", e);
             }
         }
     }, [token]); // Add token dependency to re-check when token changes/sets on mount
@@ -184,7 +180,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             // Auto login after signup
             await login(email, password);
         } catch (error) {
-            console.error("Signup failed", error);
             throw error;
         }
     };
@@ -193,7 +188,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         try {
             await client.post('/signup/otp', { email });
         } catch (error) {
-            console.error("Failed to request OTP", error);
             throw error;
         }
     };
@@ -202,7 +196,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         try {
             await client.post('/forgot-password/otp', { email });
         } catch (error) {
-            console.error("Failed to request password reset OTP", error);
             throw error;
         }
     };
@@ -211,7 +204,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         try {
             await client.post('/reset-password', { email, otp, newPassword });
         } catch (error) {
-            console.error("Failed to reset password", error);
             throw error;
         }
     };

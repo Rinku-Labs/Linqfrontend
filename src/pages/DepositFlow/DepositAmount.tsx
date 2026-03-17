@@ -4,13 +4,11 @@ import Header from '../../components/Layout/Header';
 import Button from '../../components/ui/Button';
 import { createOnrampOrder, getOnrampRate } from '../../api/onramp';
 import { useCurrentAccount } from '@mysten/dapp-kit';
-import { useWallet } from '@solana/wallet-adapter-react';
 import { useWallet as useAptosWallet } from '@aptos-labs/wallet-adapter-react';
 import { useAccount as useBscAccount } from 'wagmi';
 import { Loader2, CheckCircle, AlertCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import { resolveSuinsName, isValidSuinsName } from '../../utils/suinsUtils';
-import { resolveSolanaName, isValidSnsName, isValidSolanaAddress } from '../../utils/solanaUtils';
 import { isValidAptosAddress, isValidAptosName, resolveAptosName } from '../../utils/aptosUtils';
 import { isValidBscAddress } from '../../utils/bscUtils';
 import usdcLogo from '../../assets/usdc-logo.png';
@@ -22,13 +20,12 @@ import ChainSelector from '../../components/ChainSelector';
 export default function DepositAmount() {
     const navigate = useNavigate();
     const currentAccount = useCurrentAccount();
-    const { publicKey: solanaPublicKey } = useWallet();
     const { account: aptosAccount } = useAptosWallet();
     const { address: bscAddress } = useBscAccount();
     const { selectedChain, setSelectedChain } = useChain();
 
     useEffect(() => {
-        if (!['SUI', 'SOLANA'].includes(selectedChain)) {
+        if (!['SUI'].includes(selectedChain)) {
             setSelectedChain('SUI');
         }
     }, [selectedChain, setSelectedChain]);
@@ -50,7 +47,6 @@ export default function DepositAmount() {
                 const rate = await getOnrampRate();
                 setExchangeRate(rate);
             } catch (error) {
-                console.error("Failed to fetch rate", error);
                 toast.error("Failed to fetch exchange rate");
             } finally {
                 setIsLoadingRate(false);
@@ -69,14 +65,6 @@ export default function DepositAmount() {
                 if (selectedChain === 'SUI') {
                     if (isValidSuinsName(manualWalletAddress)) {
                         const address = await resolveSuinsName(manualWalletAddress);
-                        if (address) setResolvedAddress(address);
-                        else setSuinsError(true);
-                    } else {
-                        setResolvedAddress(null);
-                    }
-                } else if (selectedChain === 'SOLANA') {
-                    if (isValidSnsName(manualWalletAddress)) {
-                        const address = await resolveSolanaName(manualWalletAddress);
                         if (address) setResolvedAddress(address);
                         else setSuinsError(true);
                     } else {
@@ -108,7 +96,6 @@ export default function DepositAmount() {
     const getWalletAddress = (): string | undefined => {
         if (useConnectedWallet) {
             if (selectedChain === 'SUI') return currentAccount?.address;
-            if (selectedChain === 'SOLANA') return solanaPublicKey?.toBase58();
             if (selectedChain === 'APTOS') return aptosAccount?.address?.toString();
             if (selectedChain === 'BSC') return bscAddress;
         }
@@ -123,15 +110,8 @@ export default function DepositAmount() {
         }
 
         // Validate Address based on Chain
-        if (selectedChain === 'SUI') {
-            const suiRegex = /^0x[a-fA-F0-9]{64}$/;
             if (!suiRegex.test(walletAddress)) {
                 toast.error("Invalid Sui address. Must start with 0x and have 64 hex characters.");
-                return;
-            }
-        } else if (selectedChain === 'SOLANA') {
-            if (!isValidSolanaAddress(walletAddress)) {
-                toast.error("Invalid Solana address.");
                 return;
             }
         } else if (selectedChain === 'APTOS') {
@@ -172,7 +152,7 @@ export default function DepositAmount() {
                 coin: {
                     sui: selectedChain === 'SUI',
                     base: false,
-                    solana: selectedChain === 'SOLANA',
+                    solana: false,
                     ethereum: false,
                     aptos: selectedChain === 'APTOS',
                     bsc: selectedChain === 'BSC'
@@ -182,7 +162,6 @@ export default function DepositAmount() {
             navigate('/deposit/payment', { state: { order: response } });
             invalidateOrdersCache(); // Refresh orders list
         } catch (error) {
-            console.error("Failed to create order", error);
             toast.error("Failed to create deposit order. Please try again.");
         } finally {
             setIsSubmitting(false);
@@ -220,7 +199,7 @@ export default function DepositAmount() {
                         pointerEvents: 'none',
                         color: 'var(--text-main)',
                     }}>Deposit USDC</h1>
-                    <ChainSelector allowedChains={['SUI', 'SOLANA']} />
+                    <ChainSelector allowedChains={['SUI']} />
                 </div>
             </div>
 
@@ -389,15 +368,13 @@ export default function DepositAmount() {
                             {useConnectedWallet && <div style={{ width: '10px', height: '10px', borderRadius: '50%', background: 'var(--primary)' }} />}
                         </div>
                         <div style={{ overflow: 'hidden', flex: 1 }}>
-                            <p style={{ fontWeight: 500, color: 'var(--text-main)' }}>My {selectedChain === 'SUI' ? 'Sui' : selectedChain === 'SOLANA' ? 'Solana' : selectedChain === 'APTOS' ? 'Aptos' : 'BSC'} Wallet</p>
+                            <p style={{ fontWeight: 500, color: 'var(--text-main)' }}>My {selectedChain === 'SUI' ? 'Sui' : selectedChain === 'APTOS' ? 'Aptos' : 'BSC'} Wallet</p>
                             <p style={{ fontSize: '9px', color: 'var(--text-secondary)', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>
                                 {selectedChain === 'SUI'
                                     ? (currentAccount ? currentAccount.address : 'No Sui wallet connected')
-                                    : selectedChain === 'SOLANA'
-                                        ? (solanaPublicKey ? solanaPublicKey.toBase58() : 'No Solana wallet connected')
-                                        : selectedChain === 'APTOS'
-                                            ? (aptosAccount?.address?.toString() || 'No Aptos wallet connected')
-                                            : (bscAddress || 'No BSC wallet connected')
+                                    : selectedChain === 'APTOS'
+                                        ? (aptosAccount?.address?.toString() || 'No Aptos wallet connected')
+                                        : (bscAddress || 'No BSC wallet connected')
                                 }
                             </p>
                         </div>
@@ -442,7 +419,7 @@ export default function DepositAmount() {
                                     type="text"
                                     value={manualWalletAddress}
                                     onChange={(e) => setManualWalletAddress(e.target.value)}
-                                    placeholder={selectedChain === 'SUI' ? "Enter address or SuiNS name (e.g. adewale.sui)" : selectedChain === 'SOLANA' ? "Enter address or SNS name (e.g. raj.sol)" : selectedChain === 'APTOS' ? "Enter Aptos address or .apt name" : "Enter BSC address (0x...)"}
+                                    placeholder={selectedChain === 'SUI' ? "Enter address or SuiNS name (e.g. adewale.sui)" : selectedChain === 'APTOS' ? "Enter Aptos address or .apt name" : "Enter BSC address (0x...)"}
                                     style={{
                                         width: '100%',
                                         padding: '12px',
@@ -457,7 +434,7 @@ export default function DepositAmount() {
                                 {isResolvingSuins && (
                                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '8px', fontSize: '9px', color: 'var(--text-secondary)' }}>
                                         <Loader2 className="animate-spin" size={14} />
-                                        <span>Resolving {selectedChain === 'SUI' ? 'SuiNS' : selectedChain === 'SOLANA' ? 'SNS' : 'ANS'}...</span>
+                                        <span>Resolving {selectedChain === 'SUI' ? 'SuiNS' : 'ANS'}...</span>
                                     </div>
                                 )}
                                 {resolvedAddress && !isResolvingSuins && (
@@ -483,7 +460,7 @@ export default function DepositAmount() {
                                 {suinsError && !isResolvingSuins && (
                                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '8px', fontSize: '9px', color: '#FF5252' }}>
                                         <AlertCircle size={14} />
-                                        <span>Could not resolve {selectedChain === 'SUI' ? 'SuiNS' : 'SNS'} name</span>
+                                        <span>Could not resolve {selectedChain === 'SUI' ? 'SuiNS' : 'ANS'} name</span>
                                     </div>
                                 )}
                             </div>

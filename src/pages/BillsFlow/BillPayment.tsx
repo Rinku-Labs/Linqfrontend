@@ -136,12 +136,10 @@ export default function BillPayment() {
                 { transaction: tx },
                 {
                     onSuccess: (result) => {
-                        console.log("Sui Bill Transaction successful:", result);
                         setStatus('processing');
                         setMessage('Transaction sent! Processing your bill payment...');
                     },
                     onError: (err) => {
-                        console.error('Transaction cancelled:', err);
                         setStatus('cancelled');
                         setMessage('Transaction was cancelled or rejected.');
                         hasInitiatedRef.current = false;
@@ -210,12 +208,10 @@ export default function BillPayment() {
             setMessage('Please sign the transaction in your Solana wallet...');
 
             const signature = await sendSolanaTransaction(transaction, connection);
-            console.log("Solana Bill Transaction sent:", signature);
             setStatus('processing');
             setMessage('Transaction sent! Processing your bill payment...');
             await connection.confirmTransaction(signature, 'processed');
         } catch (error: any) {
-            console.error("Solana Bill Payment failed:", error);
             setStatus('failed');
             setMessage(error.message || 'Failed to prepare transaction.');
             hasInitiatedRef.current = false;
@@ -245,11 +241,9 @@ export default function BillPayment() {
                 }
             });
 
-            console.log("Aptos Bill Transaction submitted:", response);
             setStatus('processing');
             setMessage('Transaction sent! Processing your bill payment...');
         } catch (error: any) {
-            console.error("Aptos Bill Payment failed:", error);
             setStatus('failed');
             setMessage(error.message || 'Failed to prepare transaction.');
             hasInitiatedRef.current = false;
@@ -276,7 +270,6 @@ export default function BillPayment() {
             setStatus('processing');
             setMessage('Transaction sent! Processing your bill payment...');
         } catch (error: any) {
-            console.error("BSC Bill Payment failed:", error);
             setStatus('failed');
             setMessage(error.message || 'Failed to prepare transaction.');
             hasInitiatedRef.current = false;
@@ -303,7 +296,6 @@ export default function BillPayment() {
             setStatus('processing');
             setMessage('Transaction sent! Processing your bill payment...');
         } catch (error: any) {
-            console.error("BASE Bill Payment failed:", error);
             setStatus('failed');
             setMessage(error.message || 'Failed to prepare transaction.');
             hasInitiatedRef.current = false;

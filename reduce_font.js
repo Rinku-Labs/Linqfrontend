@@ -50,4 +50,4 @@ files.forEach(file => {
     }
 });
 
-console.log('Total fontSize replacements:', totalChanges);
+// fontSize replacements finished

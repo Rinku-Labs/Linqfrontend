@@ -134,7 +134,6 @@ export default function Home() {
                     setSolanaBalance(0);
                 }
             } catch (error) {
-                console.error("Error fetching Solana balance:", error);
                 setSolanaBalance(null);
             } finally {
                 setIsSolanaLoading(false);
@@ -158,7 +157,6 @@ export default function Home() {
                 });
                 setAptosBalance(balance / 1_000_000);
             } catch (error) {
-                console.error("Error fetching Aptos balance:", error);
                 setAptosBalance(null);
             } finally {
                 setIsAptosLoading(false);
@@ -184,7 +182,6 @@ export default function Home() {
                 // USDT on Tron has 6 decimals
                 setTronBalance(parseInt(balance.toString()) / 1_000_000);
             } catch (error) {
-                console.error("Error fetching Tron balance:", error);
                 setTronBalance(null);
             } finally {
                 setIsTronLoading(false);
@@ -204,8 +201,6 @@ export default function Home() {
             setTransactions(orders);
             setDailyVolume(calculateDailyOffRampVolume(orders));
             setExchangeRate(rate);
-        } catch (error) {
-            console.error("Failed to fetch data", error);
         } finally {
             if (!isSilent) setIsDataLoading(false);
         }
@@ -220,7 +215,6 @@ export default function Home() {
     // Trigger refresh when a WS message is received
     useEffect(() => {
         if (lastMessage) {
-            console.log("Real-time update received:", lastMessage);
             // Force refresh to bypass cache and show the new status
             loadAllData(true, true);
         }

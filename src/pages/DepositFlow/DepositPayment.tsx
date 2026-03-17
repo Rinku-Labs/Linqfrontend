@@ -44,7 +44,6 @@ export default function DepositPayment() {
 
     useEffect(() => {
         if (lastMessage && lastMessage.data) {
-            console.log("WebSocket Update:", lastMessage);
 
             let statusStr: string;
             if (typeof lastMessage.data === 'string') {
@@ -78,7 +77,7 @@ export default function DepositPayment() {
                     }
                 });
             }
-        }).catch(err => console.error(err));
+        }).catch(err => {});
     }, [order.orderId, navigate]);
 
     return (
