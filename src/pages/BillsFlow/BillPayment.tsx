@@ -30,6 +30,11 @@ const BASE_USDC_ADDRESS = "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913" as `0x${s
 
 type BillPaymentStatus = 'idle' | 'preparing' | 'signing' | 'processing' | 'success' | 'completed' | 'failed' | 'cancelled';
 
+interface SuiCoin {
+    coinObjectId: string;
+    balance: string;
+}
+
 export default function BillPayment() {
     const location = useLocation();
     const navigate = useNavigate();
@@ -92,22 +97,22 @@ export default function BillPayment() {
             const tx = new Transaction();
             const amountInMist = Math.floor(parseFloat(amount) * 1_000_000);
 
-            const totalBalance = coins.reduce((sum: number, coin: any) => sum + parseInt(coin.balance), 0);
+            const totalBalance = (coins as any).reduce((sum: number, coin: SuiCoin) => sum + parseInt(coin.balance), 0);
             if (totalBalance < amountInMist) {
                 throw new Error(`Insufficient USDC balance. Required: ${amount}, Available: ${(totalBalance / 1_000_000).toFixed(2)}`);
             }
 
-            let primaryCoin = coins.find((c: any) => parseInt(c.balance) >= amountInMist);
+            let primaryCoin = (coins as any).find((c: SuiCoin) => parseInt(c.balance) >= amountInMist);
             let coinToTransfer;
 
             if (primaryCoin) {
                 const [splitCoin] = tx.splitCoins(tx.object(primaryCoin.coinObjectId), [amountInMist]);
                 coinToTransfer = splitCoin;
             } else {
-                const sortedCoins = coins.sort((a: any, b: any) => parseInt(b.balance) - parseInt(a.balance));
+                const sortedCoins = (coins as any).sort((a: SuiCoin, b: SuiCoin) => parseInt(b.balance) - parseInt(a.balance));
                 primaryCoin = sortedCoins[0];
 
-                const coinsToMerge: any[] = [];
+                const coinsToMerge: SuiCoin[] = [];
                 let currentBalance = parseInt(primaryCoin.balance);
 
                 for (let i = 1; i < sortedCoins.length; i++) {
@@ -119,7 +124,7 @@ export default function BillPayment() {
                 if (coinsToMerge.length > 0) {
                     tx.mergeCoins(
                         tx.object(primaryCoin.coinObjectId),
-                        coinsToMerge.map((c: any) => tx.object(c.coinObjectId))
+                        coinsToMerge.map((c: SuiCoin) => tx.object(c.coinObjectId))
                     );
                 }
 
@@ -135,21 +140,21 @@ export default function BillPayment() {
             signAndExecuteSuiTransaction(
                 { transaction: tx },
                 {
-                    onSuccess: (result) => {
+                    onSuccess: () => {
                         setStatus('processing');
                         setMessage('Transaction sent! Processing your bill payment...');
                     },
-                    onError: (err) => {
+                    onError: () => {
                         setStatus('cancelled');
                         setMessage('Transaction was cancelled or rejected.');
                         hasInitiatedRef.current = false;
                     },
                 }
             );
-        } catch (error: any) {
+        } catch (error: unknown) {
             console.error("Sui Bill Payment failed:", error);
             setStatus('failed');
-            setMessage(error.message || 'Failed to prepare transaction.');
+            setMessage(error instanceof Error ? error.message : 'Failed to prepare transaction.');
             hasInitiatedRef.current = false;
         }
     };
@@ -233,7 +238,7 @@ export default function BillPayment() {
                 throw new Error(`Insufficient Aptos USDC balance.`);
             }
 
-            const response = await signAndSubmitAptosTransaction({
+            await signAndSubmitAptosTransaction({
                 data: {
                     function: "0x1::aptos_account::transfer_coins",
                     typeArguments: [APTOS_USDC_ADDRESS],

@@ -80,6 +80,7 @@ export default function Onboarding() {
                 localStorage.setItem('zkLoginAddress', addr);
             }
 
+            const intent = localStorage.getItem('auth_intent');
             if (intent === 'signin') {
                 try {
                     await login(user.email, derivedPassword);

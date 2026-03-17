@@ -77,7 +77,7 @@ export default function DepositPayment() {
                     }
                 });
             }
-        }).catch(err => {});
+        }).catch(() => { });
     }, [order.orderId, navigate]);
 
     return (
