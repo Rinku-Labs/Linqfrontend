@@ -37,6 +37,7 @@ interface AuthContextType {
     isVerified: boolean;
     isCheckingVerification: boolean;
     checkVerificationStatus: (force?: boolean) => Promise<void>;
+    markVerified: () => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -96,6 +97,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         } finally {
             setIsCheckingVerification(false);
         }
+    };
+
+    // Directly mark user as verified without hitting the backend
+    // Used after a successful NIN verification response from the server
+    const markVerified = () => {
+        setIsVerified(true);
+        localStorage.setItem('linqIsVerified', 'true');
     };
 
     useEffect(() => {
@@ -278,7 +286,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             hasPin, setTransactionPin, validatePin,
             activeWalletSource, setActiveWalletSource, zkAddress,
             updateProfilePicture,
-            isVerified, isCheckingVerification, checkVerificationStatus
+            isVerified, isCheckingVerification, checkVerificationStatus, markVerified
         }}>
             {children}
         </AuthContext.Provider>

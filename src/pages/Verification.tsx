@@ -11,7 +11,7 @@ import InlineError from '../components/ui/InlineError';
 
 export default function Verification() {
     const navigate = useNavigate();
-    const { user, checkVerificationStatus, isVerified, isCheckingVerification } = useAuth();
+    const { user, markVerified, isVerified, isCheckingVerification } = useAuth();
     const [nin, setNin] = useState('');
     const [showSuccess, setShowSuccess] = useState(false);
 
@@ -26,8 +26,10 @@ export default function Verification() {
             verifyNIN(data.nin, data.userId),
         onSuccess: (data) => {
             if (data.status === 'verified') {
-                // Update global verified state - FORCE check to bypass throttle
-                checkVerificationStatus(true);
+                // Directly mark user as verified in global state + localStorage
+                // We trust the backend response directly, no need to re-fetch status
+                // as the verification endpoint reads stale JWT-cached user data
+                markVerified();
                 setShowSuccess(true);
             }
         },
