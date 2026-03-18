@@ -7,6 +7,7 @@ import { toast } from 'sonner';
 import { getOnrampStatus, type OnrampOrderResponse } from '../../api/onramp';
 import { formatDate } from '../../utils/dateFormatter';
 import { useWebSocket } from '../../hooks/useWebSocket';
+import { useAuth } from '../../context/AuthContext';
 
 
 
@@ -40,7 +41,8 @@ export default function DepositPayment() {
         data: string | { status: string };
     }
 
-    const { lastMessage } = useWebSocket<WebSocketMessage>({ orderId: order.orderId });
+    const { token } = useAuth();
+    const { lastMessage } = useWebSocket<WebSocketMessage>({ orderId: order.orderId, token: token ?? undefined });
 
     useEffect(() => {
         if (lastMessage && lastMessage.data) {

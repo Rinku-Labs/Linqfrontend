@@ -79,8 +79,8 @@ export default function TransactionsList() {
         }
     }, []);
 
-    const { user } = useAuth();
-    const { lastMessage } = useWebSocket(user?.id ? { userId: user.id.toString() } : undefined);
+    const { user, token } = useAuth();
+    const { lastMessage } = useWebSocket(user?.id ? { userId: user.id.toString(), token: token ?? undefined } : undefined);
 
     useEffect(() => {
         loadOrders();

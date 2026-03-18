@@ -40,7 +40,7 @@ const BSC_USDC_ABI = [{
 
 export default function Home() {
     const navigate = useNavigate();
-    const { user } = useAuth();
+    const { user, token } = useAuth();
     const [showBalance, setShowBalance] = useState(() => {
         const saved = localStorage.getItem('showBalance');
         return saved !== null ? JSON.parse(saved) : true;
@@ -210,7 +210,7 @@ export default function Home() {
     // We need the numeric user ID. Assuming user object has it, or we decode from token/localstorage if needed.
     // For now, attempting to use user?.id. If user ID is not available in context, we might need to fetch it.
     // Based on Admin panel showing "UserID: 3", it's a number.
-    const { lastMessage } = useWebSocket(user?.id ? { userId: user.id.toString() } : undefined);
+    const { lastMessage } = useWebSocket(user?.id ? { userId: user.id.toString(), token: token ?? undefined } : undefined);
 
     // Trigger refresh when a WS message is received
     useEffect(() => {

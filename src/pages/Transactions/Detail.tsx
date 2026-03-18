@@ -7,6 +7,7 @@ import { Loader2 } from 'lucide-react';
 import type { Order } from '../../components/TransactionPopup';
 import { getCachedOrders } from '../../utils/ordersCache';
 import client from '../../api/client';
+import { useAuth } from '../../context/AuthContext';
 
 export default function TransactionDetail() {
     const { id } = useParams<{ id: string }>();
@@ -47,8 +48,9 @@ export default function TransactionDetail() {
         fetchOrder();
     }, [id]);
 
+    const { token } = useAuth();
     // WebSocket Integration
-    const { lastMessage } = useWebSocket<Order>(id ? { orderId: id } : undefined);
+    const { lastMessage } = useWebSocket<Order>(id ? { orderId: id, token: token ?? undefined } : undefined);
 
     useEffect(() => {
         if (lastMessage) {

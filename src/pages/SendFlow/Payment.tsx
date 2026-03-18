@@ -11,6 +11,7 @@ import { getOrderStatus } from '../../api/order';
 import { playSuccessSound } from '../../utils/audio';
 import TransactionReceipt from '../../components/TransactionReceipt';
 import type { Order } from '../../components/TransactionPopup';
+import { useAuth } from '../../context/AuthContext';
 
 export default function Payment() {
     const location = useLocation();
@@ -39,7 +40,8 @@ export default function Payment() {
         data: string | { status: string };
     }
 
-    const { lastMessage, isConnected } = useWebSocket<WebSocketMessage>({ orderId });
+    const { token } = useAuth();
+    const { lastMessage, isConnected } = useWebSocket<WebSocketMessage>({ orderId, token: token ?? undefined });
 
     useEffect(() => {
         if (lastMessage) {

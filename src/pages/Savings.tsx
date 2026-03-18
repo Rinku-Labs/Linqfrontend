@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from 'react';
-import { PiggyBank, TrendingUp, AlertTriangle, ArrowDownToLine, Wallet, Trash2 } from 'lucide-react';
+import { PiggyBank, TrendingUp, AlertTriangle, ArrowDownToLine, Wallet, Trash2, Eye, EyeOff } from 'lucide-react';
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 import { useSavings } from '../context/SavingsContext';
 import { useChain } from '../context/ChainContext';
@@ -115,7 +115,7 @@ export default function Savings() {
                         <button onClick={() => setShowBalance(!showBalance)} style={{
                             background: 'none', border: 'none', color: 'rgba(255,255,255,0.7)', cursor: 'pointer'
                         }}>
-                            {showBalance ? '👁' : '👁‍🗨'}
+                            {showBalance ? <Eye size={18} /> : <EyeOff size={18} />}
                         </button>
                     </div>
                     {showBalance && exchangeRate > 0 && (

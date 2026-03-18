@@ -10,6 +10,7 @@ import { mapTransactionStatus } from '../../utils/statusMapping';
 import { formatDuration } from '../../utils/time';
 import { invalidateOrdersCache } from '../../utils/ordersCache';
 import { playSuccessSound } from '../../utils/audio';
+import { useAuth } from '../../context/AuthContext';
 
 export default function DepositStatus() {
     const navigate = useNavigate();
@@ -32,8 +33,9 @@ export default function DepositStatus() {
         return null;
     }
 
+    const { token } = useAuth();
     // WebSocket hook
-    const { lastMessage } = useWebSocket<OnrampStatusResponse>(orderId);
+    const { lastMessage } = useWebSocket<OnrampStatusResponse>({ orderId, token: token ?? undefined });
 
     // Initial load
     useEffect(() => {

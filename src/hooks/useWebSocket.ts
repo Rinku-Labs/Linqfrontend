@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 
 
-export const useWebSocket = <T>(params: { orderId?: string; userId?: string } | undefined) => {
+export const useWebSocket = <T>(params: { orderId?: string; userId?: string; token?: string } | undefined) => {
     const [lastMessage, setLastMessage] = useState<T | null>(null);
     const [isConnected, setIsConnected] = useState(false);
     const socketRef = useRef<WebSocket | null>(null);
@@ -9,6 +9,8 @@ export const useWebSocket = <T>(params: { orderId?: string; userId?: string } | 
 
     useEffect(() => {
         if (!params || (!params.orderId && !params.userId)) return;
+        // Don't connect if no token is available — backend will reject unauthenticated WS
+        if (!params.token) return;
 
         let reconnectAttempts = 0;
         const maxReconnectAttempts = 5;
@@ -16,11 +18,12 @@ export const useWebSocket = <T>(params: { orderId?: string; userId?: string } | 
         const connect = () => {
             // Determine WS URL from existing API URL or default
             const apiUrl = import.meta.env.VITE_API_URL || 'https://api.linq.pxxl.click';
-            let queryString = '';
-            if (params.orderId) queryString = `orderId=${params.orderId}`;
-            else if (params.userId) queryString = `userId=${params.userId}`;
+            const queryParts: string[] = [];
+            if (params.orderId) queryParts.push(`orderId=${params.orderId}`);
+            else if (params.userId) queryParts.push(`userId=${params.userId}`);
+            if (params.token) queryParts.push(`token=${encodeURIComponent(params.token)}`);
 
-            const wsUrl = apiUrl.replace(/^http/, 'ws') + `/ws?${queryString}`;
+            const wsUrl = apiUrl.replace(/^http/, 'ws') + `/ws?${queryParts.join('&')}`;
 
             const socket = new WebSocket(wsUrl);
 
@@ -69,7 +72,7 @@ export const useWebSocket = <T>(params: { orderId?: string; userId?: string } | 
                 clearTimeout(reconnectTimeoutRef.current);
             }
         };
-    }, [params?.orderId, params?.userId]);
+    }, [params?.orderId, params?.userId, params?.token]);
 
     return { lastMessage, isConnected };
 };
