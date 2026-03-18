@@ -515,9 +515,6 @@ select {
   transition: all 0.3s ease;
 }
 
-.status-badge--pending {
-  animation: pulse 2s ease-in-out infinite;
-}
 
 .status-dot {
   width: 6px;
@@ -528,7 +525,6 @@ select {
 
 .status-dot--pending {
   background: #f59e0b;
-  animation: statusPulse 2s ease-in-out infinite;
 }
 
 .status-dot--completed {

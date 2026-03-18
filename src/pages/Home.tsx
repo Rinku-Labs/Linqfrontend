@@ -17,7 +17,7 @@ import { fetchOrders } from '../utils/ordersCache';
 import { fetchRate } from '../utils/rateCache';
 import { calculateDailyOffRampVolume, DAILY_LIMIT } from '../utils/volumeUtils';
 import { formatDate } from '../utils/dateFormatter';
-import { BalanceCardSkeleton, TransactionListSkeleton, QuickActionsSkeleton, VolumeTrackerSkeleton } from '../components/ui/SkeletonLoader';
+import { BalanceCardSkeleton, TransactionListSkeleton, QuickActionsSkeleton } from '../components/ui/SkeletonLoader';
 import EmptyState from '../components/ui/EmptyState';
 import usePullToRefresh, { PullToRefreshIndicator } from '../hooks/usePullToRefresh';
 import { useConnection, useWallet } from '@solana/wallet-adapter-react';
@@ -471,8 +471,8 @@ export default function Home() {
                 </div>
             )}
 
-            {/* Volume Tracker */}
-            {isDataLoading ? (
+            {/* Volume Tracker - HIDDEN */}
+            {/* {isDataLoading ? (
                 <VolumeTrackerSkeleton />
             ) : (
                 <div className="glass-card animate-slideUp stagger-2" style={{ borderRadius: '20px', padding: '20px', marginBottom: '24px', animationFillMode: 'backwards', transition: 'background-color 0.3s ease' }}>
@@ -500,7 +500,7 @@ export default function Home() {
                         </p>
                     )}
                 </div>
-            )}
+            )} */}
 
             {/* Recent Transactions */}
             {isDataLoading ? (
