@@ -26,8 +26,8 @@ export default function Verification() {
             verifyNIN(data.nin, data.userId),
         onSuccess: (data) => {
             if (data.status === 'verified') {
-                // Update global verified state
-                checkVerificationStatus();
+                // Update global verified state - FORCE check to bypass throttle
+                checkVerificationStatus(true);
                 setShowSuccess(true);
             }
         },

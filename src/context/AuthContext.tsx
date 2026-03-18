@@ -36,7 +36,7 @@ interface AuthContextType {
     // KYC
     isVerified: boolean;
     isCheckingVerification: boolean;
-    checkVerificationStatus: () => Promise<void>;
+    checkVerificationStatus: (force?: boolean) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -72,13 +72,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     const lastVerificationCheckRef = React.useRef<number>(0);
 
-    const checkVerificationStatus = async () => {
+    const checkVerificationStatus = async (force: boolean = false) => {
         if (!token) return;
-        // Skip if already verified
-        if (isVerified) return;
-        // Throttle: skip if checked within the last 30 seconds
+        // Skip if already verified (unless forced)
+        if (isVerified && !force) return;
+        // Throttle: skip if checked within the last 30 seconds (unless forced)
         const now = Date.now();
-        if (now - lastVerificationCheckRef.current < 30000) return;
+        if (!force && now - lastVerificationCheckRef.current < 30000) return;
         lastVerificationCheckRef.current = now;
 
         setIsCheckingVerification(true);
