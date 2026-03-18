@@ -45,3 +45,8 @@ export const getOnrampRate = async (): Promise<number> => {
     const { fetchRate } = await import('../utils/rateCache');
     return fetchRate();
 };
+
+export const getLiquidityBalance = async (): Promise<number> => {
+    const response = await client.get('/onramp/liquidity');
+    return response.data.balance;
+};

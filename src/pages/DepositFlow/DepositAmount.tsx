@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Header from '../../components/Layout/Header';
 import Button from '../../components/ui/Button';
-import { createOnrampOrder, getOnrampRate } from '../../api/onramp';
+import { createOnrampOrder, getOnrampRate, getLiquidityBalance } from '../../api/onramp';
 import { useCurrentAccount } from '@mysten/dapp-kit';
 import { useWallet as useAptosWallet } from '@aptos-labs/wallet-adapter-react';
 import { useAccount as useBscAccount } from 'wagmi';
@@ -42,19 +42,24 @@ export default function DepositAmount() {
     const [isResolvingSuins, setIsResolvingSuins] = useState(false);
     const [suinsError, setSuinsError] = useState<boolean>(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [liquidityBalance, setLiquidityBalance] = useState<number | null>(null);
 
     useEffect(() => {
-        const fetchRate = async () => {
+        const fetchData = async () => {
             try {
-                const rate = await getOnrampRate();
+                const [rate, balance] = await Promise.all([
+                    getOnrampRate(),
+                    getLiquidityBalance()
+                ]);
                 setExchangeRate(rate);
+                setLiquidityBalance(balance);
             } catch (error) {
-                toast.error("Failed to fetch exchange rate");
+                toast.error("Failed to fetch required data");
             } finally {
                 setIsLoadingRate(false);
             }
         };
-        fetchRate();
+        fetchData();
     }, []);
 
     useEffect(() => {
@@ -143,6 +148,12 @@ export default function DepositAmount() {
             return;
         }
         amountStableCoin = numAmount / exchangeRate;
+    }
+
+    // Check against liquidity balance
+    if (liquidityBalance !== null && amountStableCoin > liquidityBalance) {
+        toast.error(`Amount exceeds available liquidity (${liquidityBalance.toFixed(2)} USDC). Please try a smaller amount.`);
+        return;
     }
 
     setIsSubmitting(true);

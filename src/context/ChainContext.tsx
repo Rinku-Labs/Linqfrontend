@@ -2,6 +2,9 @@ import React, { createContext, useContext, useState } from 'react';
 
 export type Chain = 'SUI' | 'SOLANA' | 'APTOS' | 'BSC' | 'BASE' | 'TRON';
 
+export const HIDE_APTOS = true;
+export const HIDE_TRON = true;
+
 interface ChainContextType {
     selectedChain: Chain;
     setSelectedChain: (chain: Chain) => void;
@@ -11,8 +14,14 @@ const ChainContext = createContext<ChainContextType | undefined>(undefined);
 
 export function ChainProvider({ children }: { children: React.ReactNode }) {
     const [selectedChain, setSelectedChainState] = useState<Chain>(() => {
-        const saved = localStorage.getItem('selectedChain');
-        return (saved === 'SUI' || saved === 'SOLANA' || saved === 'APTOS' || saved === 'BSC' || saved === 'BASE' || saved === 'TRON') ? saved : 'SUI';
+        const saved = localStorage.getItem('selectedChain') as Chain | null;
+        if (!saved) return 'SUI';
+
+        const isHidden = (saved === 'APTOS' && HIDE_APTOS) || (saved === 'TRON' && HIDE_TRON);
+        if (isHidden) return 'SUI';
+
+        const isValid = ['SUI', 'SOLANA', 'APTOS', 'BSC', 'BASE', 'TRON'].includes(saved);
+        return isValid ? saved : 'SUI';
     });
 
     const setSelectedChain = (chain: Chain) => {

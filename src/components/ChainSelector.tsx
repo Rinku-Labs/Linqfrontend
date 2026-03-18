@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { useChain, type Chain } from '../context/ChainContext';
+import { useChain, type Chain, HIDE_APTOS, HIDE_TRON } from '../context/ChainContext';
 import { ChevronDown, Check } from 'lucide-react';
 import './ChainSelector.css';
 import suiLogo from '../assets/sui-logo.png';
@@ -44,11 +44,12 @@ const ChainSelector = ({ allowedChains }: ChainSelectorProps) => {
             name: 'Solana',
             logo: solanaLogo
         },
-        {
-            id: 'APTOS',
+        // Only include APTOS if not hidden
+        ...(!HIDE_APTOS ? [{
+            id: 'APTOS' as Chain,
             name: 'Aptos',
             logo: aptosLogo
-        },
+        }] : []),
         {
             id: 'BSC',
             name: 'BNB Chain',
@@ -59,11 +60,12 @@ const ChainSelector = ({ allowedChains }: ChainSelectorProps) => {
             name: 'Base',
             logo: 'https://avatars.githubusercontent.com/u/108554348?s=200&v=4'
         },
-        {
-            id: 'TRON',
+        // Only include TRON if not hidden
+        ...(!HIDE_TRON ? [{
+            id: 'TRON' as Chain,
             name: 'Tron',
             logo: tronLogo
-        }
+        }] : [])
     ];
 
     const displayChains = allowedChains ? chains.filter(c => allowedChains.includes(c.id)) : chains;

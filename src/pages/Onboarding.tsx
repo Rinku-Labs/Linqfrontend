@@ -10,6 +10,8 @@ import { getGoogleLoginUrl, parseGoogleToken, computeGoogleAddress, derivePasswo
 
 type ViewType = 'welcome' | 'signup' | 'signin' | 'forgot';
 
+export const SHOW_GOOGLE_LOGIN = false;
+
 export default function Onboarding() {
     const navigate = useNavigate();
     const location = useLocation();
@@ -339,15 +341,17 @@ export default function Onboarding() {
                         >
                             Create Account
                         </Button>
-                        <Button
-                            variant="secondary"
-                            fullWidth
-                            onClick={() => handleGoogleLogin('signup')}
-                            style={{ borderRadius: '16px', height: '56px', fontSize: '13px', display: 'flex', gap: '10px' }}
-                        >
-                            <img src="https://www.svgrepo.com/show/475656/google-color.svg" alt="G" style={{ width: '24px' }} />
-                            Continue with Google
-                        </Button>
+                        {SHOW_GOOGLE_LOGIN && (
+                            <Button
+                                variant="secondary"
+                                fullWidth
+                                onClick={() => handleGoogleLogin('signup')}
+                                style={{ borderRadius: '16px', height: '56px', fontSize: '13px', display: 'flex', gap: '10px' }}
+                            >
+                                <img src="https://www.svgrepo.com/show/475656/google-color.svg" alt="G" style={{ width: '24px' }} />
+                                Continue with Google
+                            </Button>
+                        )}
                         <Button
                             variant="outline"
                             fullWidth
@@ -374,21 +378,25 @@ export default function Onboarding() {
                         <h2 style={{ ...titleStyle, fontSize: '17px', marginBottom: '24px' }}>Create Account</h2>
                         {error && <p style={errorStyle}>{error}</p>}
 
-                        <Button
-                            variant="secondary"
-                            fullWidth
-                            onClick={() => handleGoogleLogin('signup')}
-                            style={{ borderRadius: '16px', height: '48px', fontSize: '11px', marginBottom: '24px', display: 'flex', gap: '10px' }}
-                        >
-                            <img src="https://www.svgrepo.com/show/475656/google-color.svg" alt="G" style={{ width: '20px' }} />
-                            Sign Up with Google
-                        </Button>
+                        {SHOW_GOOGLE_LOGIN && (
+                            <>
+                                <Button
+                                    variant="secondary"
+                                    fullWidth
+                                    onClick={() => handleGoogleLogin('signup')}
+                                    style={{ borderRadius: '16px', height: '48px', fontSize: '11px', marginBottom: '24px', display: 'flex', gap: '10px' }}
+                                >
+                                    <img src="https://www.svgrepo.com/show/475656/google-color.svg" alt="G" style={{ width: '20px' }} />
+                                    Sign Up with Google
+                                </Button>
 
-                        <div style={{ display: 'flex', alignItems: 'center', margin: '20px 0', color: 'var(--text-secondary)' }}>
-                            <div style={{ flex: 1, height: '1px', background: 'var(--border-color)' }}></div>
-                            <span style={{ padding: '0 10px', fontSize: '9px' }}>OR</span>
-                            <div style={{ flex: 1, height: '1px', background: 'var(--border-color)' }}></div>
-                        </div>
+                                <div style={{ display: 'flex', alignItems: 'center', margin: '20px 0', color: 'var(--text-secondary)' }}>
+                                    <div style={{ flex: 1, height: '1px', background: 'var(--border-color)' }}></div>
+                                    <span style={{ padding: '0 10px', fontSize: '9px' }}>OR</span>
+                                    <div style={{ flex: 1, height: '1px', background: 'var(--border-color)' }}></div>
+                                </div>
+                            </>
+                        )}
 
                         <form onSubmit={handleSignUp}>
                             <Input
@@ -546,21 +554,25 @@ export default function Onboarding() {
                         <h2 style={{ ...titleStyle, fontSize: '17px', marginBottom: '24px' }}>Welcome Back</h2>
                         {error && <p style={errorStyle}>{error}</p>}
 
-                        <Button
-                            variant="secondary"
-                            fullWidth
-                            onClick={() => handleGoogleLogin('signin')}
-                            style={{ borderRadius: '16px', height: '48px', fontSize: '11px', marginBottom: '24px', display: 'flex', gap: '10px' }}
-                        >
-                            <img src="https://www.svgrepo.com/show/475656/google-color.svg" alt="G" style={{ width: '20px' }} />
-                            Sign In with Google
-                        </Button>
+                        {SHOW_GOOGLE_LOGIN && (
+                            <>
+                                <Button
+                                    variant="secondary"
+                                    fullWidth
+                                    onClick={() => handleGoogleLogin('signin')}
+                                    style={{ borderRadius: '16px', height: '48px', fontSize: '11px', marginBottom: '24px', display: 'flex', gap: '10px' }}
+                                >
+                                    <img src="https://www.svgrepo.com/show/475656/google-color.svg" alt="G" style={{ width: '20px' }} />
+                                    Sign In with Google
+                                </Button>
 
-                        <div style={{ display: 'flex', alignItems: 'center', margin: '20px 0', color: 'var(--text-secondary)' }}>
-                            <div style={{ flex: 1, height: '1px', background: 'var(--border-color)' }}></div>
-                            <span style={{ padding: '0 10px', fontSize: '9px' }}>OR</span>
-                            <div style={{ flex: 1, height: '1px', background: 'var(--border-color)' }}></div>
-                        </div>
+                                <div style={{ display: 'flex', alignItems: 'center', margin: '20px 0', color: 'var(--text-secondary)' }}>
+                                    <div style={{ flex: 1, height: '1px', background: 'var(--border-color)' }}></div>
+                                    <span style={{ padding: '0 10px', fontSize: '9px' }}>OR</span>
+                                    <div style={{ flex: 1, height: '1px', background: 'var(--border-color)' }}></div>
+                                </div>
+                            </>
+                        )}
 
                         <form onSubmit={handleSignIn}>
                             <Input
