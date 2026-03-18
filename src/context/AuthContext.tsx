@@ -212,6 +212,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         localStorage.removeItem('linqAuthToken');
         localStorage.removeItem('linqUser');
         localStorage.removeItem('linqIsVerified');
+        // Clear session cookie for landing page
+        document.cookie = "linq_session_active=; domain=.uselinq.xyz; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax";
         invalidateBeneficiariesCache();
         setUser(null);
         setToken(null);
@@ -230,6 +232,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             setUser(newUser);
         }
         setIsAuthenticated(true);
+        // Set session cookie for landing page to detect
+        document.cookie = "linq_session_active=true; domain=.uselinq.xyz; path=/; max-age=604800; SameSite=Lax";
         // Check verification immediately after login
         // We can't await here easily inside setting state logic, but effects will trigger or allow manual call
         // Actually, we can just call it
