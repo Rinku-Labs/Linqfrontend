@@ -29,19 +29,22 @@ createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <QueryClientProvider client={queryClient}>
       <SuiClientProvider networks={networkConfig} defaultNetwork="mainnet">
-        <WalletProvider autoConnect>
+        <WalletProvider autoConnect
+          slushWallet={{
+            name: 'linq',
+          }}>
           <AptosWalletProvider>
             <BscWalletProvider>
               <AuthProvider>
                 <ChainProvider>
                   <SavingsProvider>
-                  <TronWalletProvider>
-                    <SolanaWalletProvider>
-                      <ThemeProvider>
-                        <App />
-                      </ThemeProvider>
-                    </SolanaWalletProvider>
-                  </TronWalletProvider>
+                    <TronWalletProvider>
+                      <SolanaWalletProvider>
+                        <ThemeProvider>
+                          <App />
+                        </ThemeProvider>
+                      </SolanaWalletProvider>
+                    </TronWalletProvider>
                   </SavingsProvider>
                 </ChainProvider>
               </AuthProvider>
