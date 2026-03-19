@@ -10,10 +10,10 @@
  * - Everything else -> 'processing'
  */
 export const mapTransactionStatus = (status: string): 'initiated' | 'processing' | 'completed' | 'refunded' | 'failed' => {
-    const s = status.toLowerCase();
+    const s = status?.toLowerCase()?.trim() || '';
 
     // Success states
-    if (['disbursed', 'completed', 'success', 'received_in_treasury', 'settled in treasury', 'crypto confirmed'].includes(s)) {
+    if (['disbursed', 'completed', 'success', 'received_in_treasury', 'received in treasury', 'settled in treasury', 'settled_in_treasury', 'crypto confirmed'].includes(s)) {
         return 'completed';
     }
 
