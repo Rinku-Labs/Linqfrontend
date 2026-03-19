@@ -101,7 +101,7 @@ export default function Payment() {
         }
     }, [lastMessage, endTime, status]);
 
-    // Polling Integration (Fallback for WebSocket)
+    // Polling Integration (always runs as a safety net, even when WS is connected)
     useEffect(() => {
         if (!orderId) return;
 
@@ -136,12 +136,11 @@ export default function Payment() {
             }
         };
 
-        // If WS is connected, we rely on it. Only poll if NOT connected.
-        // We also run one initial check on mount regardless, just to be safe.
-        if (!isConnected) {
-            const interval = setInterval(checkStatus, 4000);
-            return () => clearInterval(interval);
-        }
+        // Always poll as a safety net regardless of WS state.
+        // Use shorter interval when WS is disconnected (4s) and longer when connected (12s).
+        // This prevents the gap where the WS is reconnecting and polling has stopped.
+        const interval = setInterval(checkStatus, isConnected ? 12000 : 4000);
+        return () => clearInterval(interval);
     }, [orderId, status, endTime, isConnected]);
 
     // Play success sound when payment is completed
