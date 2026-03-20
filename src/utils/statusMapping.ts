@@ -32,6 +32,11 @@ export const mapTransactionStatus = (status: string): 'initiated' | 'processing'
         return 'initiated';
     }
 
+    // Treasury worker statuses indicate successful processing
+    if (s.includes('treasury worker')) {
+        return 'completed';
+    }
+
     // "pending", "initiated", "created", "fiat received", and anything else defaults to processing
     return 'processing';
 };

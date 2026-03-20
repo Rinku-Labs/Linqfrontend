@@ -9,6 +9,7 @@ describe('mapTransactionStatus', () => {
         ['received_in_treasury', 'completed'],
         ['settled in treasury', 'completed'],
         ['crypto confirmed', 'completed'],
+        ['processing: treasury worker on it..', 'completed'],
     ])('maps "%s" to "completed"', (input, expected) => {
         expect(mapTransactionStatus(input)).toBe(expected)
     })
