@@ -241,7 +241,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
         setIsAuthenticated(true);
         // Set session cookie for landing page to detect
-        document.cookie = "linq_session_active=true; domain=.uselinq.xyz; path=/; max-age=604800; SameSite=Lax";
+        document.cookie = "linq_session_active=true; domain=.uselinq.xyz; path=/; max-age=31536000; SameSite=Lax";
         // Check verification immediately after login
         // We can't await here easily inside setting state logic, but effects will trigger or allow manual call
         // Actually, we can just call it
