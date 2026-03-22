@@ -66,11 +66,13 @@ const getLastKnownRate = (): number => {
     return FALLBACK_RATE;
 };
 
-export const fetchRate = async (): Promise<number> => {
-    // Return cached rate if still fresh
-    const cached = getCachedRate();
-    if (cached !== null) {
-        return cached;
+export const fetchRate = async (forceRefresh = false): Promise<number> => {
+    // Return cached rate if still fresh (unless force-refreshing)
+    if (!forceRefresh) {
+        const cached = getCachedRate();
+        if (cached !== null) {
+            return cached;
+        }
     }
 
     // Error backoff: if the API failed recently, return the last known rate

@@ -126,16 +126,30 @@ export default function Confirm() {
     const accountNumber = state?.accountNumber ?? '--';
     const bankLogo = state?.bankLogo;
 
-    // Fetch the current rate via shared cache
+    // Always fetch a fresh rate on mount and when page becomes visible (e.g. tab switch, refresh)
     useEffect(() => {
-        fetchCachedRate()
-            .then(rate => {
-                if (rate > 0) setCurrentRate(rate);
-                else setCurrentRate(state?.rate ?? 1460);
-            })
-            .catch(() => setCurrentRate(state?.rate ?? 1460))
-            .finally(() => setIsRateLoading(false));
-    }, [state?.rate]);
+        const loadFreshRate = () => {
+            setIsRateLoading(true);
+            fetchCachedRate(true)
+                .then(rate => {
+                    if (rate > 0) setCurrentRate(rate);
+                    else setCurrentRate(state?.rate ?? 1460);
+                })
+                .catch(() => setCurrentRate(state?.rate ?? 1460))
+                .finally(() => setIsRateLoading(false));
+        };
+
+        loadFreshRate();
+
+        const handleVisibilityChange = () => {
+            if (document.visibilityState === 'visible') {
+                loadFreshRate();
+            }
+        };
+
+        document.addEventListener('visibilitychange', handleVisibilityChange);
+        return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+    }, []);
 
     // Calculate NGN amount with current rate
     const ngnAmount = amount * currentRate;
