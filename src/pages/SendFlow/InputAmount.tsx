@@ -14,8 +14,6 @@ import { formatUnits } from 'viem';
 import ChainSelector from '../../components/ChainSelector';
 import { useChain } from '../../context/ChainContext';
 import nairaLogo from '../../assets/naira.png';
-import { fetchOrders } from '../../utils/ordersCache';
-import { calculateDailyOffRampVolume, DAILY_LIMIT } from '../../utils/volumeUtils';
 
 export default function InputAmount() {
     const navigate = useNavigate();
@@ -44,9 +42,7 @@ export default function InputAmount() {
     const [tronBalance, setTronBalance] = useState<number | null>(null);
     const [isTronLoading, setIsTronLoading] = useState(false);
 
-    // Daily Limit State
-    const [remainingLimit, setRemainingLimit] = useState<number>(DAILY_LIMIT);
-    const [isLoadingOrders, setIsLoadingOrders] = useState(true);
+
 
     // Redirect to dashboard if state is missing (page was reloaded)
     const accountDetails = location.state as { accountNumber?: string; bankName?: string; recipientUsername?: string } | null;
@@ -211,15 +207,8 @@ export default function InputAmount() {
                 // Fetch rate (via shared cache)
                 const rate = await fetchCachedRate();
                 if (rate > 0) setExchangeRate(rate);
-
-                // Fetch orders for limit calculation
-                const orders = await fetchOrders(100);
-                const dailyVolume = calculateDailyOffRampVolume(orders);
-                setRemainingLimit(Math.max(0, DAILY_LIMIT - dailyVolume));
             } catch (error) {
                 console.error("Failed to fetch data", error);
-            } finally {
-                setIsLoadingOrders(false);
             }
         };
         loadData();
@@ -432,7 +421,6 @@ export default function InputAmount() {
                     <Button
                         fullWidth
                         onClick={() => {
-                            if (isLoadingOrders) return;
                             setError(null);
 
                             const numAmount = parseFloat(amount) || 0;
@@ -450,12 +438,6 @@ export default function InputAmount() {
                                 return;
                             }
 
-                            // Check Daily Limit
-                            if (usdAmount > remainingLimit) {
-                                setError(`Daily send limit exceeded. You have $${remainingLimit.toFixed(2)} remaining for today.`);
-                                return;
-                            }
-
                             // Calculate NGN equivalent for receiver
                             const ngnAmount = currency === 'NGN' ? numAmount : numAmount * exchangeRate;
 
@@ -470,7 +452,7 @@ export default function InputAmount() {
                             });
                         }}
                     >
-                        {isLoadingOrders ? 'Checking Limit...' : 'Confirm Amount'}
+                        Confirm Amount
                     </Button>
                 </div>
             </div>

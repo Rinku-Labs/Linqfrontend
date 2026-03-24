@@ -15,7 +15,6 @@ import type { Order } from '../components/TransactionPopup';
 
 import { fetchOrders } from '../utils/ordersCache';
 import { fetchRate } from '../utils/rateCache';
-import { calculateDailyOffRampVolume, DAILY_LIMIT } from '../utils/volumeUtils';
 import { formatDate } from '../utils/dateFormatter';
 import { BalanceCardSkeleton, TransactionListSkeleton, QuickActionsSkeleton } from '../components/ui/SkeletonLoader';
 import EmptyState from '../components/ui/EmptyState';
@@ -93,7 +92,6 @@ export default function Home() {
     const [transactions, setTransactions] = useState<Order[]>([]);
     const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
     const [exchangeRate, setExchangeRate] = useState<number>(0);
-    const [dailyVolume, setDailyVolume] = useState<number>(0);
     const [isDataLoading, setIsDataLoading] = useState(true);
 
     // USDC coin type on Sui mainnet
@@ -199,7 +197,6 @@ export default function Home() {
                 fetchRate(),
             ]);
             setTransactions(orders);
-            setDailyVolume(calculateDailyOffRampVolume(orders));
             setExchangeRate(rate);
         } finally {
             if (!isSilent) setIsDataLoading(false);
@@ -418,11 +415,8 @@ export default function Home() {
                             onClick={() => navigate('/send/details')}
                             style={{
                                 borderRadius: '12px',
-                                height: '48px',
-                                opacity: dailyVolume >= DAILY_LIMIT ? 0.5 : 1,
-                                cursor: dailyVolume >= DAILY_LIMIT ? 'not-allowed' : 'pointer'
+                                height: '48px'
                             }}
-                            disabled={dailyVolume >= DAILY_LIMIT}
                         >
                             <ArrowUpRight size={20} /> Transfer
                         </Button>
