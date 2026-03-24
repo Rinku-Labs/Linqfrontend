@@ -22,3 +22,36 @@ export function trimInput(input: string): string {
     if (typeof input !== 'string') return input;
     return input.trim();
 }
+/**
+ * Sanitizes technical error messages to be user-friendly.
+ * Strips URLs, raw JSON, and technical keywords.
+ */
+export function sanitizeErrorMessage(message: string | undefined): string {
+    if (!message || typeof message !== 'string') return 'An error occurred. Please try again.';
+
+    let sanitized = message;
+
+    // 1. Strip URLs (http/https)
+    sanitized = sanitized.replace(/https?:\/\/[^\s"']+/g, '');
+
+    // 2. Map common technical phrases to user-friendly ones
+    const lower = sanitized.toLowerCase();
+    if (lower.includes('timeout') || lower.includes('deadline exceeded')) {
+        return 'The request timed out. Please check your connection and try again.';
+    }
+    if (lower.includes('insufficient')) {
+        return 'Insufficient funds or limit exceeded.';
+    }
+    if (lower.includes('nomba') || lower.includes('flutterwave') || lower.includes('request failed')) {
+        return 'Payment processing failed. Please try again in a few minutes.';
+    }
+    if (sanitized.includes('{') && sanitized.includes('}')) {
+        return 'An internal error occurred while processing your request.';
+    }
+
+    // 3. Clean up any remaining artifacts like "Transaction Failed: " prefix if it's followed by nothing useful
+    sanitized = sanitized.replace(/^Transaction Failed:\s*/i, '');
+    sanitized = sanitized.replace(/^request failed:\s*/i, '');
+
+    return sanitized.trim() || 'An error occurred. Please try again.';
+}

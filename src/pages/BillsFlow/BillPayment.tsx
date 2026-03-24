@@ -23,6 +23,7 @@ import { useWebSocket } from '../../hooks/useWebSocket';
 import { playSuccessSound } from '../../utils/audio';
 import { invalidateOrdersCache } from '../../utils/ordersCache';
 import { useAuth } from '../../context/AuthContext';
+import { sanitizeErrorMessage } from '../../utils/sanitize';
 
 const SUI_USDC_COIN_TYPE = "0xdba34672e30cb065b1f93e3ab55318768fd6fef66c15942c9f7cb846e2f900e7::usdc::USDC";
 const SOLANA_USDC_MINT = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v";
@@ -374,16 +375,7 @@ export default function BillPayment() {
         } else if (orderStatus === 'failed' || orderStatus === 'timeout: no deposit received') {
             setStatus('failed');
 
-            let sanitizedDescription = description || 'Payment failed.';
-            // Sanitize raw API errors and JSON responses
-            if (
-                sanitizedDescription.toLowerCase().includes('flutterwave') ||
-                sanitizedDescription.toLowerCase().includes('api returned') ||
-                sanitizedDescription.includes('{') ||
-                sanitizedDescription.includes('}')
-            ) {
-                sanitizedDescription = 'Payment processing failed. Please try again in a few minutes.';
-            }
+            const sanitizedDescription = sanitizeErrorMessage(description);
 
             setMessage(orderStatus === 'timeout: no deposit received'
                 ? 'No deposit received. Please try again.'
@@ -511,7 +503,9 @@ export default function BillPayment() {
                             {status === 'failed' && 'Payment Failed'}
                             {status === 'cancelled' && 'Transaction Cancelled'}
                         </h2>
-                        <p style={{ marginTop: '8px', color: 'var(--text-secondary)' }}>{message}</p>
+                        <p style={{ marginTop: '8px', color: 'var(--text-secondary)' }}>
+                            {status === 'failed' || status === 'cancelled' ? '' : message}
+                        </p>
 
                         {(status === 'failed' || status === 'cancelled') && (
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginTop: '20px', width: '100%' }}>

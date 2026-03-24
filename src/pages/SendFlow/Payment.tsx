@@ -193,7 +193,9 @@ export default function Payment() {
                             {status === 'failed' && 'Payment Failed'}
                             {status === 'cancelled' && 'Transaction Cancelled'}
                         </h2>
-                        <p style={{ marginTop: '8px', color: 'var(--text-secondary)' }}>{message}</p>
+                        <p style={{ marginTop: '8px', color: 'var(--text-secondary)' }}>
+                            {status === 'failed' || status === 'cancelled' ? '' : message}
+                        </p>
 
                         {(status === 'failed' || status === 'cancelled') && confirmState && (
                             <Button onClick={() => navigate('/send/confirm', { state: confirmState })} style={{ marginTop: '20px' }}>Try Again</Button>
