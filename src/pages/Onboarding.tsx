@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
+import { Info } from 'lucide-react';
 import logo from '../assets/logo.png';
 import Button from '../components/ui/Button';
 import Input from '../components/ui/Input';
@@ -310,6 +311,24 @@ export default function Onboarding() {
         marginBottom: '16px',
     };
 
+    const calloutStyle: React.CSSProperties = {
+        background: 'rgba(139, 92, 246, 0.05)',
+        color: 'var(--text-main)',
+        padding: '20px 24px',
+        borderRadius: '24px',
+        fontSize: '12px',
+        lineHeight: '1.6',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '12px',
+        marginBottom: '32px',
+        border: '1px solid rgba(139, 92, 246, 0.15)',
+        textAlign: 'left',
+        animation: 'slideUp 0.6s cubic-bezier(0.4, 0, 0.2, 1) forwards',
+        boxShadow: '0 10px 30px rgba(139, 92, 246, 0.05)',
+        width: '100%',
+    };
+
     // Welcome View
     if (view === 'welcome') {
         return (
@@ -332,7 +351,17 @@ export default function Onboarding() {
                     <h1 style={titleStyle}>Welcome to Linq</h1>
                     <p style={subtitleStyle}>Your gateway to seamless crypto transfers</p>
 
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginTop: '24px' }}>
+                    <div style={calloutStyle}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--primary)' }}>
+                            <Info size={18} />
+                            <span style={{ fontWeight: 700 }}>Welcome back, Linq family! 💜</span>
+                        </div>
+                        <p style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>
+                            We've completely rebuilt Linq for v2. Since this is a brand new system, you'll need to create a fresh account to get started. We hope you enjoy the upgrade!
+                        </p>
+                    </div>
+
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginTop: '8px' }}>
                         <Button
                             variant="primary"
                             fullWidth
@@ -534,9 +563,9 @@ export default function Onboarding() {
                         </p>
                     </div>
                 </div>
-                <TermsModal 
-                    isOpen={showTermsModal} 
-                    onClose={() => setShowTermsModal(false)} 
+                <TermsModal
+                    isOpen={showTermsModal}
+                    onClose={() => setShowTermsModal(false)}
                 />
             </div>
         );
@@ -552,6 +581,17 @@ export default function Onboarding() {
                     </div>
                     <div style={cardStyle}>
                         <h2 style={{ ...titleStyle, fontSize: '17px', marginBottom: '24px' }}>Welcome Back</h2>
+
+                        <div style={{ ...calloutStyle, padding: '16px', marginBottom: '24px' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--primary)' }}>
+                                <Info size={16} />
+                                <span style={{ fontWeight: 700, fontSize: '11px' }}>Note for v1 users</span>
+                            </div>
+                            <p style={{ fontSize: '10px', color: 'var(--text-secondary)', lineHeight: '1.5' }}>
+                                Linq v2 is a fresh start. Please create a new account to experience the new features. We're excited to have you back! ✨
+                            </p>
+                        </div>
+
                         {error && <p style={errorStyle}>{error}</p>}
 
                         {SHOW_GOOGLE_LOGIN && (
