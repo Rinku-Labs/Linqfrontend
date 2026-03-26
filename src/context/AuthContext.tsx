@@ -50,7 +50,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const [isVerified, setIsVerified] = useState<boolean>(() => {
         return localStorage.getItem('linqIsVerified') === 'true';
     });
-    const [isCheckingVerification, setIsCheckingVerification] = useState<boolean>(false);
+    const [isCheckingVerification, setIsCheckingVerification] = useState<boolean>(() => {
+        const storedToken = localStorage.getItem('linqAuthToken');
+        const storedIsVerified = localStorage.getItem('linqIsVerified') === 'true';
+        return !!storedToken && !storedIsVerified;
+    });
 
     // Wallet Source State
     const [zkAddress] = useState<string | null>(localStorage.getItem('zkLoginAddress'));
@@ -74,9 +78,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const lastVerificationCheckRef = React.useRef<number>(0);
 
     const checkVerificationStatus = async (force: boolean = false) => {
-        if (!token) return;
+        if (!token) {
+            setIsCheckingVerification(false);
+            return;
+        }
         // Skip if already verified (unless forced)
-        if (isVerified && !force) return;
+        if (isVerified && !force) {
+            setIsCheckingVerification(false);
+            return;
+        }
         // Throttle: skip if checked within the last 30 seconds (unless forced)
         const now = Date.now();
         if (!force && now - lastVerificationCheckRef.current < 30000) return;
@@ -243,8 +253,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         // Set session cookie for landing page to detect
         document.cookie = "linq_session_active=true; domain=.uselinq.xyz; path=/; max-age=31536000; SameSite=Lax";
         // Check verification immediately after login
-        // We can't await here easily inside setting state logic, but effects will trigger or allow manual call
-        // Actually, we can just call it
+        setIsCheckingVerification(true);
         setTimeout(checkVerificationStatus, 100);
         // Pre-load beneficiaries on login
         fetchAndCacheBeneficiaries();
