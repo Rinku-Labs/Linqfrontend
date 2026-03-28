@@ -9,6 +9,7 @@ interface User {
     username: string;
     email: string;
     pfp?: string;
+    verified?: boolean;
     // Add other fields as needed
 }
 
@@ -84,7 +85,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const lastVerificationCheckRef = React.useRef<number>(0);
 
     const checkVerificationStatus = async (force: boolean = false) => {
-        if (!token) {
+        if (!localStorage.getItem('linqAuthToken')) {
             setIsCheckingVerification(false);
             return;
         }
@@ -263,9 +264,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setIsAuthenticated(true);
         // Set session cookie for landing page to detect
         document.cookie = "linq_session_active=true; domain=.uselinq.xyz; path=/; max-age=31536000; SameSite=Lax";
-        // Check verification immediately after login
-        setIsCheckingVerification(true);
-        setTimeout(checkVerificationStatus, 100);
+        // If the login response already includes verified=true, set it immediately
+        // to avoid flashing the verification modal on a fresh device/browser.
+        if (newUser?.verified) {
+            markVerified();
+            setIsCheckingVerification(false);
+        } else {
+            setIsCheckingVerification(true);
+            setTimeout(() => checkVerificationStatus(true), 100);
+        }
         // Pre-load beneficiaries on login
         fetchAndCacheBeneficiaries();
     };
