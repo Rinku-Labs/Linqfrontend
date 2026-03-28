@@ -38,6 +38,7 @@ interface AuthContextType {
     isCheckingVerification: boolean;
     checkVerificationStatus: (force?: boolean) => Promise<void>;
     markVerified: () => void;
+    hasTrialRemaining: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -55,6 +56,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const storedIsVerified = localStorage.getItem('linqIsVerified') === 'true';
         return !!storedToken && !storedIsVerified;
     });
+    const [trialVolumeUsed, setTrialVolumeUsed] = useState<number>(() => {
+        const stored = localStorage.getItem('linqTrialVolumeUsed');
+        return stored ? parseFloat(stored) : 0;
+    });
+    const hasTrialRemaining = trialVolumeUsed < 5;
 
     // Wallet Source State
     const [zkAddress] = useState<string | null>(localStorage.getItem('zkLoginAddress'));
@@ -100,6 +106,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 localStorage.setItem('linqIsVerified', 'true');
             } else {
                 localStorage.removeItem('linqIsVerified');
+            }
+            // Track trial volume for unverified users
+            if (data.trialVolumeUsed !== undefined) {
+                setTrialVolumeUsed(data.trialVolumeUsed);
+                localStorage.setItem('linqTrialVolumeUsed', String(data.trialVolumeUsed));
             }
         } catch (error) {
             // Default to false on error to be safe, or just keep previous state
@@ -295,7 +306,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             hasPin, setTransactionPin, validatePin,
             activeWalletSource, setActiveWalletSource, zkAddress,
             updateProfilePicture,
-            isVerified, isCheckingVerification, checkVerificationStatus, markVerified
+            isVerified, isCheckingVerification, checkVerificationStatus, markVerified, hasTrialRemaining
         }}>
             {children}
         </AuthContext.Provider>

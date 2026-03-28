@@ -6,7 +6,7 @@ import { useAuth } from '../context/AuthContext';
 import '../index.css';
 
 export default function MainLayout() {
-    const { isVerified, isCheckingVerification } = useAuth();
+    const { isVerified, isCheckingVerification, hasTrialRemaining } = useAuth();
 
     return (
         <div style={{
@@ -24,7 +24,7 @@ export default function MainLayout() {
             </div>
             <BottomNav />
             <Toaster position="top-center" />
-            <VerificationOverlay isVerified={isVerified} isCheckingVerification={isCheckingVerification} />
+            <VerificationOverlay isVerified={isVerified} isCheckingVerification={isCheckingVerification} hasTrialRemaining={hasTrialRemaining} />
         </div>
     );
 }

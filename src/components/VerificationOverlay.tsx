@@ -4,12 +4,14 @@ import { ShieldAlert, LogOut } from 'lucide-react';
 interface VerificationOverlayProps {
     isVerified: boolean;
     isCheckingVerification?: boolean;
+    hasTrialRemaining?: boolean;
 }
 
-export default function VerificationOverlay({ isVerified, isCheckingVerification }: VerificationOverlayProps) {
+export default function VerificationOverlay({ isVerified, isCheckingVerification, hasTrialRemaining }: VerificationOverlayProps) {
     const navigate = useNavigate();
 
-    if (isVerified || isCheckingVerification) return null;
+    // Don't block if verified, still checking, or user has trial volume remaining
+    if (isVerified || isCheckingVerification || hasTrialRemaining) return null;
 
     const handleLogout = () => {
         localStorage.removeItem('linqAuthToken');

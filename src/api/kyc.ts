@@ -8,6 +8,7 @@ export interface VerificationLinkResponse {
 export interface VerificationStatusResponse {
     verified: boolean;
     verification_status: boolean;
+    trialVolumeUsed: number;
 }
 
 export interface VerifyNINResponse {
