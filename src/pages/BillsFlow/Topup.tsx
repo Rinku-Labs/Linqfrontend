@@ -658,7 +658,6 @@ export default function Topup() {
                                     outline: 'none',
                                 }}
                             />
-                            <ChevronDown size={18} color="var(--text-secondary)" />
                         </div>
 
                         {/* Network Selector Dropdown */}

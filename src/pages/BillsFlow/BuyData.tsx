@@ -224,7 +224,6 @@ export default function BuyData() {
                                 outline: 'none',
                             }}
                         />
-                        <ChevronDown size={18} color="var(--text-secondary)" />
                     </div>
 
                     {/* Network Selector Dropdown */}
