@@ -66,7 +66,7 @@ export default function VerificationOverlay({ isVerified, isCheckingVerification
                     marginBottom: '12px',
                     color: 'var(--text-main)',
                 }}>
-                    Verification Required
+                    Identity Verification Required
                 </h2>
 
                 {/* Description */}
