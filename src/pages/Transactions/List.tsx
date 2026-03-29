@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowUpRight, RefreshCw, Inbox, Search, X, BarChart3, Smartphone } from 'lucide-react';
+import { Inbox, Search, X, BarChart3 } from 'lucide-react';
+import { getTransactionIcon } from '../../utils/transactionIcons';
 import TransactionPopup, { formatStatus, getStatusStyle } from '../../components/TransactionPopup';
 import type { Order } from '../../components/TransactionPopup';
 import { formatDate } from '../../utils/dateFormatter';
@@ -242,12 +243,7 @@ export default function TransactionsList() {
                                                 width: '40px', height: '40px', borderRadius: '50%',
                                                 background: statusStyle.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0
                                             }}>
-                                                {order.orderType === 'bill-payment'
-                                                    ? <Smartphone size={18} color={statusStyle.color} />
-                                                    : order.coin?.sui
-                                                        ? <RefreshCw size={18} color={statusStyle.color} />
-                                                        : <ArrowUpRight size={18} color={statusStyle.color} />
-                                                }
+                                                {(() => { const Icon = getTransactionIcon(order); return <Icon size={18} color={statusStyle.color} />; })()}
                                             </div>
                                             <div style={{ flex: 1, minWidth: 0 }}>
                                                 <p style={{ fontSize: '10px', fontWeight: 500, color: 'var(--text-main)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>

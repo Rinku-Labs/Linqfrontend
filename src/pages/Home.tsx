@@ -1,4 +1,5 @@
 import { ArrowUpRight, ArrowDownLeft, RefreshCw, Smartphone, Zap, Eye, EyeOff, Wallet, Inbox, Copy } from 'lucide-react';
+import { getTransactionIcon } from '../utils/transactionIcons';
 import logo from '../assets/logo.png';
 import nairaLogo from '../assets/naira.png';
 import balanceCardBg from '../assets/balance-card-bg.png';
@@ -531,10 +532,10 @@ export default function Home() {
                                 >
                                     <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flex: 1, minWidth: 0 }}>
                                         <div style={{
-                                            width: '40px', height: '40px', borderRadius: '50%', background: 'var(--progress-bg)',
+                                            width: '40px', height: '40px', borderRadius: '50%', background: getStatusStyle(trx.status).bg,
                                             display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0
                                         }}>
-                                            {trx.coin?.sui ? <RefreshCw size={20} color="var(--text-secondary)" /> : <ArrowUpRight size={20} color="var(--text-secondary)" />}
+                                            {(() => { const Icon = getTransactionIcon(trx); return <Icon size={20} color={getStatusStyle(trx.status).color} />; })()}
                                         </div>
                                         <div style={{ flex: 1, minWidth: 0 }}>
                                             <p style={{ fontSize: '10px', fontWeight: 500, marginBottom: '2px', color: 'var(--text-main)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '100%' }}>{trx.accountName || trx.bankName || 'Transfer'}</p>
