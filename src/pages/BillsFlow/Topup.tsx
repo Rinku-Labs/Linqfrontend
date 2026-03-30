@@ -37,6 +37,28 @@ function parseDataSize(plan: { name: string; short_name: string }): string {
     return plan.short_name || plan.name;
 }
 
+// Helper function to categorize raw durations into Daily, Weekly, Monthly
+function categorizeDuration(plan: { name: string; short_name: string }): string {
+    const text = `${plan.short_name} ${plan.name}`.toLowerCase().replace(/\s+/g, '');
+
+    if (text.includes('month') || text.includes('30day') || text.includes('60day') || text.includes('90day')) return 'Monthly';
+    if (text.includes('week')) return 'Weekly';
+    if (text.includes('year') || text.includes('365day')) return 'Yearly';
+    if (text.includes('hour') || text.includes('hr') || text.includes('night') || text.includes('mid')) return 'Daily';
+
+    const match = text.match(/(\d+)day/);
+    if (match) {
+        const days = parseInt(match[1], 10);
+        if (days >= 1 && days <= 6) return 'Daily';
+        if (days >= 7 && days <= 29) return 'Weekly';
+        if (days >= 30) return 'Monthly';
+    }
+
+    if (text.includes('daily') || text.includes('day')) return 'Daily';
+
+    return 'Other';
+}
+
 export default function Topup() {
     const navigate = useNavigate();
     const { selectedChain } = useChain();
@@ -59,6 +81,7 @@ export default function Topup() {
     const [dataPlans, setDataPlans] = useState<BillCategory[]>([]);
     const [selectedPlan, setSelectedPlan] = useState<BillCategory | null>(null);
     const [isLoadingPlans, setIsLoadingPlans] = useState(false);
+    const [activeDataDuration, setActiveDataDuration] = useState<string>('');
 
     // Electricity-specific state
     const [electricityBillers, setElectricityBillers] = useState<BillCategory[]>([]);
@@ -134,6 +157,28 @@ export default function Topup() {
     // Sort data plans by amount ascending
     const sortedDataPlans = [...dataPlans].sort((a, b) => a.amount - b.amount);
 
+    // Group data plans by duration category
+    const groupedDataPlans = sortedDataPlans.reduce((groups, plan) => {
+        const key = categorizeDuration(plan);
+        if (!groups[key]) groups[key] = [];
+        groups[key].push(plan);
+        return groups;
+    }, {} as Record<string, BillCategory[]>);
+
+    const dataDurations = Object.keys(groupedDataPlans).sort((a, b) => {
+        const order = ['Daily', 'Weekly', 'Monthly', 'Yearly'];
+        const aIdx = order.indexOf(a);
+        const bIdx = order.indexOf(b);
+        if (aIdx !== -1 && bIdx !== -1) return aIdx - bIdx;
+        if (aIdx !== -1) return -1;
+        if (bIdx !== -1) return 1;
+        return a.localeCompare(b);
+    });
+
+    const activePlans = activeDataDuration && groupedDataPlans[activeDataDuration]
+        ? groupedDataPlans[activeDataDuration]
+        : sortedDataPlans;
+
     // Auto-detect network from phone number prefix
     useEffect(() => {
         const detected = detectNetwork(phoneNumber);
@@ -171,6 +216,14 @@ export default function Topup() {
                 const response = await getBillers('MOBILEDATA');
                 const plans = response.data.filter((p: any) => p.biller_code === network.billerCode);
                 setDataPlans(plans);
+
+                // Auto-select first duration category
+                if (plans.length > 0) {
+                    const durations = Array.from(new Set(plans.map((p: any) => categorizeDuration(p))));
+                    if (durations.includes('Daily')) setActiveDataDuration('Daily');
+                    else if (durations.includes('Monthly')) setActiveDataDuration('Monthly');
+                    else setActiveDataDuration(durations[0] as string);
+                }
             } catch (_err) {
                 setError('Failed to load data plans. Please try again.');
             } finally {
@@ -1317,56 +1370,100 @@ export default function Topup() {
                                 No data plans available for {selectedNetwork}
                             </p>
                         ) : (
-                            <div style={{
-                                display: 'grid',
-                                gridTemplateColumns: 'repeat(auto-fit, minmax(90px, 1fr))',
-                                gap: '10px',
-                            }}>
-                                {sortedDataPlans.map((plan, index) => {
-                                    const isSelected = selectedPlan?.item_code === plan.item_code;
-                                    const dataSize = parseDataSize(plan);
-                                    return (
-                                        <button
-                                            key={plan.item_code || index}
-                                            onClick={() => setSelectedPlan(plan)}
-                                            style={{
-                                                display: 'flex',
-                                                flexDirection: 'column',
-                                                alignItems: 'center',
-                                                gap: '4px',
-                                                padding: '14px 6px',
-                                                borderRadius: '14px',
-                                                border: isSelected ? '2px solid var(--primary)' : '1px solid var(--border-color)',
-                                                background: isSelected ? 'rgba(139, 92, 246, 0.06)' : 'transparent',
-                                                cursor: 'pointer',
-                                                transition: 'all 0.2s ease',
-                                                color: 'var(--text-main)',
-                                            }}
-                                        >
-                                            <span style={{
-                                                fontWeight: 700,
-                                                fontSize: '10px',
-                                                color: 'var(--primary)',
-                                            }}>
-                                                {dataSize}
-                                            </span>
-                                            <span style={{
-                                                fontWeight: 600,
-                                                fontSize: '9px',
-                                                color: 'var(--text-main)',
-                                            }}>
-                                                ₦{plan.amount.toLocaleString()}
-                                            </span>
-                                            <span style={{
-                                                fontSize: '9px',
-                                                color: 'var(--text-muted)',
-                                            }}>
-                                                (≈{(plan.amount / exchangeRate).toFixed(2)} USDC)
-                                            </span>
-                                        </button>
-                                    );
-                                })}
-                            </div>
+                            <>
+                                {/* Duration category tabs */}
+                                {dataDurations.length > 1 && (
+                                    <div style={{
+                                        display: 'flex',
+                                        gap: '8px',
+                                        marginBottom: '16px',
+                                        overflowX: 'auto',
+                                        scrollbarWidth: 'none',
+                                        msOverflowStyle: 'none',
+                                    }}>
+                                        {dataDurations.map(duration => {
+                                            const isActive = activeDataDuration === duration;
+                                            const count = groupedDataPlans[duration]?.length || 0;
+                                            return (
+                                                <button
+                                                    key={duration}
+                                                    onClick={() => {
+                                                        setActiveDataDuration(duration);
+                                                        setSelectedPlan(null);
+                                                    }}
+                                                    style={{
+                                                        padding: '8px 16px',
+                                                        borderRadius: '20px',
+                                                        border: 'none',
+                                                        background: isActive ? 'var(--primary)' : 'var(--input-bg)',
+                                                        color: isActive ? '#fff' : 'var(--text-secondary)',
+                                                        fontSize: '10px',
+                                                        fontWeight: 600,
+                                                        cursor: 'pointer',
+                                                        transition: 'all 0.2s ease',
+                                                        whiteSpace: 'nowrap',
+                                                        boxShadow: isActive ? '0 2px 8px rgba(139, 92, 246, 0.3)' : 'none',
+                                                    }}
+                                                >
+                                                    {duration} ({count})
+                                                </button>
+                                            );
+                                        })}
+                                    </div>
+                                )}
+
+                                {/* Data plan cards */}
+                                <div style={{
+                                    display: 'grid',
+                                    gridTemplateColumns: 'repeat(auto-fit, minmax(90px, 1fr))',
+                                    gap: '10px',
+                                }}>
+                                    {activePlans.map((plan, index) => {
+                                        const isSelected = selectedPlan?.item_code === plan.item_code;
+                                        const dataSize = parseDataSize(plan);
+                                        return (
+                                            <button
+                                                key={plan.item_code || index}
+                                                onClick={() => setSelectedPlan(plan)}
+                                                style={{
+                                                    display: 'flex',
+                                                    flexDirection: 'column',
+                                                    alignItems: 'center',
+                                                    gap: '4px',
+                                                    padding: '14px 6px',
+                                                    borderRadius: '14px',
+                                                    border: isSelected ? '2px solid var(--primary)' : '1px solid var(--border-color)',
+                                                    background: isSelected ? 'rgba(139, 92, 246, 0.06)' : 'transparent',
+                                                    cursor: 'pointer',
+                                                    transition: 'all 0.2s ease',
+                                                    color: 'var(--text-main)',
+                                                }}
+                                            >
+                                                <span style={{
+                                                    fontWeight: 700,
+                                                    fontSize: '10px',
+                                                    color: 'var(--primary)',
+                                                }}>
+                                                    {dataSize}
+                                                </span>
+                                                <span style={{
+                                                    fontWeight: 600,
+                                                    fontSize: '9px',
+                                                    color: 'var(--text-main)',
+                                                }}>
+                                                    ₦{plan.amount.toLocaleString()}
+                                                </span>
+                                                <span style={{
+                                                    fontSize: '9px',
+                                                    color: 'var(--text-muted)',
+                                                }}>
+                                                    (≈{(plan.amount / exchangeRate).toFixed(2)} USDC)
+                                                </span>
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                            </>
                         )}
                     </div>
                 )}
