@@ -6,10 +6,11 @@ import Button from '../components/ui/Button';
 import Input from '../components/ui/Input';
 import TermsModal from '../components/TermsModal';
 import { useAuth } from '../context/AuthContext';
+import client from '../api/client';
 
 import { getGoogleLoginUrl, parseGoogleToken, computeGoogleAddress, derivePasswordFromSub } from '../utils/zkLogin';
 
-type ViewType = 'welcome' | 'signup' | 'signin' | 'forgot';
+type ViewType = 'welcome' | 'signup' | 'signin' | 'forgot' | 'survey';
 
 export const SHOW_GOOGLE_LOGIN = false;
 
@@ -52,6 +53,11 @@ export default function Onboarding() {
     const [isResetOtpSent, setIsResetOtpSent] = useState(false);
     const [isRequestingResetOtp, setIsRequestingResetOtp] = useState(false);
     const [resetSuccess, setResetSuccess] = useState(false);
+
+    // Survey states
+    const [hearAboutUs, setHearAboutUs] = useState('');
+    const [mostUsedChain, setMostUsedChain] = useState('');
+    const [isSurveySubmitting, setIsSurveySubmitting] = useState(false);
 
     // Check for Google Redirect
     useEffect(() => {
@@ -165,7 +171,7 @@ export default function Onboarding() {
         setError('');
         try {
             await signup(email, username, firstName, lastName, password, otp);
-            navigate('/');
+            setView('survey');
         } catch (err: any) {
             setError(err.response?.data?.message || 'Failed to sign up');
         } finally {
@@ -243,6 +249,18 @@ export default function Onboarding() {
             setError(err.response?.data?.message || 'Failed to sign in');
         } finally {
             setIsLoading(false);
+        }
+    };
+
+    const handleSurveySubmit = async () => {
+        setIsSurveySubmitting(true);
+        try {
+            await client.post('/user/survey', { hearAboutUs, mostUsedChain });
+        } catch {
+            // Best-effort — proceed to app even if survey save fails
+        } finally {
+            setIsSurveySubmitting(false);
+            navigate('/');
         }
     };
 
@@ -772,6 +790,99 @@ export default function Onboarding() {
     }
 
 
+
+    // Survey View
+    if (view === 'survey') {
+        const optionBase: React.CSSProperties = {
+            padding: '10px 16px',
+            borderRadius: '12px',
+            border: '1.5px solid var(--border-color)',
+            background: 'var(--surface)',
+            color: 'var(--text-main)',
+            fontSize: '12px',
+            cursor: 'pointer',
+            transition: 'all 0.15s ease',
+            textAlign: 'left',
+        };
+        const optionActive: React.CSSProperties = {
+            ...optionBase,
+            border: '1.5px solid var(--primary)',
+            background: 'rgba(139, 92, 246, 0.08)',
+            color: 'var(--primary)',
+            fontWeight: 600,
+        };
+
+        const hearOptions = [
+            { value: 'x', label: 'X (Twitter)' },
+            { value: 'tiktok', label: 'TikTok' },
+            { value: 'friend', label: 'A Friend' },
+            { value: 'other', label: 'Other' },
+        ];
+        const chainOptions = [
+            { value: 'sui', label: 'Sui' },
+            { value: 'solana', label: 'Solana' },
+            { value: 'aptos', label: 'Aptos' },
+            { value: 'bsc', label: 'BSC' },
+            { value: 'base', label: 'Base' },
+            { value: 'tron', label: 'Tron' },
+        ];
+
+        return (
+            <div style={containerStyle}>
+                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+                    <div style={logoContainerStyle}>
+                        <img src={logo} alt="Linq Logo" style={{ ...logoStyle, width: '80px', height: '80px' }} className="glow-on-hover" />
+                    </div>
+                    <div style={cardStyle}>
+                        <h2 style={{ ...titleStyle, fontSize: '17px', marginBottom: '6px' }}>Quick question 🎉</h2>
+                        <p style={{ ...subtitleStyle, marginBottom: '24px' }}>Help us understand you better — just takes 10 seconds</p>
+
+                        <p style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-main)', marginBottom: '10px' }}>
+                            Where did you hear about us?
+                        </p>
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '24px' }}>
+                            {hearOptions.map(opt => (
+                                <button
+                                    key={opt.value}
+                                    type="button"
+                                    style={hearAboutUs === opt.value ? optionActive : optionBase}
+                                    onClick={() => setHearAboutUs(opt.value)}
+                                >
+                                    {opt.label}
+                                </button>
+                            ))}
+                        </div>
+
+                        <p style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-main)', marginBottom: '10px' }}>
+                            What chain do you use most?
+                        </p>
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px', marginBottom: '28px' }}>
+                            {chainOptions.map(opt => (
+                                <button
+                                    key={opt.value}
+                                    type="button"
+                                    style={mostUsedChain === opt.value ? optionActive : optionBase}
+                                    onClick={() => setMostUsedChain(opt.value)}
+                                >
+                                    {opt.label}
+                                </button>
+                            ))}
+                        </div>
+
+                        <Button
+                            variant="primary"
+                            fullWidth
+                            disabled={!hearAboutUs || !mostUsedChain || isSurveySubmitting}
+                            onClick={handleSurveySubmit}
+                            style={{ borderRadius: '16px', height: '56px', fontSize: '13px' }}
+                        >
+                            {isSurveySubmitting ? 'Saving...' : 'Continue'}
+                        </Button>
+                    </div>
+                </div>
+            </div>
+        );
+    }
 
     return null;
 }
