@@ -154,6 +154,15 @@ export default function Confirm() {
     // Calculate NGN amount with current rate
     const ngnAmount = amount * currentRate;
 
+    // Calculate upfront fees and totals for UI
+    const feeRate = amount < 100 ? 0.01 : amount < 500 ? 0.0075 : amount < 999 ? 0.005 : 0.0035;
+    const feeApprox = amount * feeRate;
+
+    const savingsConfigUI = getSavingsConfig(selectedChain);
+    const hasSavingsUI = savingsConfigUI.enabled && savingsConfigUI.savingsAddress && savingsConfigUI.percentage > 0;
+    const savingsAmountUI = hasSavingsUI ? parseFloat((amount * savingsConfigUI.percentage / 100).toFixed(6)) : 0;
+    const totalYouPay = amount + feeApprox + savingsAmountUI;
+
 
     // Payment Handlers
     const handleSuiPayment = async (walletAddress: string, orderId: string) => {
@@ -1036,20 +1045,23 @@ export default function Confirm() {
                     <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '16px' }}>
                         <span style={{ color: 'var(--text-muted)', fontSize: '13px', fontWeight: 500 }}>Fee</span>
                         <span style={{ color: 'var(--text-main)', fontSize: '13px', fontWeight: 600 }}>
-                            ${(() => {
-                                const feeRate = amount < 100 ? 0.01 : amount < 500 ? 0.0075 : amount < 999 ? 0.005 : 0.0035;
-                                return (amount * feeRate).toFixed(2);
-                            })()}
+                            ${feeApprox.toFixed(2)}
                         </span>
                     </div>
 
+                    {hasSavingsUI && savingsAmountUI > 0 && (
+                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '16px' }}>
+                            <span style={{ color: 'var(--text-muted)', fontSize: '13px', fontWeight: 500 }}>Savings contribution</span>
+                            <span style={{ color: 'var(--text-main)', fontSize: '13px', fontWeight: 600 }}>
+                                ${savingsAmountUI.toFixed(2)}
+                            </span>
+                        </div>
+                    )}
+
                     <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '16px' }}>
-                        <span style={{ color: 'var(--text-muted)', fontSize: '13px', fontWeight: 500 }}>You pay</span>
+                        <span style={{ color: 'var(--text-muted)', fontSize: '13px', fontWeight: 500 }}>Total you pay</span>
                         <span style={{ color: 'var(--primary)', fontSize: '13px', fontWeight: 700 }}>
-                            ${(() => {
-                                const feeRate = amount < 100 ? 0.01 : amount < 500 ? 0.0075 : amount < 999 ? 0.005 : 0.0035;
-                                return (amount + amount * feeRate).toFixed(2);
-                            })()} USDC
+                            ${totalYouPay.toFixed(2)} USDC
                         </span>
                     </div>
 
