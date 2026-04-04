@@ -18,7 +18,7 @@ interface AuthContextType {
     token: string | null;
     isAuthenticated: boolean;
     login: (email: string, password: string) => Promise<void>;
-    signup: (email: string, name: string, firstName: string, lastName: string, password: string, otp?: string, oauthVerified?: boolean) => Promise<void>;
+    signup: (email: string, name: string, firstName: string, lastName: string, password: string, otp?: string, oauthVerified?: boolean, referralCode?: string) => Promise<void>;
     requestSignupOtp: (email: string) => Promise<void>;
     requestPasswordResetOtp: (email: string) => Promise<void>;
     resetPassword: (email: string, otp: string, newPassword: string) => Promise<void>;
@@ -194,7 +194,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
     };
 
-    const signup = async (email: string, name: string, firstName: string, lastName: string, password: string, otp?: string, oauthVerified?: boolean) => {
+    const signup = async (email: string, name: string, firstName: string, lastName: string, password: string, otp?: string, oauthVerified?: boolean, referralCode?: string) => {
         try {
             // Include OTP or oauthVerified in signup request
             await client.post('/signup', {
@@ -204,7 +204,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 firstName,
                 lastName,
                 otp: otp || '',
-                oauthVerified: oauthVerified || false
+                oauthVerified: oauthVerified || false,
+                ...(referralCode ? { referralCode } : {}),
             });
 
             // Auto login after signup

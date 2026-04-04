@@ -25,6 +25,8 @@ import BillConfirm from './pages/BillsFlow/BillConfirm';
 import BillPayment from './pages/BillsFlow/BillPayment';
 import Swap from './pages/Swap';
 import Savings from './pages/Savings';
+import Rewards from './pages/Rewards';
+import Leaderboard from './pages/Leaderboard';
 import ScrollToTop from './components/ScrollToTop';
 import ErrorBoundary from './components/ErrorBoundary';
 import SEO from './components/SEO';
@@ -93,6 +95,10 @@ function App() {
           <Route path="/bills/data" element={<Navigate to="/bills/topup" replace />} />
           <Route path="/bills/confirm" element={<><SEO title="Confirm Bill Payment" /><BillConfirm /></>} />
           <Route path="/bills/payment" element={<><SEO title="Sign Bill Payment" /><BillPayment /></>} />
+
+          {/* Rewards & Leaderboard */}
+          <Route path="/rewards" element={<><SEO title="Earn Rewards" /><Rewards /></>} />
+          <Route path="/leaderboard" element={<><SEO title="Leaderboard" /><Leaderboard /></>} />
 
           {/* Deposit Flow */}
           <Route path="/deposit" element={<><SEO title="Deposit Funds" /><DepositAmount /></>} />

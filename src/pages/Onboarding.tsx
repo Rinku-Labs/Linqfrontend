@@ -34,6 +34,7 @@ export default function Onboarding() {
     const [lastName, setLastName] = useState('');
     const [password, setPassword] = useState('');
     const [signupConfirmPassword, setSignupConfirmPassword] = useState('');
+    const [referralCode, setReferralCode] = useState('');
 
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState('');
@@ -170,7 +171,7 @@ export default function Onboarding() {
         setIsLoading(true);
         setError('');
         try {
-            await signup(email, username, firstName, lastName, password, otp);
+            await signup(email, username, firstName, lastName, password, otp, undefined, referralCode || undefined);
             setView('survey');
         } catch (err: any) {
             setError(err.response?.data?.message || 'Failed to sign up');
@@ -543,6 +544,13 @@ export default function Onboarding() {
                                         value={signupConfirmPassword}
                                         onChange={(e) => setSignupConfirmPassword(e.target.value)}
                                         required
+                                    />
+                                    <Input
+                                        label="Referral Code (optional)"
+                                        type="text"
+                                        placeholder="Enter a referral code"
+                                        value={referralCode}
+                                        onChange={(e) => setReferralCode(e.target.value)}
                                     />
 
                                     <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', marginTop: '16px', marginBottom: '8px' }}>
