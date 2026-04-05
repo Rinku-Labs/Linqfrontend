@@ -472,22 +472,23 @@ export default function Home() {
                 onClick={() => navigate('/rewards')}
                 className="card-interactive"
                 style={{
-                    background: 'linear-gradient(135deg, #EDE9FE 0%, #DDD6FE 100%)',
+                    backgroundImage: `url(${clickToEarnImg})`,
+                    backgroundSize: 'cover',
+                    backgroundPosition: 'center',
                     borderRadius: '20px',
                     padding: '16px 20px',
                     marginBottom: '24px',
                     display: 'flex',
                     alignItems: 'center',
-                    justifyContent: 'space-between',
                     cursor: 'pointer',
                     boxShadow: 'var(--card-shadow)',
+                    minHeight: '80px',
                 }}
             >
                 <div>
                     <p style={{ fontSize: '13px', fontWeight: 700, color: '#5B21B6', marginBottom: '4px' }}>Earn Rewards</p>
                     <p style={{ fontSize: '11px', color: '#7C3AED' }}>Complete tasks, check in daily & earn XP</p>
                 </div>
-                <img src={clickToEarnImg} alt="" style={{ width: '64px', height: '64px', objectFit: 'contain' }} />
             </div>
 
             {/* Volume Tracker - HIDDEN */}
