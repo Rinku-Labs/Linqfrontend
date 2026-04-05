@@ -484,12 +484,7 @@ export default function Home() {
                     boxShadow: 'var(--card-shadow)',
                     minHeight: '80px',
                 }}
-            >
-                <div>
-                    <p style={{ fontSize: '13px', fontWeight: 700, color: '#5B21B6', marginBottom: '4px' }}>Earn Rewards</p>
-                    <p style={{ fontSize: '11px', color: '#7C3AED' }}>Complete tasks, check in daily & earn XP</p>
-                </div>
-            </div>
+            />
 
             {/* Volume Tracker - HIDDEN */}
             {/* {isDataLoading ? (
