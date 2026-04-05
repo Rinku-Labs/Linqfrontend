@@ -99,7 +99,7 @@ export default function Rewards() {
                             Refer and Earn
                         </h2>
                         <p style={{ fontSize: '11px', color: 'var(--text-secondary)', lineHeight: 1.6, marginBottom: '20px' }}>
-                            Invite friends to earn XP and level up! You both get $0.50 once your referral completes a
+                            Invite friends to earn XP and level up! You both earn XP once your referral completes a
                             transaction of $5 or more. Start sharing to stack your rewards.
                         </p>
 
@@ -150,20 +150,20 @@ export default function Rewards() {
 
                     {/* Trading Volume */}
                     <div className="animate-slideUp" style={{
-                        background: '#F0FDF4', borderRadius: '24px', padding: '24px',
+                        background: '#EDE9FE', borderRadius: '24px', padding: '24px',
                         animationFillMode: 'backwards', animationDelay: '0.1s',
                     }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '20px' }}>
                             <div style={{
                                 width: '40px', height: '40px', borderRadius: '50%',
-                                background: '#DCFCE7', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                background: '#DDD6FE', display: 'flex', alignItems: 'center', justifyContent: 'center',
                                 flexShrink: 0,
                             }}>
-                                <TrendingUp size={20} color="#16A34A" />
+                                <TrendingUp size={20} color="#7C3AED" />
                             </div>
                             <div>
-                                <p style={{ fontSize: '13px', fontWeight: 700, color: '#14532D', marginBottom: '2px' }}>Trading volume</p>
-                                <p style={{ fontSize: '10px', color: '#15803D' }}>More transactions equals more XP</p>
+                                <p style={{ fontSize: '13px', fontWeight: 700, color: '#4C1D95', marginBottom: '2px' }}>Trading volume</p>
+                                <p style={{ fontSize: '10px', color: '#6D28D9' }}>More transactions equals more XP</p>
                             </div>
                         </div>
 
@@ -174,12 +174,12 @@ export default function Rewards() {
                         }}>
                             {[
                                 { label: 'Total Volume', value: `$${data.volume.totalVolume.toLocaleString()}` },
-                                { label: 'XP earned\n(All-time)', value: `$${data.volume.xpAllTime}` },
-                                { label: 'XP earned\n(This month)', value: `$${data.volume.xpThisMonth}` },
+                                { label: 'XP earned\n(All-time)', value: `${data.volume.xpAllTime.toLocaleString()} XP` },
+                                { label: 'XP earned\n(This month)', value: `${data.volume.xpThisMonth.toLocaleString()} XP` },
                             ].map(({ label, value }) => (
                                 <div key={label} style={{ textAlign: 'center' }}>
-                                    <p style={{ fontSize: '13px', fontWeight: 700, color: '#14532D', marginBottom: '4px' }}>{value}</p>
-                                    <p style={{ fontSize: '9px', color: '#15803D', whiteSpace: 'pre-line' }}>{label}</p>
+                                    <p style={{ fontSize: '13px', fontWeight: 700, color: '#4C1D95', marginBottom: '4px' }}>{value}</p>
+                                    <p style={{ fontSize: '9px', color: '#6D28D9', whiteSpace: 'pre-line' }}>{label}</p>
                                 </div>
                             ))}
                         </div>

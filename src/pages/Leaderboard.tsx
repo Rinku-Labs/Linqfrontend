@@ -112,7 +112,7 @@ export default function Leaderboard() {
                                     </div>
                                 ))}
                             </div>
-                            {/* Podium blocks */}
+                            {/* Podium blocks — replace src/assets/podium.png with the Figma export to update */}
                             <img
                                 src={podiumImg}
                                 alt="Podium"
