@@ -5,6 +5,7 @@ import Button from '../../components/ui/Button';
 import InlineError from '../../components/ui/InlineError';
 import client from '../../api/client';
 import { fetchRate as fetchCachedRate } from '../../utils/rateCache';
+import { isGasFeeError } from '../../utils/sanitize';
 import { useCurrentAccount, useSignAndExecuteTransaction, useSuiClient } from '@mysten/dapp-kit';
 import { Transaction } from '@mysten/sui/transactions';
 import { useWallet } from '@solana/wallet-adapter-react';
@@ -275,6 +276,9 @@ export default function Confirm() {
                         setIsLoading(false);
                         const msg = err.message?.toLowerCase() || '';
                         const isUserRejection = msg.includes('reject') || msg.includes('cancel') || msg.includes('user denied') || msg.includes('user disapproved');
+                        if (isGasFeeError(err.message)) {
+                            toast.error('Transaction failed: insufficient gas fees. Please add more SUI to your wallet to cover network fees.');
+                        }
                         setError(isUserRejection ? 'Transaction was cancelled or rejected.' : (err.message || 'Failed to execute transaction.'));
                     },
                 }
@@ -283,6 +287,9 @@ export default function Confirm() {
         } catch (error: any) {
             setIsLoading(false);
             setIsSigning(false);
+            if (isGasFeeError(error.message)) {
+                toast.error('Transaction failed: insufficient gas fees. Please add more SUI to your wallet to cover network fees.');
+            }
             setError(error.message || 'Failed to prepare transaction.');
         }
     };
@@ -443,6 +450,9 @@ export default function Confirm() {
             setIsSigning(false);
             const msg = error.message?.toLowerCase() || '';
             const isUserRejection = msg.includes('reject') || msg.includes('cancel') || msg.includes('user denied') || msg.includes('user disapproved');
+            if (isGasFeeError(error.message)) {
+                toast.error('Transaction failed: insufficient gas fees. Please add more SOL to your wallet to cover network fees.');
+            }
             setError(isUserRejection ? 'Transaction cancelled or rejected.' : (error.message || 'Failed to prepare transaction.'));
         }
     };
@@ -531,6 +541,9 @@ export default function Confirm() {
             setIsSigning(false);
             const msg = error.message?.toLowerCase() || '';
             const isUserRejection = msg.includes('reject') || msg.includes('cancel') || msg.includes('user denied') || msg.includes('user disapproved');
+            if (isGasFeeError(error.message)) {
+                toast.error('Transaction failed: insufficient gas fees. Please add more APT to your wallet to cover network fees.');
+            }
             setError(isUserRejection ? 'Transaction cancelled or rejected.' : (error.message || 'Failed to prepare transaction.'));
         }
     };
@@ -641,6 +654,9 @@ export default function Confirm() {
             setIsSigning(false);
             const msg = error.message?.toLowerCase() || '';
             const isUserRejection = msg.includes('reject') || msg.includes('cancel') || msg.includes('user denied') || msg.includes('user disapproved');
+            if (isGasFeeError(error.message)) {
+                toast.error('Transaction failed: insufficient gas fees. Please add more BNB to your wallet to cover network fees.');
+            }
             setError(isUserRejection ? 'Transaction cancelled or rejected.' : (error.message || 'Failed to prepare transaction.'));
         }
     };
@@ -751,6 +767,9 @@ export default function Confirm() {
             setIsSigning(false);
             const msg = error.message?.toLowerCase() || '';
             const isUserRejection = msg.includes('reject') || msg.includes('cancel') || msg.includes('user denied') || msg.includes('user disapproved');
+            if (isGasFeeError(error.message)) {
+                toast.error('Transaction failed: insufficient gas fees. Please add more ETH to your wallet to cover network fees.');
+            }
             setError(isUserRejection ? 'Transaction cancelled or rejected.' : (error.message || 'Failed to prepare transaction.'));
         }
     };
@@ -849,6 +868,9 @@ export default function Confirm() {
             setIsSigning(false);
             const msg = error.message?.toLowerCase() || '';
             const isUserRejection = msg.includes('reject') || msg.includes('cancel') || msg.includes('user denied') || msg.includes('user disapproved');
+            if (isGasFeeError(error.message)) {
+                toast.error('Transaction failed: insufficient gas fees. Please add more TRX to your wallet to cover network fees (energy/bandwidth).');
+            }
             setError(isUserRejection ? 'Transaction cancelled or rejected.' : (error.message || 'Failed to prepare transaction.'));
         }
     };

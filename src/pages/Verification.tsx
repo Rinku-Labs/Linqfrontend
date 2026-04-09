@@ -49,11 +49,15 @@ export default function Verification() {
     const getErrorMessage = (): string => {
         if (!verifyNinMutation.isError) return '';
         const err = verifyNinMutation.error as any;
-        return (
+        const raw: string =
             err?.response?.data?.error ||
             err?.message ||
-            'Failed to verify NIN. Please try again.'
-        );
+            'Failed to verify NIN. Please try again.';
+        const lower = raw.toLowerCase();
+        if (lower.includes('id authority') || lower.includes('authority is currently unavailable')) {
+            return 'Verification is temporarily unavailable. Please try again later.';
+        }
+        return raw;
     };
 
     return (

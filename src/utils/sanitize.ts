@@ -55,3 +55,23 @@ export function sanitizeErrorMessage(message: string | undefined): string {
 
     return sanitized.trim() || 'An error occurred. Please try again.';
 }
+
+/**
+ * Returns true if the error message indicates a gas/network fee shortage.
+ */
+export function isGasFeeError(message: string | undefined): boolean {
+    if (!message) return false;
+    const lower = message.toLowerCase();
+    return (
+        lower.includes('insufficient funds for gas') ||
+        lower.includes('out of gas') ||
+        lower.includes('gas required exceeds') ||
+        lower.includes('insufficient fee') ||
+        lower.includes('insufficient energy') ||    // Tron
+        lower.includes('insufficient bandwidth') || // Tron
+        lower.includes('not enough energy') ||      // Tron
+        lower.includes('not enough bandwidth') ||   // Tron
+        (lower.includes('gas') && lower.includes('insufficient')) ||
+        (lower.includes('fee') && lower.includes('insufficient'))
+    );
+}
