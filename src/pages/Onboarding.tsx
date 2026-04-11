@@ -20,12 +20,12 @@ export default function Onboarding() {
     const { login, signup, requestSignupOtp, requestPasswordResetOtp, resetPassword, isAuthenticated } = useAuth();
     const [view, setView] = useState<ViewType>('welcome');
 
-    // Redirect if already authenticated
+    // Redirect if already authenticated, but not if we're showing the post-signup survey
     useEffect(() => {
-        if (isAuthenticated) {
+        if (isAuthenticated && view !== 'survey') {
             navigate('/', { replace: true });
         }
-    }, [isAuthenticated, navigate]);
+    }, [isAuthenticated, view, navigate]);
 
     // Form states
     const [email, setEmail] = useState('');
