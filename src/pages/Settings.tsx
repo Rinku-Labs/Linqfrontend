@@ -51,7 +51,7 @@ const NetworkSelector = ({ activeTab, onSelect, logos }: NetworkSelectorProps) =
     const selectedNetwork = networks.find(n => n.id === activeTab);
 
     return (
-        <div style={{ position: 'relative' }} ref={dropdownRef}>
+        <div style={{ position: 'relative', zIndex: 1000 }} ref={dropdownRef}>
             <button
                 onClick={() => setIsOpen(!isOpen)}
                 style={{
@@ -97,8 +97,10 @@ const NetworkSelector = ({ activeTab, onSelect, logos }: NetworkSelectorProps) =
                     borderRadius: '12px',
                     padding: '4px',
                     boxShadow: '0 4px 20px rgba(0,0,0,0.2)',
-                    zIndex: 20,
+                    zIndex: 1000,
                     minWidth: '160px',
+                    maxHeight: '300px',
+                    overflowY: 'auto' as any,
                     border: '1px solid var(--border-color)'
                 }}>
                     {networks.map((network) => (
@@ -620,6 +622,9 @@ export default function Settings() {
                 borderRadius: '24px',
                 padding: '24px',
                 marginBottom: '20px',
+                overflow: 'visible',
+                position: 'relative' as any,
+                zIndex: 10,
             }}>
                 {/* Header with Toggle */}
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '24px' }}>
