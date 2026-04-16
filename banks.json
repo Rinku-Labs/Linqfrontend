@@ -52,11 +52,11 @@
             "name": "ABUCOOP MICROFINANCE BANK"
         },
         {
-            "code": "000014",
+            "code": "044",
             "name": "ACCESS BANK"
         },
         {
-            "code": "000005",
+            "code": "063",
             "name": "Access Bank (Diamond)"
         },
         {
@@ -249,7 +249,7 @@
         },
         {
             "code": "090367",
-            "name": "Bank of Agriculture\t"
+            "name": "Bank of Agriculture"
         },
         {
             "code": "090275",
@@ -460,7 +460,7 @@
             "name": "Chikum Microfinance Bank"
         },
         {
-            "code": "000009",
+            "code": "023",
             "name": "CITI BANK"
         },
         {
@@ -573,7 +573,7 @@
         },
         {
             "code": "090828",
-            "name": "Dillon MFB\t"
+            "name": "Dillon MFB"
         },
         {
             "code": "090643",
@@ -612,7 +612,7 @@
             "name": "Eastman MFB"
         },
         {
-            "code": "000010",
+            "code": "050",
             "name": "ECOBANK"
         },
         {
@@ -712,7 +712,7 @@
             "name": "FBNQUEST MERCHANT BANK"
         },
         {
-            "code": "000003",
+            "code": "214",
             "name": "FCMB"
         },
         {
@@ -760,7 +760,7 @@
             "name": "FHA MORTGAGE BANK LTD"
         },
         {
-            "code": "000007",
+            "code": "070",
             "name": "FIDELITY BANK"
         },
         {
@@ -788,7 +788,7 @@
             "name": "First Ally MFB"
         },
         {
-            "code": "000016",
+            "code": "011",
             "name": "First Bank"
         },
         {
@@ -800,7 +800,7 @@
             "name": "First Marina Trust Finance"
         },
         {
-            "code": "090575 ",
+            "code": "090575",
             "name": "First Midas MFB"
         },
         {
@@ -913,7 +913,7 @@
         },
         {
             "code": "090278",
-            "name": "GLORY MFB "
+            "name": "GLORY MFB"
         },
         {
             "code": "090574",
@@ -964,7 +964,7 @@
             "name": "GROOMING MICROFINANCE BANK"
         },
         {
-            "code": "000013",
+            "code": "058",
             "name": "GTBank"
         },
         {
@@ -1140,7 +1140,7 @@
             "name": "Izon Microfinance Bank"
         },
         {
-            "code": "000006",
+            "code": "301",
             "name": "JAIZ BANK"
         },
         {
@@ -1192,7 +1192,7 @@
             "name": "KENECHUKWU MICROFINANCE BANK"
         },
         {
-            "code": "000002",
+            "code": "082",
             "name": "KEYSTONE BANK"
         },
         {
@@ -1728,7 +1728,7 @@
             "name": "Poder Finance"
         },
         {
-            "code": "000008",
+            "code": "076",
             "name": "POLARIS BANK"
         },
         {
@@ -1760,8 +1760,8 @@
             "name": "Prosperity Microfinance Bank"
         },
         {
-            "code": "000023",
-            "name": "PROVIDUS BANK "
+            "code": "101",
+            "name": "PROVIDUS BANK"
         },
         {
             "code": "090690",
@@ -1932,11 +1932,11 @@
             "name": "STANBIC IBTC @EASE WALLET"
         },
         {
-            "code": "000012",
+            "code": "039",
             "name": "STANBICIBTC BANK"
         },
         {
-            "code": "000021",
+            "code": "068",
             "name": "STANDARDCHARTERED"
         },
         {
@@ -1956,7 +1956,7 @@
             "name": "Stellas Microfinance bank"
         },
         {
-            "code": "000001",
+            "code": "232",
             "name": "STERLING BANK"
         },
         {
@@ -1976,7 +1976,7 @@
             "name": "SUNTOP MFB"
         },
         {
-            "code": "000022",
+            "code": "100",
             "name": "SUNTRUST BANK"
         },
         {
@@ -2084,7 +2084,7 @@
             "name": "U AND C MFB"
         },
         {
-            "code": "000004",
+            "code": "033",
             "name": "UBA"
         },
         {
@@ -2117,7 +2117,7 @@
         },
         {
             "code": "090652",
-            "name": "UMUCHUKWU MFB "
+            "name": "UMUCHUKWU MFB"
         },
         {
             "code": "090510",
@@ -2148,11 +2148,11 @@
             "name": "UNIILORIN MFB"
         },
         {
-            "code": "000018",
+            "code": "032",
             "name": "UNION BANK"
         },
         {
-            "code": "000011",
+            "code": "215",
             "name": "UNITY BANK"
         },
         {
@@ -2208,7 +2208,7 @@
             "name": "WAYA MFB"
         },
         {
-            "code": "000017",
+            "code": "035",
             "name": "WEMA BANK"
         },
         {
@@ -2225,7 +2225,7 @@
         },
         {
             "code": "050035",
-            "name": "Whitecrust Finance\t"
+            "name": "Whitecrust Finance"
         },
         {
             "code": "090419",
@@ -2260,7 +2260,7 @@
             "name": "ZEDVANCE FINANCE LIMITED"
         },
         {
-            "code": "000015",
+            "code": "057",
             "name": "Zenith Bank"
         },
         {
