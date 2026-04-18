@@ -180,11 +180,11 @@ export default function Confirm() {
                 setIsSigning(true);
                 setSigningMessage('Please sign in Wallet...');
 
-                // Deserialize the transaction the backend built
-                const tx = Transaction.from(txBytes);
-
-                // User signs (sign-only, does NOT execute)
-                const { signature: userSignature } = await signTransaction({ transaction: tx });
+                // The backend returning txBytes is passing base64 bytes for a sponsored tx.
+                // We pass it directly to avoid the wallet SDK stripping the specific gas parameters it doesn't recognize natively via object parsing!
+                const { signature: userSignature } = await signTransaction({ 
+                    transaction: txBytes as any 
+                });
 
                 setSigningMessage('Submitting transaction...');
 
