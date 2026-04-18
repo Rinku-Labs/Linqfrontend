@@ -144,8 +144,7 @@ export default function Settings() {
     const navigate = useNavigate();
     const currentAccount = useCurrentAccount();
     const { mutate: disconnect } = useDisconnectWallet();
-    const { publicKey: solanaPublicKey, connected: solanaConnected } = useWallet();
-    const { disconnect: disconnectSolana } = useWallet();
+    const { publicKey: solanaPublicKey, connected: solanaConnected, wallet: selectedSolanaWallet, select: selectSolanaWallet, disconnect: disconnectSolana } = useWallet();
 
     // Aptos wallet hooks
     const { account: aptosAccount, connected: aptosConnected, disconnect: disconnectAptos, connect: connectAptos, wallets: aptosWallets } = useAptosWallet();
@@ -699,7 +698,7 @@ export default function Settings() {
                         {solanaConnected ? (
                             renderDisconnectButton(() => disconnectSolana())
                         ) : (
-                            <div style={{ width: '100%', display: 'flex', justifyContent: 'center' }}>
+                            <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: '8px', alignItems: 'center' }}>
                                 <WalletMultiButton style={{
                                     width: '100%',
                                     justifyContent: 'center',
@@ -713,6 +712,21 @@ export default function Settings() {
                                     height: 'auto',
                                     lineHeight: '1.5'
                                 }} />
+                                {selectedSolanaWallet && (
+                                    <button
+                                        onClick={() => selectSolanaWallet(null)}
+                                        style={{
+                                            background: 'transparent',
+                                            border: 'none',
+                                            color: 'var(--text-secondary)',
+                                            fontSize: '10px',
+                                            cursor: 'pointer',
+                                            marginTop: '4px'
+                                        }}
+                                    >
+                                        Change Solana Wallet
+                                    </button>
+                                )}
                             </div>
                         )}
                     </>
