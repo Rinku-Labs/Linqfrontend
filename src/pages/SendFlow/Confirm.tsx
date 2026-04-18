@@ -180,10 +180,12 @@ export default function Confirm() {
                 setIsSigning(true);
                 setSigningMessage('Please sign in Wallet...');
 
-                // The backend returning txBytes is passing base64 bytes for a sponsored tx.
-                // We pass it directly to avoid the wallet SDK stripping the specific gas parameters it doesn't recognize natively via object parsing!
+                // Deserialize the backend's base64 txBytes into a Transaction object.
+                // Transaction.from() preserves all fields: gasOwner, sender, gasPayment, gasBudget.
+                const sponsoredTx = Transaction.from(txBytes);
+
                 const { signature: userSignature } = await signTransaction({ 
-                    transaction: txBytes as any 
+                    transaction: sponsoredTx 
                 });
 
                 setSigningMessage('Submitting transaction...');
