@@ -3,6 +3,7 @@ import { ConnectionProvider, WalletProvider } from '@solana/wallet-adapter-react
 import { WalletAdapterNetwork } from '@solana/wallet-adapter-base';
 import { PhantomWalletAdapter } from '@solana/wallet-adapter-phantom';
 import { SolflareWalletAdapter } from '@solana/wallet-adapter-solflare';
+import { SolanaMobileWalletAdapter } from '@solana-mobile/wallet-adapter-mobile';
 import {
     WalletModalProvider
 } from '@solana/wallet-adapter-react-ui';
@@ -27,6 +28,10 @@ export const SolanaWalletProvider = ({ children }: Props) => {
 
     const wallets = useMemo(
         () => [
+            new SolanaMobileWalletAdapter({
+                appIdentity: { name: 'Linq v2', uri: 'https://app.uselinq.xyz', icon: 'https://app.uselinq.xyz/favicon.ico' },
+                authorizationResultCache: undefined,
+            }),
             new PhantomWalletAdapter(),
             new SolflareWalletAdapter(),
         ],
