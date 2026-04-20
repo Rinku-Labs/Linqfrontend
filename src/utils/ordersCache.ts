@@ -58,14 +58,14 @@ export const setCachedOrders = (orders: Order[], fullFetch: boolean) => {
 const mapBillToOrder = (bill: any): Order => ({
     id: bill.id,
     orderType: 'bill-payment',
-    amountStableCoin: Number(bill.amountUsdc),
-    amountNgn: Number(bill.amountNgn),
-    accountName: bill.itemName || bill.customerId,
-    bankName: bill.network || bill.billType,
-    billType: bill.billType, // Included for transactionIcons.tsx
+    amountStableCoin: Number(bill.amountUsdc || 0),
+    amountNgn: Number(bill.amountNgn || 0),
+    accountName: bill.customerName || bill.itemName || bill.customerId,
+    bankName: bill.provider || bill.network || bill.billCategory,
+    billType: bill.billCategory || bill.billType, // Included for transactionIcons.tsx
     status: bill.status,
-    createdAt: bill.created,
-    created: bill.created,
+    createdAt: bill.created || bill.createdAt,
+    created: bill.created || bill.createdAt,
     trnxWallet: bill.trnxWallet,
     rate: bill.rate,
     description: bill.description
