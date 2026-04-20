@@ -240,7 +240,7 @@ export default function Confirm() {
 
             const tx = new Transaction();
             const amountWithFee = amount + orderFeeRef.current;
-            const amountInMist = Math.floor(parseFloat(amountWithFee.toString()) * 1_000_000);
+            const amountInMist = Math.round(parseFloat(amountWithFee.toString()) * 1_000_000);
             let totalNeeded = amountInMist + savingsAmountInMist;
 
             const totalBalance = coins.reduce((sum, coin) => sum + parseInt(coin.balance), 0);
@@ -353,7 +353,7 @@ export default function Confirm() {
             let savingsAmountInMicros = hasSavings ? Math.floor(savingsAmountUSDC * 1_000_000) : 0;
 
             const amountWithFee = amount + orderFeeRef.current;
-            const amountInMicros = Math.floor(parseFloat(amountWithFee.toString()) * 1_000_000);
+            const amountInMicros = Math.round(parseFloat(amountWithFee.toString()) * 1_000_000);
             let totalNeeded = amountInMicros + savingsAmountInMicros;
             const destinationWalletPubkey = new PublicKey(walletAddress);
             const mintPubkey = new PublicKey(SOLANA_USDC_MINT);
@@ -515,7 +515,7 @@ export default function Confirm() {
             let savingsAmountInMicros = hasSavings ? Math.floor(savingsAmountUSDC * 1_000_000) : 0;
 
             const amountWithFee = amount + orderFeeRef.current;
-            const amountInMicros = Math.floor(parseFloat(amountWithFee.toString()) * 1_000_000);
+            const amountInMicros = Math.round(parseFloat(amountWithFee.toString()) * 1_000_000);
             let totalNeeded = amountInMicros + savingsAmountInMicros;
 
             const balance = await aptos.getAccountCoinAmount({
@@ -837,7 +837,7 @@ export default function Confirm() {
 
             // Tron TRC20 transfer amount = amount * 10^6
             const amountWithFee = amount + orderFeeRef.current;
-            const amountInSun = Math.floor(parseFloat(amountWithFee.toString()) * 1_000_000);
+            const amountInSun = Math.round(parseFloat(amountWithFee.toString()) * 1_000_000);
             let totalNeededSun = amountInSun + savingsAmountInSun;
 
             // Assume the contract check logic handles balances or we could add a `balanceOf` check here
