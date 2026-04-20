@@ -9,7 +9,7 @@ export function getTransactionCategory(order: Order): TransactionCategory {
     const orderType = order.orderType?.toLowerCase() || '';
     const description = (order.description || '').toLowerCase();
     const accountName = (order.accountName || '').toLowerCase();
-    const billType = ((order as any).billType || '').toUpperCase();
+    const billType = (order.billType || '').toUpperCase();
 
     // Swap explicit
     if (orderType === 'swap') {

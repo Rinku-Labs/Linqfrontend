@@ -55,6 +55,22 @@ export const setCachedOrders = (orders: Order[], fullFetch: boolean) => {
     localStorage.setItem(CACHE_KEY, JSON.stringify(data));
 };
 
+const mapBillToOrder = (bill: any): Order => ({
+    id: bill.id,
+    orderType: 'bill-payment',
+    amountStableCoin: Number(bill.amountUsdc),
+    amountNgn: Number(bill.amountNgn),
+    accountName: bill.itemName || bill.customerId,
+    bankName: bill.network || bill.billType,
+    billType: bill.billType, // Included for transactionIcons.tsx
+    status: bill.status,
+    createdAt: bill.created,
+    created: bill.created,
+    trnxWallet: bill.trnxWallet,
+    rate: bill.rate,
+    description: bill.description
+});
+
 export const fetchOrders = async (limit?: number, forceRefresh = false): Promise<Order[]> => {
     const cached = getCachedOrders();
     const needsFull = !limit;
@@ -64,20 +80,43 @@ export const fetchOrders = async (limit?: number, forceRefresh = false): Promise
         return limit ? cached.orders.slice(0, limit) : cached.orders;
     }
 
-    // If limit is specified, just fetch one page
+    // If limit is specified, just fetch one page of orders and all bills (since bills API isn't paginated yet)
     if (limit) {
-        const response = await fetchWithRetry(`/user/orders?page=1&page_size=${limit}`);
-        if (response.data?.data) {
-            const mappedOrders: Order[] = response.data.data.map((order: any) => ({
-                ...order,
-                createdAt: order.createdAt || order.created,
-                amountStableCoin: Number(order.amountStableCoin),
-                amountNgn: order.amountNgn
-            }));
-            setCachedOrders(mappedOrders, false);
-            return mappedOrders;
+        try {
+            const [ordersRes, billsRes] = await Promise.all([
+                fetchWithRetry(`/user/orders?page=1&page_size=${limit}`),
+                fetchWithRetry('/bills/orders').catch(() => ({ data: { data: [] } })) // Graceful failure for bills
+            ]);
+
+            let merged: Order[] = [];
+
+            if (ordersRes.data?.data) {
+                merged.push(...ordersRes.data.data.map((order: any) => ({
+                    ...order,
+                    createdAt: order.createdAt || order.created,
+                    amountStableCoin: Number(order.amountStableCoin),
+                    amountNgn: order.amountNgn
+                })));
+            }
+
+            if (billsRes.data?.data) {
+                merged.push(...billsRes.data.data.map(mapBillToOrder));
+            }
+
+            // Sort by date descending
+            merged.sort((a, b) => {
+                const dateA = new Date(a.createdAt || a.created || 0).getTime();
+                const dateB = new Date(b.createdAt || b.created || 0).getTime();
+                return dateB - dateA;
+            });
+
+            const finalOrders = merged.slice(0, limit);
+            setCachedOrders(finalOrders, false);
+            return finalOrders;
+        } catch (err) {
+            console.error('Failed to fetch limited orders', err);
+            return [];
         }
-        return [];
     }
 
     // Deduplicate: if a full fetch is already in-flight, reuse it
@@ -117,6 +156,23 @@ export const fetchOrders = async (limit?: number, forceRefresh = false): Promise
                     hasNext = false;
                 }
             }
+
+            // Fetch bills and merge
+            try {
+                const billsRes = await fetchWithRetry('/bills/orders');
+                if (billsRes.data?.data) {
+                    allOrders.push(...billsRes.data.data.map(mapBillToOrder));
+                }
+            } catch (err) {
+                console.error('Failed to fetch bill orders during full sync', err);
+            }
+
+            // Final sort
+            allOrders.sort((a, b) => {
+                const dateA = new Date(a.createdAt || a.created || 0).getTime();
+                const dateB = new Date(b.createdAt || b.created || 0).getTime();
+                return dateB - dateA;
+            });
 
             setCachedOrders(allOrders, true);
             return allOrders;

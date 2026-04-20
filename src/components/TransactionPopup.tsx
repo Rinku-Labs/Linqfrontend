@@ -51,6 +51,7 @@ export interface Order {
     walletTime?: string;
     bankTime?: string;
     updated?: string;
+    billType?: string;
 }
 
 // Helper to format status - case-insensitive comparison
