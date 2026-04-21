@@ -51,7 +51,7 @@ export default function FeatureDiscoveryPopup({ feature, onClose, onCtaClick }: 
                     onCtaClick();
                 }}
             >
-                {/* Close button overlay */}
+                {/* Invisible close hit area over the image's built-in X button */}
                 <button
                     onClick={(e) => {
                         e.stopPropagation();
@@ -59,26 +59,17 @@ export default function FeatureDiscoveryPopup({ feature, onClose, onCtaClick }: 
                     }}
                     style={{
                         position: 'absolute',
-                        top: '12px',
-                        right: '12px',
+                        top: '0',
+                        right: '0',
                         zIndex: 2,
-                        width: '32px',
-                        height: '32px',
-                        borderRadius: '50%',
+                        width: '48px',
+                        height: '48px',
                         border: 'none',
-                        background: 'rgba(0, 0, 0, 0.15)',
-                        color: '#333',
-                        fontSize: '18px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
+                        background: 'transparent',
                         cursor: 'pointer',
-                        lineHeight: 1,
                     }}
                     aria-label="Close"
-                >
-                    ✕
-                </button>
+                />
 
                 {/* Feature image */}
                 <img
