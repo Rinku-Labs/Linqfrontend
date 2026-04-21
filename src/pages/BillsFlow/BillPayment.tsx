@@ -63,6 +63,16 @@ export default function BillPayment() {
     const [message, setMessage] = useState('Initializing payment...');
     const hasInitiatedRef = useRef(false);
 
+    // Prevent double-charge on page refresh:
+    // Check if we already sent a transaction for this order
+    useEffect(() => {
+        if (orderId && sessionStorage.getItem(`billPayment_${orderId}`) === 'sent') {
+            hasInitiatedRef.current = true;
+            setStatus('processing');
+            setMessage('Transaction sent! Processing your bill payment...');
+        }
+    }, [orderId]);
+
     // WebSocket Hook
     // The backend sends { orderId: string, data: { status: string, description: string } }
     type WebSocketMessage = {
@@ -144,6 +154,7 @@ export default function BillPayment() {
                 { transaction: tx },
                 {
                     onSuccess: () => {
+                        if (orderId) sessionStorage.setItem(`billPayment_${orderId}`, 'sent');
                         setStatus('processing');
                         setMessage('Transaction sent! Processing your bill payment...');
                     },
@@ -216,6 +227,7 @@ export default function BillPayment() {
             setMessage('Please sign the transaction in your Solana wallet...');
 
             const signature = await sendSolanaTransaction(transaction, connection);
+            if (orderId) sessionStorage.setItem(`billPayment_${orderId}`, 'sent');
             setStatus('processing');
             setMessage('Transaction sent! Processing your bill payment...');
             await connection.confirmTransaction(signature, 'processed');
@@ -249,6 +261,7 @@ export default function BillPayment() {
                 }
             });
 
+            if (orderId) sessionStorage.setItem(`billPayment_${orderId}`, 'sent');
             setStatus('processing');
             setMessage('Transaction sent! Processing your bill payment...');
         } catch (error: any) {
@@ -275,6 +288,7 @@ export default function BillPayment() {
             });
 
             await sendBscTransaction({ to: BSC_USDC_ADDRESS, data });
+            if (orderId) sessionStorage.setItem(`billPayment_${orderId}`, 'sent');
             setStatus('processing');
             setMessage('Transaction sent! Processing your bill payment...');
         } catch (error: any) {
@@ -301,6 +315,7 @@ export default function BillPayment() {
             });
 
             await sendBscTransaction({ to: BASE_USDC_ADDRESS, data });
+            if (orderId) sessionStorage.setItem(`billPayment_${orderId}`, 'sent');
             setStatus('processing');
             setMessage('Transaction sent! Processing your bill payment...');
         } catch (error: any) {
@@ -371,8 +386,10 @@ export default function BillPayment() {
         if (orderStatus === 'completed') {
             setStatus('completed');
             setMessage('Bill payment successful!');
+            if (orderId) sessionStorage.removeItem(`billPayment_${orderId}`);
             invalidateOrdersCache();
         } else if (orderStatus === 'failed' || orderStatus === 'timeout: no deposit received') {
+            if (orderId) sessionStorage.removeItem(`billPayment_${orderId}`);
             setStatus('failed');
 
             const sanitizedDescription = sanitizeErrorMessage(description);
