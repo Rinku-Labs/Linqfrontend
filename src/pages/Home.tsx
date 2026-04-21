@@ -17,6 +17,12 @@ import type { Order } from '../components/TransactionPopup';
 
 import { fetchOrders } from '../utils/ordersCache';
 import { fetchRate } from '../utils/rateCache';
+import { getRewardsData } from '../api/rewards';
+import type { RewardsData } from '../api/rewards';
+import { useFeatureDiscovery } from '../hooks/useFeatureDiscovery';
+import FeatureDiscoveryPopup from '../components/FeatureDiscoveryPopup';
+import FeatureExplainerModal from '../components/FeatureExplainerModal';
+import { useSavings } from '../context/SavingsContext';
 import { formatDate } from '../utils/dateFormatter';
 import { BalanceCardSkeleton, TransactionListSkeleton, QuickActionsSkeleton } from '../components/ui/SkeletonLoader';
 import EmptyState from '../components/ui/EmptyState';
@@ -95,6 +101,8 @@ export default function Home() {
     const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
     const [exchangeRate, setExchangeRate] = useState<number>(0);
     const [isDataLoading, setIsDataLoading] = useState(true);
+    const [rewardsData, setRewardsData] = useState<RewardsData | null>(null);
+    const { history: savingsHistory } = useSavings();
 
     // USDC coin type on Sui mainnet
     const USDC_COIN_TYPE = '0xdba34672e30cb065b1f93e3ab55318768fd6fef66c15942c9f7cb846e2f900e7::usdc::USDC';
@@ -194,12 +202,14 @@ export default function Home() {
     const loadAllData = useCallback(async (isSilent = false, forceRefresh = false) => {
         if (!isSilent) setIsDataLoading(true);
         try {
-            const [orders, rate] = await Promise.all([
+            const [orders, rate, rewards] = await Promise.all([
                 fetchOrders(100, forceRefresh),
                 fetchRate(),
+                getRewardsData().catch(() => null),
             ]);
             setTransactions(orders);
             setExchangeRate(rate);
+            if (rewards) setRewardsData(rewards);
         } finally {
             if (!isSilent) setIsDataLoading(false);
         }
@@ -234,6 +244,13 @@ export default function Home() {
     const { isRefreshing, pullDistance, handlers: pullHandlers } = usePullToRefresh({
         onRefresh: () => loadAllData(false),
     });
+
+    const { feature: discoveryFeature, showPopup: showDiscoveryPopup, handleClose: handleDiscoveryClose, handleCtaClick: handleDiscoveryCta } = useFeatureDiscovery(
+        transactions,
+        rewardsData,
+        savingsHistory.length > 0,
+        !isDataLoading
+    );
 
     // Format USDC balance (USDC has 6 decimals on most chains, 18 on BSC)
     const formatBalance = () => {
@@ -598,6 +615,18 @@ export default function Home() {
                 order={selectedOrder}
                 onClose={() => setSelectedOrder(null)}
             />
+
+            {/* Feature Discovery Popup */}
+            {showDiscoveryPopup && discoveryFeature && (
+                <FeatureDiscoveryPopup
+                    feature={discoveryFeature}
+                    onClose={handleDiscoveryClose}
+                    onCtaClick={handleDiscoveryCta}
+                />
+            )}
+
+            {/* Feature Explainer (for multi-chain which navigates to /) */}
+            <FeatureExplainerModal />
 
         </div>
     );

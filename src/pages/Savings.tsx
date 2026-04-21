@@ -1,5 +1,6 @@
 import { useState, useMemo, useEffect } from 'react';
 import { PiggyBank, TrendingUp, AlertTriangle, ArrowDownToLine, Wallet, Trash2, Eye, EyeOff } from 'lucide-react';
+import FeatureExplainerModal from '../components/FeatureExplainerModal';
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 import { useSavings } from '../context/SavingsContext';
 import { useChain } from '../context/ChainContext';
@@ -410,6 +411,7 @@ export default function Savings() {
                     </div>
                 )}
             </div>
+            <FeatureExplainerModal />
         </div>
     );
 }

@@ -6,6 +6,7 @@ import Button from '../components/ui/Button';
 import { getRewardsData } from '../api/rewards';
 import type { RewardsData } from '../api/rewards';
 import referEarnImg from '../assets/refer-earn.png';
+import FeatureExplainerModal from '../components/FeatureExplainerModal';
 
 export default function Rewards() {
     const navigate = useNavigate();
@@ -187,6 +188,7 @@ export default function Rewards() {
 
                 </div>
             )}
+            <FeatureExplainerModal />
         </div>
     );
 }

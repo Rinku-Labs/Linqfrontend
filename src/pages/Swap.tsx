@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, ArrowDown, Loader2, AlertCircle, CheckCircle } from 'lucide-react';
+import FeatureExplainerModal from '../components/FeatureExplainerModal';
 import Button from '../components/ui/Button';
 import { useAuth } from '../context/AuthContext';
 import { getQuote, type Token, type QuoteResponse, getSwapStatus } from '../api/swap';
@@ -1023,6 +1024,7 @@ export default function Swap() {
             </div>
 
             {showSuccessModal && <SuccessModal />}
+            <FeatureExplainerModal />
         </div>
     );
 }
