@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(grep -r \"treasur\\\\|processing\\\\|initiated\" /c/Users/PC/Downloads/website_for_slush/Repos/Linq-v2-Frontend-1/src --include=*.tsx --include=*.ts)",
+      "Bash(npx vitest:*)",
+      "Bash(git pull:*)",
+      "Bash(git push:*)",
+      "Bash(npm install:*)"
+    ]
+  }
+}
