@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import './ProductTour.css';
 
 interface TourStep {
@@ -56,13 +57,19 @@ export default function ProductTour() {
                 cutoutRef.current.style.height = `${height}px`;
                 cutoutRef.current.style.opacity = '1';
                 
-                // Tooltip positioning
+                // Tooltip positioning (Centered relative to cutout)
+                const tooltipWidth = tooltipRef.current.offsetWidth || 280;
                 const tooltipHeight = tooltipRef.current.offsetHeight || 120;
+                
+                // Center horizontally
+                let tooltipLeft = left + (width / 2) - (tooltipWidth / 2);
+                // Clamp to screen edges with 16px padding
+                tooltipLeft = Math.max(16, Math.min(tooltipLeft, window.innerWidth - tooltipWidth - 16));
+                
                 const viewportHeight = window.innerHeight;
                 const spaceBelow = viewportHeight - (top + height + 12);
                 const placeBelow = spaceBelow > tooltipHeight;
                 
-                const tooltipLeft = Math.max(16, Math.min(left, window.innerWidth - 296));
                 const tooltipTop = placeBelow ? top + height + 12 : top - tooltipHeight - 12;
                 
                 tooltipRef.current.style.transform = `translate3d(${tooltipLeft}px, ${tooltipTop}px, 0)`;
@@ -122,7 +129,9 @@ export default function ProductTour() {
     const step = TOUR_STEPS[currentStep];
     const isLastStep = currentStep === TOUR_STEPS.length - 1;
 
-    return (
+    // Render directly into document.body to escape any CSS transforms from parent containers
+    // This is critical for position: fixed to align perfectly with getBoundingClientRect.
+    return createPortal(
         <div
             ref={overlayRef}
             className={`tour-overlay ${isExiting ? 'tour-overlay--exiting' : ''}`}
@@ -168,6 +177,7 @@ export default function ProductTour() {
                     </div>
                 </div>
             </div>
-        </div>
+        </div>,
+        document.body
     );
 }
