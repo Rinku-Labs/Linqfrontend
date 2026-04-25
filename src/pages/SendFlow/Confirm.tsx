@@ -215,7 +215,7 @@ export default function Confirm() {
                         navigate('/send/payment', {
                             state: {
                                 walletAddress, amount, orderId, chain: selectedChain, confirmState: {
-                                    amount, ngnAmount, currency: 'USD', recipientName, recipientUsername, bankName, bankCode, accountNumber, rate: currentRate, bankLogo
+                                    amount, ngnAmount, currency: 'USD', recipientName, recipientUsername, bankName, bankCode, accountNumber, rate: currentRate, bankLogo, description: descriptionText.trim() || undefined
                                 }
                             }
                         });
@@ -309,7 +309,7 @@ export default function Confirm() {
                                 navigate('/send/payment', {
                                     state: {
                                         walletAddress, amount, orderId, chain: selectedChain, confirmState: {
-                                            amount, ngnAmount, currency: 'USD', recipientName, recipientUsername, bankName, bankCode, accountNumber, rate: currentRate, bankLogo
+                                            amount, ngnAmount, currency: 'USD', recipientName, recipientUsername, bankName, bankCode, accountNumber, rate: currentRate, bankLogo, description: descriptionText.trim() || undefined
                                         }
                                     }
                                 });
@@ -482,7 +482,7 @@ export default function Confirm() {
                     navigate('/send/payment', {
                         state: {
                             walletAddress, amount, orderId, chain: selectedChain, confirmState: {
-                                amount, ngnAmount, currency: 'USD', recipientName, recipientUsername, bankName, bankCode, accountNumber, rate: currentRate, bankLogo
+                                amount, ngnAmount, currency: 'USD', recipientName, recipientUsername, bankName, bankCode, accountNumber, rate: currentRate, bankLogo, description: descriptionText.trim() || undefined
                             }
                         }
                     });
@@ -573,7 +573,7 @@ export default function Confirm() {
                     navigate('/send/payment', {
                         state: {
                             walletAddress, amount, orderId, chain: selectedChain, confirmState: {
-                                amount, ngnAmount, currency: 'USD', recipientName, recipientUsername, bankName, bankCode, accountNumber, rate: currentRate, bankLogo
+                                amount, ngnAmount, currency: 'USD', recipientName, recipientUsername, bankName, bankCode, accountNumber, rate: currentRate, bankLogo, description: descriptionText.trim() || undefined
                             }
                         }
                     });
@@ -686,7 +686,7 @@ export default function Confirm() {
                     navigate('/send/payment', {
                         state: {
                             walletAddress, amount, orderId, chain: selectedChain, confirmState: {
-                                amount, ngnAmount, currency: 'USD', recipientName, recipientUsername, bankName, bankCode, accountNumber, rate: currentRate, bankLogo
+                                amount, ngnAmount, currency: 'USD', recipientName, recipientUsername, bankName, bankCode, accountNumber, rate: currentRate, bankLogo, description: descriptionText.trim() || undefined
                             }
                         }
                     });
@@ -799,7 +799,7 @@ export default function Confirm() {
                     navigate('/send/payment', {
                         state: {
                             walletAddress, amount, orderId, chain: selectedChain, confirmState: {
-                                amount, ngnAmount, currency: 'USD', recipientName, recipientUsername, bankName, bankCode, accountNumber, rate: currentRate, bankLogo
+                                amount, ngnAmount, currency: 'USD', recipientName, recipientUsername, bankName, bankCode, accountNumber, rate: currentRate, bankLogo, description: descriptionText.trim() || undefined
                             }
                         }
                     });
@@ -897,7 +897,7 @@ export default function Confirm() {
                         navigate('/send/payment', {
                             state: {
                                 walletAddress, amount, orderId, chain: selectedChain, confirmState: {
-                                    amount, ngnAmount, currency: 'USD', recipientName, recipientUsername, bankName, bankCode, accountNumber, rate: currentRate, bankLogo
+                                    amount, ngnAmount, currency: 'USD', recipientName, recipientUsername, bankName, bankCode, accountNumber, rate: currentRate, bankLogo, description: descriptionText.trim() || undefined
                                 }
                             }
                         });

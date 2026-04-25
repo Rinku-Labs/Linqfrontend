@@ -158,6 +158,7 @@ export default function Payment() {
         bankAccount: confirmState?.accountNumber || '',
         bankName: confirmState?.bankName || '',
         accountName: confirmState?.recipientName || '',
+        description: confirmState?.description || '',
         status: status,
         createdAt: new Date().toISOString(),
         orderType: 'off-ramp'
