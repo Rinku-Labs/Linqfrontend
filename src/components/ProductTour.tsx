@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import './ProductTour.css';
 
 interface TourStep {
@@ -14,73 +14,83 @@ const TOUR_STEPS: TourStep[] = [
     { targetId: 'tour-rewards', text: 'Refer your friends, earn rewards, climb the leaderboard' },
 ];
 
-const PADDING = 10; // px around the highlighted element
-
-interface Rect {
-    top: number;
-    left: number;
-    width: number;
-    height: number;
-}
+const PADDING = 10;
 
 export default function ProductTour() {
     const [isActive, setIsActive] = useState(false);
     const [currentStep, setCurrentStep] = useState(0);
-    const [targetRect, setTargetRect] = useState<Rect | null>(null);
     const [isExiting, setIsExiting] = useState(false);
+    
     const overlayRef = useRef<HTMLDivElement>(null);
-
+    const cutoutRef = useRef<HTMLDivElement>(null);
+    const tooltipRef = useRef<HTMLDivElement>(null);
+    const rafRef = useRef<number>();
+    
     // Check if tour should be shown
     useEffect(() => {
         const shouldShow = localStorage.getItem('linq_showTour') === 'true';
         if (shouldShow) {
-            // Small delay to let the homepage fully render & layout settle
-            const timer = setTimeout(() => {
-                setIsActive(true);
-            }, 800);
-            return () => clearTimeout(timer);
+            setIsActive(true);
         }
     }, []);
 
-    // Calculate the position of the current target element
-    const updateTargetRect = useCallback(() => {
-        if (!isActive) return;
-        const step = TOUR_STEPS[currentStep];
-        const el = document.getElementById(step.targetId);
-        if (!el) return;
-
-        const rect = el.getBoundingClientRect();
-        setTargetRect({
-            top: rect.top - PADDING,
-            left: rect.left - PADDING,
-            width: rect.width + PADDING * 2,
-            height: rect.height + PADDING * 2,
-        });
-
-        // Scroll the element into view if needed
-        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    }, [isActive, currentStep]);
-
-    // Update rect on step change and on resize/scroll
+    // Continuous tracking loop for perfect alignment
     useEffect(() => {
-        if (!isActive) return;
+        if (!isActive || isExiting) return;
 
-        // Initial position after a tiny delay for scroll to settle
-        const initialTimer = setTimeout(updateTargetRect, 100);
-
-        window.addEventListener('resize', updateTargetRect);
-        window.addEventListener('scroll', updateTargetRect, true);
-
-        return () => {
-            clearTimeout(initialTimer);
-            window.removeEventListener('resize', updateTargetRect);
-            window.removeEventListener('scroll', updateTargetRect, true);
+        const updatePosition = () => {
+            const step = TOUR_STEPS[currentStep];
+            const el = document.getElementById(step.targetId);
+            
+            if (el && cutoutRef.current && tooltipRef.current) {
+                const rect = el.getBoundingClientRect();
+                
+                // Cutout positioning
+                const top = rect.top - PADDING;
+                const left = rect.left - PADDING;
+                const width = rect.width + PADDING * 2;
+                const height = rect.height + PADDING * 2;
+                
+                cutoutRef.current.style.transform = `translate3d(${left}px, ${top}px, 0)`;
+                cutoutRef.current.style.width = `${width}px`;
+                cutoutRef.current.style.height = `${height}px`;
+                cutoutRef.current.style.opacity = '1';
+                
+                // Tooltip positioning
+                const tooltipHeight = tooltipRef.current.offsetHeight || 120;
+                const viewportHeight = window.innerHeight;
+                const spaceBelow = viewportHeight - (top + height + 12);
+                const placeBelow = spaceBelow > tooltipHeight;
+                
+                const tooltipLeft = Math.max(16, Math.min(left, window.innerWidth - 296));
+                const tooltipTop = placeBelow ? top + height + 12 : top - tooltipHeight - 12;
+                
+                tooltipRef.current.style.transform = `translate3d(${tooltipLeft}px, ${tooltipTop}px, 0)`;
+                tooltipRef.current.style.opacity = '1';
+            } else if (cutoutRef.current && tooltipRef.current) {
+                // Element not found yet (e.g. data still loading, skeleton showing)
+                cutoutRef.current.style.opacity = '0';
+                tooltipRef.current.style.opacity = '0';
+            }
+            
+            rafRef.current = requestAnimationFrame(updatePosition);
         };
-    }, [isActive, updateTargetRect]);
+        
+        rafRef.current = requestAnimationFrame(updatePosition);
+        
+        return () => {
+            if (rafRef.current) cancelAnimationFrame(rafRef.current);
+        };
+    }, [isActive, isExiting, currentStep]);
 
     const handleNext = () => {
         if (currentStep < TOUR_STEPS.length - 1) {
             setCurrentStep(prev => prev + 1);
+            // Smooth scroll to ensure the next element is centered
+            const nextEl = document.getElementById(TOUR_STEPS[currentStep + 1].targetId);
+            if (nextEl) {
+                nextEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
         } else {
             handleDismiss();
         }
@@ -107,83 +117,35 @@ export default function ProductTour() {
         };
     }, [isActive]);
 
-    if (!isActive || !targetRect) return null;
+    if (!isActive) return null;
 
     const step = TOUR_STEPS[currentStep];
     const isLastStep = currentStep === TOUR_STEPS.length - 1;
-
-    // Calculate tooltip position — prefer below the element, fall back to above
-    const viewportHeight = window.innerHeight;
-    const tooltipHeight = 120; // estimated
-    const spaceBelow = viewportHeight - (targetRect.top + targetRect.height + 12);
-    const placeBelow = spaceBelow > tooltipHeight;
-
-    const tooltipStyle: React.CSSProperties = {
-        left: Math.max(16, Math.min(targetRect.left, window.innerWidth - 296)),
-        ...(placeBelow
-            ? { top: targetRect.top + targetRect.height + 12 }
-            : { top: targetRect.top - tooltipHeight - 12 }),
-    };
-
-    // SVG mask: full-screen dark rect with a rounded-rect hole cut out
-    const svgWidth = window.innerWidth;
-    const svgHeight = window.innerHeight;
-    const rx = 16; // border-radius for the cutout
 
     return (
         <div
             ref={overlayRef}
             className={`tour-overlay ${isExiting ? 'tour-overlay--exiting' : ''}`}
             onClick={(e) => {
-                // Clicking the dark area dismisses
-                if (e.target === overlayRef.current || (e.target as HTMLElement).tagName === 'rect') {
+                // Only dismiss if clicking the dark overlay area
+                if (e.target === overlayRef.current) {
                     handleDismiss();
                 }
             }}
         >
-            {/* Dark overlay with cutout hole */}
-            <svg className="tour-overlay__svg" width={svgWidth} height={svgHeight}>
-                <defs>
-                    <mask id="tour-mask">
-                        {/* White = visible (dark overlay shows), Black = hidden (hole) */}
-                        <rect x="0" y="0" width={svgWidth} height={svgHeight} fill="white" />
-                        <rect
-                            x={targetRect.left}
-                            y={targetRect.top}
-                            width={targetRect.width}
-                            height={targetRect.height}
-                            rx={rx}
-                            ry={rx}
-                            fill="black"
-                            style={{
-                                transition: 'all 0.45s cubic-bezier(0.4, 0, 0.2, 1)',
-                            }}
-                        />
-                    </mask>
-                </defs>
-                <rect
-                    x="0"
-                    y="0"
-                    width={svgWidth}
-                    height={svgHeight}
-                    fill="rgba(0, 0, 0, 0.75)"
-                    mask="url(#tour-mask)"
-                />
-            </svg>
-
-            {/* Dashed border around the cutout */}
+            {/* The Cutout and Dark Mask */}
             <div
-                className="tour-cutout-border"
-                style={{
-                    top: targetRect.top,
-                    left: targetRect.left,
-                    width: targetRect.width,
-                    height: targetRect.height,
-                }}
+                ref={cutoutRef}
+                className="tour-cutout"
+                style={{ opacity: 0 }}
             />
 
-            {/* Tooltip */}
-            <div className="tour-tooltip" style={tooltipStyle} key={`tooltip-${currentStep}`}>
+            {/* The Tooltip */}
+            <div
+                ref={tooltipRef}
+                className="tour-tooltip"
+                style={{ opacity: 0 }}
+            >
                 <p className="tour-tooltip__text">{step.text}</p>
                 <div className="tour-tooltip__actions">
                     <div className="tour-tooltip__dots">

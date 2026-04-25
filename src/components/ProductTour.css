@@ -7,8 +7,8 @@
     width: 100vw;
     height: 100vh;
     z-index: 9999;
-    pointer-events: auto;
-    animation: tourFadeIn 0.4s ease-out;
+    animation: tourFadeIn 0.3s ease-out;
+    overflow: hidden; /* Prevent the huge box-shadow from creating scrollbars */
 }
 
 @keyframes tourFadeIn {
@@ -25,36 +25,35 @@
     animation: tourFadeOut 0.3s ease-in forwards;
 }
 
-/* SVG overlay fills the entire screen */
-.tour-overlay__svg {
+/* ===== Cutout with Dark Overlay ===== */
+
+.tour-cutout {
     position: absolute;
     top: 0;
     left: 0;
-    width: 100%;
-    height: 100%;
-}
-
-/* ===== Dashed Cutout Border ===== */
-
-.tour-cutout-border {
-    position: absolute;
     border: 2px dashed rgba(139, 92, 246, 0.9);
     border-radius: 16px;
+    /* The huge box-shadow creates the dark overlay perfectly synced with the cutout */
     box-shadow:
         0 0 12px rgba(139, 92, 246, 0.4),
         0 0 24px rgba(139, 92, 246, 0.15),
-        inset 0 0 12px rgba(139, 92, 246, 0.1);
-    pointer-events: none;
-    transition: top 0.45s cubic-bezier(0.4, 0, 0.2, 1),
-                left 0.45s cubic-bezier(0.4, 0, 0.2, 1),
-                width 0.45s cubic-bezier(0.4, 0, 0.2, 1),
-                height 0.45s cubic-bezier(0.4, 0, 0.2, 1);
+        inset 0 0 12px rgba(139, 92, 246, 0.1),
+        0 0 0 9999px rgba(0, 0, 0, 0.75);
+    pointer-events: none; /* Let clicks pass through the cutout hole */
+    transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1),
+                width 0.4s cubic-bezier(0.4, 0, 0.2, 1),
+                height 0.4s cubic-bezier(0.4, 0, 0.2, 1),
+                opacity 0.2s ease;
+    transform-origin: top left;
+    will-change: transform, width, height;
 }
 
 /* ===== Tooltip ===== */
 
 .tour-tooltip {
     position: absolute;
+    top: 0;
+    left: 0;
     z-index: 10000;
     max-width: 280px;
     padding: 16px 20px;
@@ -65,21 +64,9 @@
     border-radius: 16px;
     color: #ffffff;
     pointer-events: auto;
-    transition: top 0.45s cubic-bezier(0.4, 0, 0.2, 1),
-                left 0.45s cubic-bezier(0.4, 0, 0.2, 1),
-                opacity 0.3s ease;
-    animation: tooltipAppear 0.35s ease-out;
-}
-
-@keyframes tooltipAppear {
-    from {
-        opacity: 0;
-        transform: translateY(8px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
+    transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1),
+                opacity 0.2s ease;
+    will-change: transform;
 }
 
 .tour-tooltip__text {
