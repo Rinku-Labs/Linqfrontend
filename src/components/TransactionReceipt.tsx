@@ -46,6 +46,7 @@ export default function TransactionReceipt({ order, onDone, showDoneButton = tru
     const transactionId = order?.id || 'N/A';
     const dateStr = order?.createdAt || order?.created || '';
     const status = order?.status || 'completed';
+    const narration = order?.description || 'FRM Linq User';
 
     // Copy handlers
     const [copiedRef, setCopiedRef] = useState(false);
@@ -182,7 +183,7 @@ export default function TransactionReceipt({ order, onDone, showDoneButton = tru
 
                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                     <span style={{ color: 'var(--text-muted)', fontSize: '10px' }}>Narration</span>
-                    <span style={{ fontWeight: 600, fontSize: '10px', color: 'var(--text-main)' }}>FRM Linq User</span>
+                    <span style={{ fontWeight: 600, fontSize: '10px', color: 'var(--text-main)' }}>{narration}</span>
                 </div>
 
             </div>

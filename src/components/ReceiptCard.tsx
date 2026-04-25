@@ -19,6 +19,7 @@ const ReceiptCard = forwardRef<HTMLDivElement, ReceiptCardProps>(({ order }, ref
     // Removed unused amountUsdc
     const amountNgn = order.amountNgn?.toLocaleString('en-NG', { maximumFractionDigits: 0 }) || '0';
     const transactionId = order.id || 'N/A';
+    const narration = order.description || 'FRM Linq User';
     const dateStr = order.createdAt || order.created || '';
 
     // Format date like: "Thursday, Jan 22 • 04:11 PM"
@@ -125,7 +126,7 @@ const ReceiptCard = forwardRef<HTMLDivElement, ReceiptCardProps>(({ order }, ref
 
                     <DashedLine />
 
-                    <DetailRow label="Narration" value="FRM Linq User" />
+                    <DetailRow label="Narration" value={narration} />
 
                     <DashedLine />
 
