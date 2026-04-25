@@ -1,4 +1,5 @@
 import { ArrowUpRight, ArrowDownLeft, RefreshCw, Smartphone, Zap, Eye, EyeOff, Wallet, Inbox, Copy } from 'lucide-react';
+import ProductTour from '../components/ProductTour';
 import { getTransactionIcon } from '../utils/transactionIcons';
 import clickToEarnImg from '../assets/click-to-earn.png';
 import logo from '../assets/logo.png';
@@ -429,6 +430,7 @@ export default function Home() {
 
                     <div style={{ display: 'flex', gap: '16px' }}>
                         <Button
+                            id="tour-transfer"
                             variant="secondary"
                             fullWidth
                             onClick={() => navigate('/send/details')}
@@ -440,6 +442,7 @@ export default function Home() {
                             <ArrowUpRight size={20} /> Transfer
                         </Button>
                         <Button
+                            id="tour-deposit"
                             variant="secondary"
                             fullWidth
                             onClick={() => navigate('/deposit')}
@@ -461,7 +464,7 @@ export default function Home() {
                         { label: 'Top Up', icon: Smartphone, comingSoon: false, path: '/bills/topup' },
                         { label: 'Electricity', icon: Zap, comingSoon: false, path: '/bills/topup?tab=electricity' }
                     ].map((item) => (
-                        <button key={item.label} className="card-interactive" onClick={() => !item.comingSoon && navigate(item.path)} style={{
+                        <button key={item.label} id={item.label === 'Swap' ? 'tour-swap' : item.label === 'Top Up' ? 'tour-topup' : undefined} className="card-interactive" onClick={() => !item.comingSoon && navigate(item.path)} style={{
                             background: 'var(--surface)', borderRadius: '20px', padding: '16px', border: 'none',
                             display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px',
                             boxShadow: 'var(--card-shadow)', cursor: item.comingSoon ? 'default' : 'pointer',
@@ -486,6 +489,7 @@ export default function Home() {
 
             {/* Earn Rewards Banner */}
             <div
+                id="tour-rewards"
                 onClick={() => navigate('/rewards')}
                 className="card-interactive"
                 style={{
@@ -627,6 +631,9 @@ export default function Home() {
 
             {/* Feature Explainer (for multi-chain which navigates to /) */}
             <FeatureExplainerModal />
+
+            {/* Onboarding Product Tour (new users only) */}
+            <ProductTour />
 
         </div>
     );

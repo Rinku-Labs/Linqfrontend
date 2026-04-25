@@ -1,0 +1,150 @@
+/* ===== Product Tour Overlay ===== */
+
+.tour-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    z-index: 9999;
+    pointer-events: auto;
+    animation: tourFadeIn 0.4s ease-out;
+}
+
+@keyframes tourFadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@keyframes tourFadeOut {
+    from { opacity: 1; }
+    to { opacity: 0; }
+}
+
+.tour-overlay--exiting {
+    animation: tourFadeOut 0.3s ease-in forwards;
+}
+
+/* SVG overlay fills the entire screen */
+.tour-overlay__svg {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+}
+
+/* ===== Dashed Cutout Border ===== */
+
+.tour-cutout-border {
+    position: absolute;
+    border: 2px dashed rgba(139, 92, 246, 0.9);
+    border-radius: 16px;
+    box-shadow:
+        0 0 12px rgba(139, 92, 246, 0.4),
+        0 0 24px rgba(139, 92, 246, 0.15),
+        inset 0 0 12px rgba(139, 92, 246, 0.1);
+    pointer-events: none;
+    transition: top 0.45s cubic-bezier(0.4, 0, 0.2, 1),
+                left 0.45s cubic-bezier(0.4, 0, 0.2, 1),
+                width 0.45s cubic-bezier(0.4, 0, 0.2, 1),
+                height 0.45s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* ===== Tooltip ===== */
+
+.tour-tooltip {
+    position: absolute;
+    z-index: 10000;
+    max-width: 280px;
+    padding: 16px 20px;
+    background: rgba(20, 10, 40, 0.92);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid rgba(139, 92, 246, 0.25);
+    border-radius: 16px;
+    color: #ffffff;
+    pointer-events: auto;
+    transition: top 0.45s cubic-bezier(0.4, 0, 0.2, 1),
+                left 0.45s cubic-bezier(0.4, 0, 0.2, 1),
+                opacity 0.3s ease;
+    animation: tooltipAppear 0.35s ease-out;
+}
+
+@keyframes tooltipAppear {
+    from {
+        opacity: 0;
+        transform: translateY(8px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.tour-tooltip__text {
+    font-size: 13px;
+    line-height: 1.5;
+    color: rgba(255, 255, 255, 0.9);
+    margin: 0 0 14px 0;
+    font-weight: 400;
+}
+
+.tour-tooltip__actions {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.tour-tooltip__dots {
+    display: flex;
+    gap: 6px;
+}
+
+.tour-tooltip__dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.2);
+    transition: background 0.3s ease, transform 0.3s ease;
+}
+
+.tour-tooltip__dot--active {
+    background: var(--primary, #8B5CF6);
+    transform: scale(1.3);
+}
+
+.tour-tooltip__next-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 8px 20px;
+    background: var(--primary, #8B5CF6);
+    color: #ffffff;
+    border: none;
+    border-radius: 20px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s ease, transform 0.15s ease;
+    white-space: nowrap;
+}
+
+.tour-tooltip__next-btn:active {
+    transform: scale(0.95);
+}
+
+.tour-tooltip__skip-btn {
+    background: none;
+    border: none;
+    color: rgba(255, 255, 255, 0.5);
+    font-size: 12px;
+    cursor: pointer;
+    padding: 4px 8px;
+    transition: color 0.2s ease;
+}
+
+.tour-tooltip__skip-btn:hover {
+    color: rgba(255, 255, 255, 0.8);
+}

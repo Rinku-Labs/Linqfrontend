@@ -210,6 +210,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
             // Auto login after signup
             await login(email, password);
+            // Flag for the product tour to show on first homepage visit
+            localStorage.setItem('linq_showTour', 'true');
         } catch (error) {
             throw error;
         }
