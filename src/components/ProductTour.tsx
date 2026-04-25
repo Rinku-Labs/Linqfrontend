@@ -135,12 +135,6 @@ export default function ProductTour() {
         <div
             ref={overlayRef}
             className={`tour-overlay ${isExiting ? 'tour-overlay--exiting' : ''}`}
-            onClick={(e) => {
-                // Only dismiss if clicking the dark overlay area
-                if (e.target === overlayRef.current) {
-                    handleDismiss();
-                }
-            }}
         >
             {/* The Cutout and Dark Mask */}
             <div

@@ -84,6 +84,11 @@ export function useFeatureDiscovery(
     useEffect(() => {
         if (!isDataLoaded) return;
 
+        // Suppress feature discovery popup if the onboarding tour is active
+        if (localStorage.getItem('linq_showTour') === 'true') {
+            return;
+        }
+
         const unused = getUnusedFeatures(orders, rewardsData, hasSavingsHistory);
         const candidates = unused.length > 0 ? unused : FEATURES.map(f => f.key);
         const selected = pickRandom(candidates);
