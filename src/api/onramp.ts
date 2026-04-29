@@ -29,6 +29,10 @@ export interface OnrampStatusResponse {
     orderId: string;
     status: 'pending' | 'awaiting_payment' | 'payment_received' | 'sending_crypto' | 'completed' | 'failed' | 'expired';
     amount: number;
+    amountNgn?: number;
+    bankName?: string;
+    accountNumber?: string;
+    accountName?: string;
 }
 
 export const createOnrampOrder = async (data: OnrampOrderRequest): Promise<OnrampOrderResponse> => {
