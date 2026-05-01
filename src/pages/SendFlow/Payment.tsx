@@ -41,7 +41,7 @@ export default function Payment() {
     }
 
     const { token } = useAuth();
-    const { lastMessage, isConnected } = useWebSocket<WebSocketMessage>({ orderId, token: token ?? undefined });
+    const { lastMessage, isConnected, stop: stopWs } = useWebSocket<WebSocketMessage>({ orderId, token: token ?? undefined });
 
     useEffect(() => {
         if (lastMessage) {
@@ -80,17 +80,20 @@ export default function Payment() {
                     setMessage('Transfer successful! Money sent.');
                     if (!endTime) setEndTime(Date.now());
                     invalidateOrdersCache();
+                    stopWs();
                 }
             } else if (mappedStatus === 'failed') {
                 if (status !== 'failed') {
                     setStatus('failed');
                     setMessage('Transaction failed. You will be refunded.');
                     hasInitiatedRef.current = false;
+                    stopWs();
                 }
             } else if (mappedStatus === 'refunded') {
                 if (status !== 'refunded') {
                     setStatus('refunded');
                     setMessage('Transaction was refunded.');
+                    stopWs();
                 }
             } else {
                 // For intermediate states

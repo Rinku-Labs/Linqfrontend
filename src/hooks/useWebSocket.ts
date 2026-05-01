@@ -6,6 +6,7 @@ export const useWebSocket = <T>(params: { orderId?: string; userId?: string; tok
     const [isConnected, setIsConnected] = useState(false);
     const socketRef = useRef<WebSocket | null>(null);
     const reconnectTimeoutRef = useRef<NodeJS.Timeout | undefined>(undefined);
+    const stoppedRef = useRef(false);
 
     useEffect(() => {
         if (!params || (!params.orderId && !params.userId)) return;
@@ -47,6 +48,7 @@ export const useWebSocket = <T>(params: { orderId?: string; userId?: string; tok
             socket.onclose = (event) => {
                 console.warn('[WS] Disconnected', { code: event.code, reason: event.reason, wasClean: event.wasClean, attempt: reconnectAttempts });
                 setIsConnected(false);
+                if (stoppedRef.current) return;
                 // Exponential backoff for reconnection
                 if (reconnectAttempts < maxReconnectAttempts) {
                     const timeout = Math.min(1000 * Math.pow(2, reconnectAttempts), 30000); // Max 30s
@@ -82,5 +84,14 @@ export const useWebSocket = <T>(params: { orderId?: string; userId?: string; tok
         };
     }, [params?.orderId, params?.userId, params?.token]);
 
-    return { lastMessage, isConnected };
+    const stop = () => {
+        stoppedRef.current = true;
+        if (reconnectTimeoutRef.current) clearTimeout(reconnectTimeoutRef.current);
+        if (socketRef.current) {
+            socketRef.current.onclose = null;
+            socketRef.current.close();
+        }
+    };
+
+    return { lastMessage, isConnected, stop };
 };

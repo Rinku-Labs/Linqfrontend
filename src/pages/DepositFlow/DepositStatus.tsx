@@ -35,7 +35,7 @@ export default function DepositStatus() {
 
     const { token } = useAuth();
     // WebSocket hook
-    const { lastMessage, isConnected: isDepositWsConnected } = useWebSocket<OnrampStatusResponse>({ orderId, token: token ?? undefined });
+    const { lastMessage, isConnected: isDepositWsConnected, stop: stopWs } = useWebSocket<OnrampStatusResponse>({ orderId, token: token ?? undefined });
 
     // Initial load
     useEffect(() => {
@@ -108,6 +108,7 @@ export default function DepositStatus() {
                     if (mapped === 'completed' && !endTime) {
                         setEndTime(Date.now());
                         invalidateOrdersCache();
+                        stopWs();
                     }
                 }
             } else if (newStatus && !statusData) {
