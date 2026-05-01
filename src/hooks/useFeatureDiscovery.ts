@@ -89,6 +89,11 @@ export function useFeatureDiscovery(
             return;
         }
 
+        // Only show popup on every 5th session (sessions 5, 10, 15, …)
+        const count = (parseInt(localStorage.getItem('linqSessionCount') || '0', 10)) + 1;
+        localStorage.setItem('linqSessionCount', String(count));
+        if (count % 5 !== 0) return;
+
         const unused = getUnusedFeatures(orders, rewardsData, hasSavingsHistory);
         const candidates = unused.length > 0 ? unused : FEATURES.map(f => f.key);
         const selected = pickRandom(candidates);

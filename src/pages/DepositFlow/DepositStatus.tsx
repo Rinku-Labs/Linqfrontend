@@ -35,7 +35,7 @@ export default function DepositStatus() {
 
     const { token } = useAuth();
     // WebSocket hook
-    const { lastMessage } = useWebSocket<OnrampStatusResponse>({ orderId, token: token ?? undefined });
+    const { lastMessage, isConnected: isDepositWsConnected } = useWebSocket<OnrampStatusResponse>({ orderId, token: token ?? undefined });
 
     // Initial load
     useEffect(() => {
@@ -43,6 +43,31 @@ export default function DepositStatus() {
             getOnrampStatus(orderId).then(setStatusData).catch(console.error);
         }
     }, [orderId]);
+
+    // HTTP polling safety net
+    useEffect(() => {
+        if (!orderId) return;
+        const terminal = ['completed', 'failed', 'expired'];
+        if (statusData && terminal.includes(statusData.status)) return;
+
+        const poll = () => {
+            getOnrampStatus(orderId).then(data => {
+                if (!data) return;
+                setStatusData(prev => {
+                    if (prev?.status === data.status) return prev;
+                    if (!endTime && mapTransactionStatus(data.status) === 'completed') {
+                        setEndTime(Date.now());
+                        invalidateOrdersCache();
+                    }
+                    return data;
+                });
+            }).catch(() => { /* ignore */ });
+        };
+
+        poll();
+        const interval = setInterval(poll, isDepositWsConnected ? 12000 : 4000);
+        return () => clearInterval(interval);
+    }, [orderId, isDepositWsConnected, statusData?.status]);
 
     // Handle WebSocket updates
     useEffect(() => {

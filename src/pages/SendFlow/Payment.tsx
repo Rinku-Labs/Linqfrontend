@@ -136,9 +136,9 @@ export default function Payment() {
             }
         };
 
-        // Always poll as a safety net regardless of WS state.
+        // Check immediately on mount, then poll as safety net.
         // Use shorter interval when WS is disconnected (4s) and longer when connected (12s).
-        // This prevents the gap where the WS is reconnecting and polling has stopped.
+        checkStatus();
         const interval = setInterval(checkStatus, isConnected ? 12000 : 4000);
         return () => clearInterval(interval);
     }, [orderId, status, endTime, isConnected]);
