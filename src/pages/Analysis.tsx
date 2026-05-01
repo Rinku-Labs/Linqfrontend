@@ -339,7 +339,7 @@ export default function Analysis() {
                         border: '1px solid var(--border-color)'
                     }}>
                         <h3 style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-main)', marginBottom: '16px' }}>Transaction Volume</h3>
-                        <ResponsiveContainer width="100%" height="85%">
+                        <ResponsiveContainer width="100%" height={250} minWidth={0}>
                             <AreaChart data={chartData}>
                                 <defs>
                                     <linearGradient id="colorValue" x1="0" y1="0" x2="0" y2="1">
@@ -393,7 +393,7 @@ export default function Analysis() {
                         }}>
                             <h3 style={{ fontSize: '10px', fontWeight: 600, color: 'var(--text-main)', marginBottom: '8px' }}>Type Breakdown</h3>
                             {typeData.length > 0 ? (
-                                <ResponsiveContainer width="100%" height={180}>
+                                <ResponsiveContainer width="100%" height={180} minWidth={0}>
                                     <PieChart>
                                         <Pie
                                             data={typeData}
@@ -450,7 +450,7 @@ export default function Analysis() {
                         }}>
                             <h3 style={{ fontSize: '10px', fontWeight: 600, color: 'var(--text-main)', marginBottom: '8px' }}>Tx Count</h3>
                             {barData.length > 0 ? (
-                                <ResponsiveContainer width="100%" height={180}>
+                                <ResponsiveContainer width="100%" height={180} minWidth={0}>
                                     <BarChart data={barData}>
                                         <defs>
                                             <linearGradient id="barGradient" x1="0" y1="0" x2="0" y2="1">

@@ -84,7 +84,7 @@ export default function BillPayment() {
         };
     };
     const { token } = useAuth();
-    const { lastMessage, isConnected: isBillWsConnected } = useWebSocket<WebSocketMessage>({ orderId, token: token ?? undefined });
+    const { lastMessage } = useWebSocket<WebSocketMessage>({ orderId, token: token ?? undefined });
 
     // Redirect if state is missing
     useEffect(() => {
@@ -408,37 +408,26 @@ export default function BillPayment() {
         }
     }, [lastMessage, orderId, status]);
 
-    // HTTP polling safety net (in case WebSocket misses a status update)
+    // One-shot status check on mount — catches orders already completed before WS connected
     useEffect(() => {
         if (!orderId) return;
-
-        const checkStatus = async () => {
-            if (status === 'completed' || status === 'failed' || status === 'cancelled') return;
-            if (status === 'idle' || status === 'preparing' || status === 'signing') return;
-
-            try {
-                const data = await getOrderStatus(orderId);
-                if (!data?.status) return;
-                if (data.status === 'completed' && status !== 'completed') {
-                    setStatus('completed');
-                    setMessage('Bill payment successful!');
-                    sessionStorage.removeItem(`billPayment_${orderId}`);
-                    invalidateOrdersCache();
-                } else if ((data.status === 'failed' || data.status === 'timeout: no deposit received') && status !== 'failed') {
-                    sessionStorage.removeItem(`billPayment_${orderId}`);
-                    setStatus('failed');
-                    setMessage(data.status === 'timeout: no deposit received'
-                        ? 'No deposit received. Please try again.'
-                        : 'Transaction failed.');
-                    invalidateOrdersCache();
-                }
-            } catch { /* ignore polling errors */ }
-        };
-
-        checkStatus();
-        const interval = setInterval(checkStatus, isBillWsConnected ? 12000 : 4000);
-        return () => clearInterval(interval);
-    }, [orderId, status, isBillWsConnected]);
+        getOrderStatus(orderId).then(data => {
+            if (!data?.status) return;
+            if (data.status === 'completed' && status !== 'completed') {
+                setStatus('completed');
+                setMessage('Bill payment successful!');
+                sessionStorage.removeItem(`billPayment_${orderId}`);
+                invalidateOrdersCache();
+            } else if ((data.status === 'failed' || data.status === 'timeout: no deposit received') && status !== 'failed') {
+                sessionStorage.removeItem(`billPayment_${orderId}`);
+                setStatus('failed');
+                setMessage(data.status === 'timeout: no deposit received'
+                    ? 'No deposit received. Please try again.'
+                    : 'Transaction failed.');
+                invalidateOrdersCache();
+            }
+        }).catch(() => { /* WS will cover it */ });
+    }, [orderId]);
 
     // Play success sound when bill is completed
     useEffect(() => {

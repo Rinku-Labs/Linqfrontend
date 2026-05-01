@@ -41,123 +41,70 @@ export default function Payment() {
     }
 
     const { token } = useAuth();
-    const { lastMessage, isConnected, stop: stopWs } = useWebSocket<WebSocketMessage>({ orderId, token: token ?? undefined });
+    const { lastMessage, stop: stopWs } = useWebSocket<WebSocketMessage>({ orderId, token: token ?? undefined });
 
     useEffect(() => {
-        if (lastMessage) {
-            console.log('[Payment] WS message received:', lastMessage);
-            // Determine the status string from various possible message formats
-            let statusStr = '';
-            const msg = lastMessage as any;
+        if (!lastMessage) return;
+        let statusStr = '';
+        const msg = lastMessage as any;
 
-            if (typeof msg === 'string') {
-                statusStr = msg;
-            } else if (msg && typeof msg === 'object') {
-                if ('data' in msg) {
-                    const data = msg.data;
-                    if (typeof data === 'string') {
-                        statusStr = data;
-                    } else if (data && typeof data === 'object' && 'status' in data) {
-                        statusStr = data.status;
-                    }
-                } else if ('status' in msg) {
-                    statusStr = msg.status;
-                }
+        if (typeof msg === 'string') {
+            statusStr = msg;
+        } else if (msg && typeof msg === 'object') {
+            if ('data' in msg) {
+                const data = msg.data;
+                if (typeof data === 'string') statusStr = data;
+                else if (data && typeof data === 'object' && 'status' in data) statusStr = data.status;
+            } else if ('status' in msg) {
+                statusStr = msg.status;
             }
+        }
 
-            console.log('[Payment] Parsed WS status:', statusStr, '| current:', status);
+        if (!statusStr) return;
+        const mappedStatus = mapTransactionStatus(statusStr);
 
-            if (!statusStr) {
-                console.warn('[Payment] WS message had no parseable status, ignoring');
-                return;
-            }
-
-            const mappedStatus = mapTransactionStatus(statusStr);
-
-            if (mappedStatus === 'completed') {
-                if (status !== 'completed') {
-                    setStatus('completed');
-                    setMessage('Transfer successful! Money sent.');
-                    if (!endTime) setEndTime(Date.now());
-                    invalidateOrdersCache();
-                    stopWs();
-                }
-            } else if (mappedStatus === 'failed') {
-                if (status !== 'failed') {
-                    setStatus('failed');
-                    setMessage('Transaction failed. You will be refunded.');
-                    hasInitiatedRef.current = false;
-                    stopWs();
-                }
-            } else if (mappedStatus === 'refunded') {
-                if (status !== 'refunded') {
-                    setStatus('refunded');
-                    setMessage('Transaction was refunded.');
-                    stopWs();
-                }
-            } else {
-                // For intermediate states
-                // Prevent reverting from terminal states
-                if (status === 'completed' || status === 'failed' || status === 'refunded') {
-                    return;
-                }
-
-                if (status !== 'processing') setStatus('processing');
-                setMessage(statusStr === 'wallet_working' ? 'Verifying transaction...' : 'Processing payment...');
-            }
+        if (mappedStatus === 'completed' && status !== 'completed') {
+            setStatus('completed');
+            setMessage('Transfer successful! Money sent.');
+            if (!endTime) setEndTime(Date.now());
+            invalidateOrdersCache();
+            stopWs();
+        } else if (mappedStatus === 'failed' && status !== 'failed') {
+            setStatus('failed');
+            setMessage('Transaction failed. You will be refunded.');
+            hasInitiatedRef.current = false;
+            stopWs();
+        } else if (mappedStatus === 'refunded' && status !== 'refunded') {
+            setStatus('refunded');
+            setMessage('Transaction was refunded.');
+            stopWs();
+        } else if (!['completed', 'failed', 'refunded'].includes(status)) {
+            if (status !== 'processing') setStatus('processing');
+            setMessage(statusStr === 'wallet_working' ? 'Verifying transaction...' : 'Processing payment...');
         }
     }, [lastMessage, endTime, status]);
 
-    // Polling Integration (always runs as a safety net, even when WS is connected)
+    // One-shot status check on mount — catches orders already completed before WS connected
     useEffect(() => {
         if (!orderId) return;
-
-        const checkStatus = async () => {
-            // Should stop polling if we reached a terminal state
-            if (['completed', 'failed', 'refunded', 'cancelled'].includes(status)) {
-                console.log('[Payment] Polling skipped — terminal status:', status);
-                return;
+        getOrderStatus(orderId).then(data => {
+            if (!data?.status) return;
+            const mapped = mapTransactionStatus(data.status);
+            if (mapped === 'completed') {
+                setStatus('completed');
+                setMessage('Transfer successful! Money sent.');
+                if (!endTime) setEndTime(Date.now());
+                invalidateOrdersCache();
+                stopWs();
+            } else if (mapped === 'failed') {
+                setStatus('failed');
+                setMessage('Transaction failed. You will be refunded.');
+            } else if (mapped === 'refunded') {
+                setStatus('refunded');
+                setMessage('Transaction was refunded.');
             }
-
-            console.log('[Payment] Polling... (WS connected:', isConnected, ')');
-            try {
-                const data = await getOrderStatus(orderId);
-                console.log('[Payment] Poll result:', { status: data?.status, orderId });
-
-                if (data && data.status) {
-                    const mappedStatus = mapTransactionStatus(data.status);
-                    console.log('[Payment] Mapped poll status:', mappedStatus, '| raw:', data.status, '| current:', status);
-                    if (mappedStatus === 'completed' && status !== 'completed') {
-                        setStatus('completed');
-                        setMessage('Transfer successful! Money sent.');
-                        if (!endTime) setEndTime(Date.now());
-                        invalidateOrdersCache();
-                    } else if (mappedStatus === 'failed' && status !== 'failed') {
-                        setStatus('failed');
-                        setMessage('Transaction failed. You will be refunded.');
-                        hasInitiatedRef.current = false;
-                    } else if (mappedStatus === 'refunded' && status !== 'refunded') {
-                        setStatus('refunded');
-                        setMessage('Transaction was refunded.');
-                    } else {
-                        // For intermediate states via polling
-                        if (status !== 'processing') setStatus('processing');
-                        setMessage(data.status === 'wallet_working' ? 'Verifying transaction...' : 'Processing payment...');
-                    }
-                }
-            } catch (err) {
-                console.error('[Payment] Poll error:', err);
-            }
-        };
-
-        // Check immediately on mount, then poll as safety net.
-        // Use shorter interval when WS is disconnected (4s) and longer when connected (12s).
-        checkStatus();
-        const intervalMs = isConnected ? 12000 : 4000;
-        console.log('[Payment] Poll interval set to', intervalMs, 'ms (WS connected:', isConnected, ')');
-        const interval = setInterval(checkStatus, intervalMs);
-        return () => clearInterval(interval);
-    }, [orderId, status, endTime, isConnected]);
+        }).catch(() => { /* WS will cover it */ });
+    }, [orderId]);
 
     // Play success sound when payment is completed
     useEffect(() => {

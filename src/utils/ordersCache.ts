@@ -2,7 +2,7 @@ import client from '../api/client';
 import type { Order } from '../components/TransactionPopup';
 
 const CACHE_KEY = 'cachedOrders';
-const CACHE_DURATION_MS = 15 * 60 * 1000; // 15 minutes
+const CACHE_DURATION_MS = 24 * 60 * 60 * 1000; // 24 hours — invalidated on new transactions
 
 interface CachedData {
     orders: Order[];
@@ -186,4 +186,6 @@ export const fetchOrders = async (limit?: number, forceRefresh = false): Promise
 
 export const invalidateOrdersCache = () => {
     localStorage.removeItem(CACHE_KEY);
+    // Warm the cache immediately in the background so the next page load is instant
+    fetchOrders().catch(() => { /* best-effort */ });
 };

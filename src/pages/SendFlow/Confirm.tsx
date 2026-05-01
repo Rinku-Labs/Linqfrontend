@@ -128,29 +128,13 @@ export default function Confirm() {
     const accountNumber = state?.accountNumber ?? '--';
     const bankLogo = state?.bankLogo;
 
-    // Always fetch a fresh rate on mount and when page becomes visible (e.g. tab switch, refresh)
+    // Use the rate locked at InputAmount — never re-fetch mid-flow to keep amounts consistent
     useEffect(() => {
-        const loadFreshRate = () => {
-            setIsRateLoading(true);
-            fetchCachedRate(true)
-                .then(rate => {
-                    if (rate > 0) setCurrentRate(rate);
-                    else setCurrentRate(state?.rate ?? 1460);
-                })
-                .catch(() => setCurrentRate(state?.rate ?? 1460))
-                .finally(() => setIsRateLoading(false));
-        };
-
-        loadFreshRate();
-
-        const handleVisibilityChange = () => {
-            if (document.visibilityState === 'visible') {
-                loadFreshRate();
-            }
-        };
-
-        document.addEventListener('visibilitychange', handleVisibilityChange);
-        return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+        const lockedRate = state?.rate;
+        if (lockedRate && lockedRate > 0) {
+            setCurrentRate(lockedRate);
+        }
+        setIsRateLoading(false);
     }, []);
 
     // Calculate NGN amount with current rate

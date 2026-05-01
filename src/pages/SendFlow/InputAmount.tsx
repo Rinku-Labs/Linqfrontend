@@ -202,16 +202,9 @@ export default function InputAmount() {
     };
 
     useEffect(() => {
-        const loadData = async () => {
-            try {
-                // Fetch rate (via shared cache)
-                const rate = await fetchCachedRate();
-                if (rate > 0) setExchangeRate(rate);
-            } catch (error) {
-                console.error("Failed to fetch data", error);
-            }
-        };
-        loadData();
+        fetchCachedRate(true).then(rate => {
+            if (rate > 0) setExchangeRate(rate);
+        }).catch(() => { /* keep default */ });
     }, []);
 
     const handleKeyPress = (key: string) => {

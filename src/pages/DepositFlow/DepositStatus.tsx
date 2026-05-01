@@ -35,86 +35,40 @@ export default function DepositStatus() {
 
     const { token } = useAuth();
     // WebSocket hook
-    const { lastMessage, isConnected: isDepositWsConnected, stop: stopWs } = useWebSocket<OnrampStatusResponse>({ orderId, token: token ?? undefined });
+    const { lastMessage, stop: stopWs } = useWebSocket<OnrampStatusResponse>({ orderId, token: token ?? undefined });
 
-    // Initial load
+    // One-shot status check on mount — catches orders already completed before WS connected
     useEffect(() => {
         if (orderId) {
-            console.log('[DepositStatus] Initial fetch for orderId:', orderId);
-            getOnrampStatus(orderId).then(data => {
-                console.log('[DepositStatus] Initial fetch result:', data);
-                setStatusData(data);
-            }).catch(err => console.error('[DepositStatus] Initial fetch error:', err));
+            getOnrampStatus(orderId).then(setStatusData).catch(() => { /* WS will cover it */ });
         }
     }, [orderId]);
 
-    // HTTP polling safety net
-    useEffect(() => {
-        if (!orderId) return;
-        const terminal = ['completed', 'failed', 'expired'];
-        if (statusData && terminal.includes(statusData.status)) {
-            console.log('[DepositStatus] Polling stopped — terminal status:', statusData.status);
-            return;
-        }
-
-        const poll = () => {
-            console.log('[DepositStatus] Polling... (WS connected:', isDepositWsConnected, ')');
-            getOnrampStatus(orderId).then(data => {
-                if (!data) return;
-                console.log('[DepositStatus] Poll result:', { status: data.status, orderId: data.orderId });
-                setStatusData(prev => {
-                    if (prev?.status === data.status) return prev;
-                    console.log('[DepositStatus] Status changed via poll:', prev?.status, '->', data.status);
-                    if (!endTime && mapTransactionStatus(data.status) === 'completed') {
-                        setEndTime(Date.now());
-                        invalidateOrdersCache();
-                    }
-                    return data;
-                });
-            }).catch(err => console.error('[DepositStatus] Poll error:', err));
-        };
-
-        poll();
-        const intervalMs = isDepositWsConnected ? 12000 : 4000;
-        console.log('[DepositStatus] Poll interval set to', intervalMs, 'ms');
-        const interval = setInterval(poll, intervalMs);
-        return () => clearInterval(interval);
-    }, [orderId, isDepositWsConnected, statusData?.status]);
-
     // Handle WebSocket updates
     useEffect(() => {
-        if (lastMessage) {
-            console.log('[DepositStatus] WS message received:', lastMessage);
-            // The backend sends { orderId, data } wrapper
-            // data can be a string (status) or an object (full order)
-            const messageData = (lastMessage as any).data;
-            let newStatus = '';
+        if (!lastMessage) return;
 
-            if (typeof messageData === 'string') {
-                newStatus = messageData;
-            } else if (messageData && typeof messageData === 'object' && 'status' in messageData) {
-                newStatus = messageData.status;
-            }
+        const messageData = (lastMessage as any).data;
+        let newStatus = '';
 
-            console.log('[DepositStatus] Parsed WS status:', newStatus, '| current:', statusData?.status);
+        if (typeof messageData === 'string') {
+            newStatus = messageData;
+        } else if (messageData && typeof messageData === 'object' && 'status' in messageData) {
+            newStatus = messageData.status;
+        }
 
-            if (newStatus && statusData) {
-                // Only update if status changed
-                if (newStatus !== statusData.status) {
-                    console.log('[DepositStatus] Status changed via WS:', statusData.status, '->', newStatus);
-                    setStatusData(prev => prev ? { ...prev, status: newStatus as any } : null);
-
-                    const mapped = mapTransactionStatus(newStatus);
-                    if (mapped === 'completed' && !endTime) {
-                        setEndTime(Date.now());
-                        invalidateOrdersCache();
-                        stopWs();
-                    }
+        if (newStatus && statusData) {
+            if (newStatus !== statusData.status) {
+                setStatusData(prev => prev ? { ...prev, status: newStatus as any } : null);
+                const mapped = mapTransactionStatus(newStatus);
+                if (mapped === 'completed' && !endTime) {
+                    setEndTime(Date.now());
+                    invalidateOrdersCache();
+                    stopWs();
                 }
-            } else if (newStatus && !statusData) {
-                console.log('[DepositStatus] WS arrived before initial load, fetching full order...');
-                getOnrampStatus(orderId).then(setStatusData).catch(console.error);
             }
+        } else if (newStatus && !statusData) {
+            getOnrampStatus(orderId).then(setStatusData).catch(() => { /* ignore */ });
         }
     }, [lastMessage, endTime, statusData, orderId]);
 
