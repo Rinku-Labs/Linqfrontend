@@ -68,7 +68,7 @@ export const formatStatus = (status: string) => {
     if (normalizedStatus.includes('waiting for deposit')) {
         return 'Pending';
     }
-    if (normalizedStatus.includes('treasury worker')) {
+    if (normalizedStatus.includes('treasury worker') || normalizedStatus.includes('treasury queue') || normalizedStatus.includes('in treasury')) {
         return 'Settled';
     }
 
@@ -105,7 +105,7 @@ export const formatStatus = (status: string) => {
 // Helper to get status color - case-insensitive comparison
 export const getStatusColor = (status: string) => {
     const normalizedStatus = status?.toLowerCase()?.trim() || '';
-    if (normalizedStatus.includes('treasury worker')) {
+    if (normalizedStatus.includes('treasury worker') || normalizedStatus.includes('treasury queue') || normalizedStatus.includes('in treasury')) {
         return 'var(--success)';
     }
     switch (normalizedStatus) {
@@ -127,7 +127,7 @@ export const getStatusColor = (status: string) => {
 // Helper to get status style - case-insensitive comparison
 export const getStatusStyle = (status: string) => {
     const normalizedStatus = status?.toLowerCase()?.trim() || '';
-    if (normalizedStatus.includes('treasury worker')) {
+    if (normalizedStatus.includes('treasury worker') || normalizedStatus.includes('treasury queue') || normalizedStatus.includes('in treasury')) {
         return { bg: 'rgba(34, 197, 94, 0.15)', color: '#22c55e' };
     }
     switch (normalizedStatus) {

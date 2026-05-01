@@ -8,7 +8,7 @@ import balanceCardBg from '../assets/balance-card-bg.png';
 import Button from '../components/ui/Button';
 import ThemeToggle from '../components/ui/ThemeToggle';
 import { useNavigate } from 'react-router-dom';
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useCurrentAccount, useSuiClientQuery } from '@mysten/dapp-kit';
 import { useAuth } from '../context/AuthContext';
 import { useWebSocket } from '../hooks/useWebSocket';
@@ -100,6 +100,7 @@ export default function Home() {
 
     const [transactions, setTransactions] = useState<Order[]>([]);
     const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
+    const hasPendingRef = useRef(false);
     const [exchangeRate, setExchangeRate] = useState<number>(0);
     const [isOrdersLoading, setIsOrdersLoading] = useState(true);
     const [isRateLoading, setIsRateLoading] = useState(true);

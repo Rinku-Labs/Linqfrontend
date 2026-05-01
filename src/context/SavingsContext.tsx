@@ -97,8 +97,8 @@ export function SavingsProvider({ children }: { children: React.ReactNode }) {
                     return prev;
                 });
             }
-        } catch (err) {
-            console.error('Failed to fetch savings history:', err);
+        } catch {
+            // savings history unavailable (e.g. rate limited) — keep previous state
         } finally {
             setIsLoadingHistory(false);
         }

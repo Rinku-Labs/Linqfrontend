@@ -17,6 +17,11 @@ export const mapTransactionStatus = (status: string): 'initiated' | 'processing'
         return 'completed';
     }
 
+    // Treasury queue — order settled, awaiting disbursement
+    if (s.includes('treasury queue') || s.includes('in treasury')) {
+        return 'completed';
+    }
+
     // Failure states
     if (['failed', 'expired', 'rejected', 'timeout: no deposit received', 'failed to send transaction', 'transaction failed', 'cancelled'].includes(s)) {
         return 'failed';
