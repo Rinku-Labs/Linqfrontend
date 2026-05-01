@@ -84,7 +84,7 @@ export default function BillPayment() {
         };
     };
     const { token } = useAuth();
-    const { lastMessage } = useWebSocket<WebSocketMessage>({ orderId, token: token ?? undefined });
+    const { lastMessage, isConnected } = useWebSocket<WebSocketMessage>({ orderId, token: token ?? undefined });
 
     // Redirect if state is missing
     useEffect(() => {
@@ -428,6 +428,36 @@ export default function BillPayment() {
             }
         }).catch(() => { /* WS will cover it */ });
     }, [orderId]);
+
+    // Polling fallback — only runs when WS is disconnected and status is non-terminal
+    useEffect(() => {
+        if (!orderId) return;
+        if (isConnected) return;
+        if (['completed', 'failed', 'cancelled'].includes(status)) return;
+
+        const interval = setInterval(() => {
+            getOrderStatus(orderId).then(data => {
+                if (!data?.status) return;
+                if (data.status === 'completed' && status !== 'completed') {
+                    setStatus('completed');
+                    setMessage('Bill payment successful!');
+                    sessionStorage.removeItem(`billPayment_${orderId}`);
+                    invalidateOrdersCache();
+                    clearInterval(interval);
+                } else if ((data.status === 'failed' || data.status === 'timeout: no deposit received') && status !== 'failed') {
+                    sessionStorage.removeItem(`billPayment_${orderId}`);
+                    setStatus('failed');
+                    setMessage(data.status === 'timeout: no deposit received'
+                        ? 'No deposit received. Please try again.'
+                        : 'Transaction failed.');
+                    invalidateOrdersCache();
+                    clearInterval(interval);
+                }
+            }).catch(() => {});
+        }, 8000);
+
+        return () => clearInterval(interval);
+    }, [orderId, isConnected, status]);
 
     // Play success sound when bill is completed
     useEffect(() => {

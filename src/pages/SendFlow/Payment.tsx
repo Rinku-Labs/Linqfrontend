@@ -41,7 +41,7 @@ export default function Payment() {
     }
 
     const { token } = useAuth();
-    const { lastMessage, stop: stopWs } = useWebSocket<WebSocketMessage>({ orderId, token: token ?? undefined });
+    const { lastMessage, isConnected, stop: stopWs } = useWebSocket<WebSocketMessage>({ orderId, token: token ?? undefined });
 
     useEffect(() => {
         if (!lastMessage) return;
@@ -105,6 +105,38 @@ export default function Payment() {
             }
         }).catch(() => { /* WS will cover it */ });
     }, [orderId]);
+
+    // Polling fallback — only runs when WS is disconnected and status is non-terminal
+    useEffect(() => {
+        if (!orderId) return;
+        if (isConnected) return;
+        if (['completed', 'failed', 'refunded', 'cancelled'].includes(status)) return;
+
+        const interval = setInterval(() => {
+            getOrderStatus(orderId).then(data => {
+                if (!data?.status) return;
+                const mapped = mapTransactionStatus(data.status);
+                if (mapped === 'completed' && status !== 'completed') {
+                    setStatus('completed');
+                    setMessage('Transfer successful! Money sent.');
+                    if (!endTime) setEndTime(Date.now());
+                    invalidateOrdersCache();
+                    stopWs();
+                    clearInterval(interval);
+                } else if (mapped === 'failed' && status !== 'failed') {
+                    setStatus('failed');
+                    setMessage('Transaction failed. You will be refunded.');
+                    clearInterval(interval);
+                } else if (mapped === 'refunded' && status !== 'refunded') {
+                    setStatus('refunded');
+                    setMessage('Transaction was refunded.');
+                    clearInterval(interval);
+                }
+            }).catch(() => {});
+        }, 8000);
+
+        return () => clearInterval(interval);
+    }, [orderId, isConnected, status, endTime]);
 
     // Play success sound when payment is completed
     useEffect(() => {
