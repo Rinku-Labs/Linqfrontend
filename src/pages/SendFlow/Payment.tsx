@@ -45,6 +45,7 @@ export default function Payment() {
 
     useEffect(() => {
         if (lastMessage) {
+            console.log('[Payment] WS message received:', lastMessage);
             // Determine the status string from various possible message formats
             let statusStr = '';
             const msg = lastMessage as any;
@@ -64,7 +65,10 @@ export default function Payment() {
                 }
             }
 
+            console.log('[Payment] Parsed WS status:', statusStr, '| current:', status);
+
             if (!statusStr) {
+                console.warn('[Payment] WS message had no parseable status, ignoring');
                 return;
             }
 
@@ -107,13 +111,19 @@ export default function Payment() {
 
         const checkStatus = async () => {
             // Should stop polling if we reached a terminal state
-            if (['completed', 'failed', 'refunded', 'cancelled'].includes(status)) return;
+            if (['completed', 'failed', 'refunded', 'cancelled'].includes(status)) {
+                console.log('[Payment] Polling skipped — terminal status:', status);
+                return;
+            }
 
+            console.log('[Payment] Polling... (WS connected:', isConnected, ')');
             try {
                 const data = await getOrderStatus(orderId);
+                console.log('[Payment] Poll result:', { status: data?.status, orderId });
 
                 if (data && data.status) {
                     const mappedStatus = mapTransactionStatus(data.status);
+                    console.log('[Payment] Mapped poll status:', mappedStatus, '| raw:', data.status, '| current:', status);
                     if (mappedStatus === 'completed' && status !== 'completed') {
                         setStatus('completed');
                         setMessage('Transfer successful! Money sent.');
@@ -133,13 +143,16 @@ export default function Payment() {
                     }
                 }
             } catch (err) {
+                console.error('[Payment] Poll error:', err);
             }
         };
 
         // Check immediately on mount, then poll as safety net.
         // Use shorter interval when WS is disconnected (4s) and longer when connected (12s).
         checkStatus();
-        const interval = setInterval(checkStatus, isConnected ? 12000 : 4000);
+        const intervalMs = isConnected ? 12000 : 4000;
+        console.log('[Payment] Poll interval set to', intervalMs, 'ms (WS connected:', isConnected, ')');
+        const interval = setInterval(checkStatus, intervalMs);
         return () => clearInterval(interval);
     }, [orderId, status, endTime, isConnected]);
 

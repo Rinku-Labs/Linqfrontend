@@ -25,35 +25,43 @@ export const useWebSocket = <T>(params: { orderId?: string; userId?: string; tok
 
             const wsUrl = apiUrl.replace(/^http/, 'ws') + `/ws?${queryParts.join('&')}`;
 
+            console.log(`[WS] Connecting (attempt ${reconnectAttempts + 1})`, wsUrl.replace(/token=[^&]+/, 'token=***'));
             const socket = new WebSocket(wsUrl);
 
             socket.onopen = () => {
+                console.log('[WS] Connected', { orderId: params.orderId, userId: params.userId });
                 setIsConnected(true);
                 reconnectAttempts = 0; // Reset attempts on successful connection
             };
 
             socket.onmessage = (event) => {
+                console.log('[WS] Message received', event.data);
                 try {
                     const message = JSON.parse(event.data);
                     setLastMessage(message);
                 } catch (_) {
-                    // Silently ignore parse errors
+                    console.warn('[WS] Failed to parse message', event.data);
                 }
             };
 
-            socket.onclose = () => {
+            socket.onclose = (event) => {
+                console.warn('[WS] Disconnected', { code: event.code, reason: event.reason, wasClean: event.wasClean, attempt: reconnectAttempts });
                 setIsConnected(false);
                 // Exponential backoff for reconnection
                 if (reconnectAttempts < maxReconnectAttempts) {
                     const timeout = Math.min(1000 * Math.pow(2, reconnectAttempts), 30000); // Max 30s
+                    console.log(`[WS] Reconnecting in ${timeout}ms...`);
                     reconnectTimeoutRef.current = setTimeout(() => {
                         reconnectAttempts++;
                         connect();
                     }, timeout);
+                } else {
+                    console.error('[WS] Max reconnect attempts reached, giving up');
                 }
             };
 
-            socket.onerror = () => {
+            socket.onerror = (event) => {
+                console.error('[WS] Error', event);
                 socket.close(); // Triggers onclose
             };
 
