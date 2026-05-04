@@ -19,13 +19,13 @@ type ContactSharingNavigator = Navigator & {
     };
 };
 
-type ShareCardVariant = 'clean' | 'dark' | 'mint';
+type ShareCardVariant = 'purpleBlack' | 'clean' | 'dark';
 
 const appUrl = 'https://app.uselinq.xyz';
 const variants: Array<{ id: ShareCardVariant; label: string }> = [
+    { id: 'purpleBlack', label: 'Purple' },
     { id: 'clean', label: 'Clean' },
     { id: 'dark', label: 'Night' },
-    { id: 'mint', label: 'Mint' },
 ];
 
 const cardStyles: Record<ShareCardVariant, {
@@ -36,6 +36,14 @@ const cardStyles: Record<ShareCardVariant, {
     accent: string;
     qr: string;
 }> = {
+    purpleBlack: {
+        background: '#07050F',
+        color: '#F8F5FF',
+        muted: '#B8A9E8',
+        border: '#2A174F',
+        accent: '#8B5CF6',
+        qr: '#BFA7FF',
+    },
     clean: {
         background: '#FFFFFF',
         color: '#111827',
@@ -51,14 +59,6 @@ const cardStyles: Record<ShareCardVariant, {
         border: '#2D2D36',
         accent: '#A78BFA',
         qr: '#F9FAFB',
-    },
-    mint: {
-        background: '#F8FFFB',
-        color: '#10231D',
-        muted: '#5F716A',
-        border: '#D7EFE5',
-        accent: '#10B981',
-        qr: '#10231D',
     },
 };
 
@@ -80,6 +80,8 @@ function ShareCard({ variant, username, qrDataUrl }: { variant: ShareCardVariant
                 flexDirection: 'column',
                 justifyContent: 'space-between',
                 boxShadow: 'none',
+                letterSpacing: '0px',
+                wordSpacing: '3px',
             }}
         >
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -99,24 +101,24 @@ function ShareCard({ variant, username, qrDataUrl }: { variant: ShareCardVariant
                     >
                         <img src={logo} alt="Linq" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                     </div>
-                    <span style={{ fontSize: '12px', fontWeight: 800 }}>Linq</span>
+                    <span style={{ fontSize: '12px', fontWeight: 800, letterSpacing: '0px', wordSpacing: '2px' }}>Linq</span>
                 </div>
-                <span style={{ fontSize: '8px', color: style.muted, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+                <span style={{ fontSize: '8px', color: style.muted, textTransform: 'uppercase', letterSpacing: '0.08em', wordSpacing: '2px' }}>
                     Fast transfers
                 </span>
             </div>
 
             <div>
-                <p style={{ fontSize: '11px', color: style.muted, marginBottom: '10px' }}>{handle} sent money in seconds.</p>
-                <h3 style={{ fontSize: '25px', lineHeight: 1.15, fontWeight: 800, letterSpacing: 0 }}>
+                <p style={{ fontSize: '11px', color: style.muted, marginBottom: '10px', lineHeight: 1.5, letterSpacing: '0px', wordSpacing: '3px' }}>{handle} sent money in seconds.</p>
+                <h3 style={{ fontSize: '24px', lineHeight: 1.28, fontWeight: 800, letterSpacing: '0px', wordSpacing: '4px' }}>
                     Move money without the wait.
                 </h3>
             </div>
 
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'end', gap: '14px' }}>
                 <div>
-                    <p style={{ fontSize: '9px', color: style.muted, marginBottom: '4px' }}>Try it here</p>
-                    <p style={{ fontSize: '11px', fontWeight: 800 }}>{appUrl.replace('https://', '')}</p>
+                    <p style={{ fontSize: '9px', color: style.muted, marginBottom: '4px', letterSpacing: '0px', wordSpacing: '2px' }}>Try it here</p>
+                    <p style={{ fontSize: '11px', fontWeight: 800, letterSpacing: '0px', wordSpacing: '2px' }}>{appUrl.replace('https://', '')}</p>
                 </div>
                 <div
                     aria-hidden
@@ -138,7 +140,7 @@ function ShareCard({ variant, username, qrDataUrl }: { variant: ShareCardVariant
 
 export default function ShareToContactsPopup({ username, onClose }: ShareToContactsPopupProps) {
     const cardRef = useRef<HTMLDivElement>(null);
-    const [selectedVariant, setSelectedVariant] = useState<ShareCardVariant>('clean');
+    const [selectedVariant, setSelectedVariant] = useState<ShareCardVariant>('purpleBlack');
     const [isSharing, setIsSharing] = useState(false);
     const [qrDataUrl, setQrDataUrl] = useState('');
     const handle = username ? `@${username.toLowerCase()}` : 'Linq';
