@@ -825,34 +825,6 @@ export default function Settings() {
                     </div>
                 </div>
             )}
-            {/* Security Section (PIN) */}
-            <div className="glass-card" style={{
-                borderRadius: '24px',
-                padding: '24px',
-                marginTop: '20px'
-            }}>
-                <h4 style={{ fontSize: '10px', fontWeight: 600, marginBottom: '16px', color: 'var(--text-main)' }}>
-                    Security
-                </h4>
-                <Button
-                    variant="outline"
-                    fullWidth
-                    onClick={() => {
-                        window.location.href = '/create-pin';
-                    }}
-                    style={{
-                        borderColor: 'var(--primary)',
-                        color: 'var(--primary)',
-                        display: 'flex',
-                        gap: '8px',
-                        height: '48px'
-                    }}
-                >
-                    <CheckCircle2 size={20} />
-                    {useAuth().hasPin ? 'Change Transaction PIN' : 'Create Transaction PIN'}
-                </Button>
-            </div>
-
             {/* Sign Out Section */}
             <div className="glass-card" style={{
                 borderRadius: '24px',

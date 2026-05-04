@@ -58,7 +58,7 @@ export const fetchAndCacheBeneficiaries = async (forceRefresh = false): Promise<
 /**
  * Adds a beneficiary via the API and appends to the cache without re-fetching.
  */
-export const addBeneficiaryAndUpdateCache = async (payload: AddBeneficiaryPayload): Promise<BeneficiaryData | null> => {
+export const addBeneficiaryAndUpdateCache = async (payload: AddBeneficiaryPayload): Promise<BeneficiaryData> => {
     try {
         const response = await addBeneficiary(payload);
         const newEntry = response.data;
@@ -67,9 +67,18 @@ export const addBeneficiaryAndUpdateCache = async (payload: AddBeneficiaryPayloa
         const currentData = cached?.data || [];
         setCachedBeneficiaries([...currentData, newEntry]);
         return newEntry;
-    } catch {
-        // Silently ignore (e.g. 409 duplicate)
-        return null;
+    } catch (error: unknown) {
+        const status = (error as { response?: { status?: number } }).response?.status;
+        if (status === 409) {
+            const refreshed = await fetchAndCacheBeneficiaries(true);
+            const existing = refreshed.find((beneficiary) =>
+                beneficiary.bankCode === payload.bankCode &&
+                beneficiary.bankAccount === payload.bankAccount
+            );
+            if (existing) return existing;
+        }
+
+        throw error;
     }
 };
 
