@@ -10,8 +10,13 @@ import { invalidateOrdersCache } from '../../utils/ordersCache';
 import { getOrderStatus } from '../../api/order';
 import { playSuccessSound } from '../../utils/audio';
 import TransactionReceipt from '../../components/TransactionReceipt';
+import ShareToContactsPopup from '../../components/ShareToContactsPopup';
 import type { Order } from '../../components/TransactionPopup';
 import { useAuth } from '../../context/AuthContext';
+
+const FAST_TRANSACTION_PROMPT_MS = 6000;
+const SHARE_PROMPT_COOLDOWN_MS = 7 * 24 * 60 * 60 * 1000;
+const SHARE_PROMPT_STORAGE_KEY = 'linqLastFastTransactionSharePromptAt';
 
 export default function Payment() {
     const location = useLocation();
@@ -21,6 +26,7 @@ export default function Payment() {
 
     const [status, setStatus] = useState<'idle' | 'preparing' | 'signing' | 'processing' | 'success' | 'failed' | 'completed' | 'refunded' | 'cancelled'>('processing');
     const [message, setMessage] = useState('Verifying your transaction...');
+    const [showSharePrompt, setShowSharePrompt] = useState(false);
     const hasInitiatedRef = useRef(false);
 
     // Timer state
@@ -40,7 +46,7 @@ export default function Payment() {
         data: string | { status: string };
     }
 
-    const { token } = useAuth();
+    const { token, user } = useAuth();
     const { lastMessage, isConnected, stop: stopWs } = useWebSocket<WebSocketMessage>({ orderId, token: token ?? undefined });
 
     useEffect(() => {
@@ -145,6 +151,20 @@ export default function Payment() {
         }
     }, [status]);
 
+    useEffect(() => {
+        if (status !== 'completed' || !endTime) return;
+
+        const elapsedMs = endTime - startTimeRef.current;
+        if (elapsedMs >= FAST_TRANSACTION_PROMPT_MS) return;
+
+        const lastPromptAt = Number(localStorage.getItem(SHARE_PROMPT_STORAGE_KEY) || 0);
+        const now = Date.now();
+        if (now - lastPromptAt < SHARE_PROMPT_COOLDOWN_MS) return;
+
+        localStorage.setItem(SHARE_PROMPT_STORAGE_KEY, String(now));
+        setShowSharePrompt(true);
+    }, [status, endTime]);
+
     // Construct an Order object for TransactionReceipt
     const orderData: Order = {
         id: orderId || '',
@@ -203,6 +223,12 @@ export default function Payment() {
                     </>
                 )}
             </div>
+            {showSharePrompt && (
+                <ShareToContactsPopup
+                    username={user?.username}
+                    onClose={() => setShowSharePrompt(false)}
+                />
+            )}
         </div>
     );
 }

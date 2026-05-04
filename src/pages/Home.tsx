@@ -602,7 +602,6 @@ export default function Home() {
                                                     flexShrink: 0,
                                                     whiteSpace: 'nowrap'
                                                 }}>
-                                                    <span className={`status-dot status-dot--${formatStatus(trx.status).toLowerCase() === 'completed' ? 'completed' : formatStatus(trx.status).toLowerCase() === 'failed' ? 'failed' : 'pending'}`} />
                                                     {formatStatus(trx.status)}
                                                 </span>
                                             </div>
