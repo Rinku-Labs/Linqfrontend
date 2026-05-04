@@ -18,6 +18,7 @@ import { cleanDisplayValue } from '../../utils/displayValue';
 const FAST_TRANSACTION_PROMPT_MS = 6000;
 const SHARE_PROMPT_COOLDOWN_MS = 7 * 24 * 60 * 60 * 1000;
 const SHARE_PROMPT_STORAGE_KEY = 'linqLastFastTransactionSharePromptAt';
+const SHARE_PROMPT_RESET_KEY = 'linqSharePromptResetV3';
 
 export default function Payment() {
     const location = useLocation();
@@ -157,6 +158,11 @@ export default function Payment() {
 
         const elapsedMs = endTime - startTimeRef.current;
         if (elapsedMs >= FAST_TRANSACTION_PROMPT_MS) return;
+
+        if (localStorage.getItem(SHARE_PROMPT_RESET_KEY) !== 'true') {
+            localStorage.removeItem(SHARE_PROMPT_STORAGE_KEY);
+            localStorage.setItem(SHARE_PROMPT_RESET_KEY, 'true');
+        }
 
         const lastPromptAt = Number(localStorage.getItem(SHARE_PROMPT_STORAGE_KEY) || 0);
         const now = Date.now();
