@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ConnectButton, useCurrentAccount, useDisconnectWallet } from '@mysten/dapp-kit';
 import Header from '../components/Layout/Header';
-import { WalletCards, LogOut, CheckCircle2, XCircle, Copy, ChevronDown, Building2, RefreshCw, ShieldCheck, Camera, User } from 'lucide-react';
+import { LogOut, CheckCircle2, XCircle, Copy, ChevronDown, Building2, RefreshCw, ShieldCheck, Camera, User } from 'lucide-react';
 import { useWallet } from '@solana/wallet-adapter-react';
 import { WalletMultiButton } from '@solana/wallet-adapter-react-ui';
 import { useWallet as useAptosWallet } from '@aptos-labs/wallet-adapter-react';
@@ -628,17 +628,6 @@ export default function Settings() {
                 {/* Header with Toggle */}
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '24px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                        <div style={{
-                            width: '48px',
-                            height: '48px',
-                            borderRadius: '12px',
-                            background: 'var(--primary)',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center'
-                        }}>
-                            <WalletCards size={24} color="white" />
-                        </div>
                         <div>
                             <h3 style={{ fontSize: '13px', fontWeight: 600, marginBottom: '4px' }}>
                                 Wallet

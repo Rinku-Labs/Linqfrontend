@@ -16,7 +16,7 @@ import { useAuth } from '../../context/AuthContext';
 
 const FAST_TRANSACTION_PROMPT_MS = 6000;
 const SHARE_PROMPT_COOLDOWN_MS = 7 * 24 * 60 * 60 * 1000;
-const SHARE_PROMPT_STORAGE_KEY = 'linqLastFastTransactionSharePromptAt';
+const SHARE_PROMPT_STORAGE_KEY = 'linqLastFastTransactionSharePromptAtV2';
 
 export default function Payment() {
     const location = useLocation();

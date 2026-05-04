@@ -405,7 +405,7 @@ export default function Onboarding() {
             <div style={containerStyle}>
                 <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
                     <div style={logoContainerStyle}>
-                        <img src={logo} alt="Linq Logo" style={logoStyle} className="glow-on-hover" />
+                        <img src={logo} alt="Linq Logo" style={logoStyle} />
                     </div>
                     {/* Status/Error Card for debugging */}
                     {isLoading && (
@@ -471,7 +471,7 @@ export default function Onboarding() {
             <div style={containerStyle}>
                 <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
                     <div style={logoContainerStyle}>
-                        <img src={logo} alt="Linq Logo" style={{ ...logoStyle, width: '80px', height: '80px' }} className="glow-on-hover" />
+                        <img src={logo} alt="Linq Logo" style={{ ...logoStyle, width: '80px', height: '80px' }} />
                     </div>
                     <div style={cardStyle}>
                         <h2 style={{ ...titleStyle, fontSize: '17px', marginBottom: '24px' }}>Create Account</h2>
@@ -654,7 +654,7 @@ export default function Onboarding() {
             <div style={containerStyle}>
                 <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
                     <div style={logoContainerStyle}>
-                        <img src={logo} alt="Linq Logo" style={{ ...logoStyle, width: '80px', height: '80px' }} className="glow-on-hover" />
+                        <img src={logo} alt="Linq Logo" style={{ ...logoStyle, width: '80px', height: '80px' }} />
                     </div>
                     <div style={cardStyle}>
                         <h2 style={{ ...titleStyle, fontSize: '17px', marginBottom: '24px' }}>Welcome Back</h2>
@@ -741,7 +741,7 @@ export default function Onboarding() {
             <div style={containerStyle}>
                 <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
                     <div style={logoContainerStyle}>
-                        <img src={logo} alt="Linq Logo" style={{ ...logoStyle, width: '80px', height: '80px' }} className="glow-on-hover" />
+                        <img src={logo} alt="Linq Logo" style={{ ...logoStyle, width: '80px', height: '80px' }} />
                     </div>
                     <div style={cardStyle}>
                         <h2 style={{ ...titleStyle, fontSize: '17px', marginBottom: '8px' }}>Reset Password</h2>
@@ -890,7 +890,7 @@ export default function Onboarding() {
             <div style={containerStyle}>
                 <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
                     <div style={logoContainerStyle}>
-                        <img src={logo} alt="Linq Logo" style={{ ...logoStyle, width: '80px', height: '80px' }} className="glow-on-hover" />
+                        <img src={logo} alt="Linq Logo" style={{ ...logoStyle, width: '80px', height: '80px' }} />
                     </div>
                     <div style={cardStyle}>
                         <h2 style={{ ...titleStyle, fontSize: '17px', marginBottom: '6px' }}>Quick question 🎉</h2>
@@ -949,7 +949,7 @@ export default function Onboarding() {
             <div style={containerStyle}>
                 <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
                     <div style={logoContainerStyle}>
-                        <img src={logo} alt="Linq Logo" style={{ ...logoStyle, width: '80px', height: '80px' }} className="glow-on-hover" />
+                        <img src={logo} alt="Linq Logo" style={{ ...logoStyle, width: '80px', height: '80px' }} />
                     </div>
                     <div style={cardStyle}>
                         <h2 style={{ ...titleStyle, fontSize: '17px', marginBottom: '6px' }}>Link Your Bank Account</h2>

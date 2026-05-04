@@ -38,6 +38,7 @@
     "jwt-decode": "^4.0.0",
     "lucide-react": "^0.562.0",
     "process": "^0.11.10",
+    "qrcode": "^1.5.4",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
     "react-router-dom": "^7.12.0",

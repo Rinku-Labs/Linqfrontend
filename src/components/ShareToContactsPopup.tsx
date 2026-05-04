@@ -1,8 +1,10 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import html2canvas from 'html2canvas';
+import QRCode from 'qrcode';
 import { Copy, MessageCircle, X } from 'lucide-react';
 import Button from './ui/Button';
+import logo from '../assets/logo.png';
 
 interface ShareToContactsPopupProps {
     username?: string;
@@ -32,6 +34,7 @@ const cardStyles: Record<ShareCardVariant, {
     muted: string;
     border: string;
     accent: string;
+    qr: string;
 }> = {
     clean: {
         background: '#FFFFFF',
@@ -39,6 +42,7 @@ const cardStyles: Record<ShareCardVariant, {
         muted: '#6B7280',
         border: '#E5E7EB',
         accent: '#8B5CF6',
+        qr: '#111827',
     },
     dark: {
         background: '#111118',
@@ -46,6 +50,7 @@ const cardStyles: Record<ShareCardVariant, {
         muted: '#A1A1AA',
         border: '#2D2D36',
         accent: '#A78BFA',
+        qr: '#F9FAFB',
     },
     mint: {
         background: '#F8FFFB',
@@ -53,10 +58,11 @@ const cardStyles: Record<ShareCardVariant, {
         muted: '#5F716A',
         border: '#D7EFE5',
         accent: '#10B981',
+        qr: '#10231D',
     },
 };
 
-function ShareCard({ variant, username }: { variant: ShareCardVariant; username?: string }) {
+function ShareCard({ variant, username, qrDataUrl }: { variant: ShareCardVariant; username?: string; qrDataUrl: string }) {
     const style = cardStyles[variant];
     const handle = username ? `@${username.toLowerCase()}` : 'A Linq user';
 
@@ -73,7 +79,7 @@ function ShareCard({ variant, username }: { variant: ShareCardVariant; username?
                 display: 'flex',
                 flexDirection: 'column',
                 justifyContent: 'space-between',
-                boxShadow: '0 16px 36px rgba(0, 0, 0, 0.12)',
+                boxShadow: 'none',
             }}
         >
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -83,16 +89,15 @@ function ShareCard({ variant, username }: { variant: ShareCardVariant; username?
                             width: '28px',
                             height: '28px',
                             borderRadius: '9px',
-                            background: style.accent,
-                            color: '#FFFFFF',
+                            background: style.background,
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'center',
-                            fontSize: '13px',
-                            fontWeight: 800,
+                            overflow: 'hidden',
+                            border: `1px solid ${style.border}`,
                         }}
                     >
-                        L
+                        <img src={logo} alt="Linq" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                     </div>
                     <span style={{ fontSize: '12px', fontWeight: 800 }}>Linq</span>
                 </div>
@@ -116,19 +121,15 @@ function ShareCard({ variant, username }: { variant: ShareCardVariant; username?
                 <div
                     aria-hidden
                     style={{
-                        width: '46px',
-                        height: '46px',
+                        width: '54px',
+                        height: '54px',
                         borderRadius: '14px',
                         border: `1px solid ${style.border}`,
-                        display: 'grid',
-                        gridTemplateColumns: 'repeat(3, 1fr)',
-                        gap: '3px',
-                        padding: '8px',
+                        background: style.background,
+                        padding: '6px',
                     }}
                 >
-                    {Array.from({ length: 9 }).map((_, index) => (
-                        <span key={index} style={{ background: index % 2 === 0 ? style.accent : style.border, borderRadius: '2px' }} />
-                    ))}
+                    {qrDataUrl && <img src={qrDataUrl} alt="" style={{ width: '100%', height: '100%', display: 'block' }} />}
                 </div>
             </div>
         </div>
@@ -139,8 +140,22 @@ export default function ShareToContactsPopup({ username, onClose }: ShareToConta
     const cardRef = useRef<HTMLDivElement>(null);
     const [selectedVariant, setSelectedVariant] = useState<ShareCardVariant>('clean');
     const [isSharing, setIsSharing] = useState(false);
+    const [qrDataUrl, setQrDataUrl] = useState('');
     const handle = username ? `@${username.toLowerCase()}` : 'Linq';
     const shareText = `${handle} just sent money with Linq in seconds. Try it: ${appUrl}`;
+
+    useEffect(() => {
+        const style = cardStyles[selectedVariant];
+        QRCode.toDataURL(appUrl, {
+            errorCorrectionLevel: 'M',
+            margin: 1,
+            width: 112,
+            color: {
+                dark: style.qr,
+                light: style.background,
+            },
+        }).then(setQrDataUrl).catch(() => setQrDataUrl(''));
+    }, [selectedVariant]);
 
     const createShareFile = async () => {
         if (!cardRef.current) return null;
@@ -272,7 +287,7 @@ export default function ShareToContactsPopup({ username, onClose }: ShareToConta
                 </p>
 
                 <div ref={cardRef} style={{ width: '300px', maxWidth: '100%', margin: '0 auto 14px' }}>
-                    <ShareCard variant={selectedVariant} username={username} />
+                    <ShareCard variant={selectedVariant} username={username} qrDataUrl={qrDataUrl} />
                 </div>
 
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px', marginBottom: '14px' }}>

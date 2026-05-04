@@ -326,9 +326,8 @@ export default function Home() {
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                     <div style={{
-                        width: '40px', height: '40px', background: 'var(--surface-elevated)', borderRadius: '12px',
+                        width: '40px', height: '40px', borderRadius: '12px',
                         display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden',
-                        transition: 'background-color 0.3s ease'
                     }}>
                         <img src={logo} alt="Logo" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                     </div>
