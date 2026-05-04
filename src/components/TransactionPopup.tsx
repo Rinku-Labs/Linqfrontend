@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import { X, Copy, Check } from 'lucide-react';
 import { formatDate } from '../utils/dateFormatter';
+import { cleanDisplayValue, displayOrFallback } from '../utils/displayValue';
 
 // CoinType represents the blockchain coin selection for an order
 export interface CoinType {
@@ -188,6 +189,11 @@ export default function TransactionPopup({ order, onClose }: TransactionPopupPro
 
     const statusStyle = getStatusStyle(order.status);
     const dateStr = order.createdAt || order.created || '';
+    const recipientUsername = cleanDisplayValue(order.recipientUsername);
+    const accountName = displayOrFallback(order.accountName || (order as any).bankAccountName || (recipientUsername ? `@${recipientUsername}` : ''));
+    const bankName = cleanDisplayValue(order.bankName);
+    const bankAccount = cleanDisplayValue(order.bankAccount || (order as any).accountNumber || (order as any).bank_account);
+    const isUsernameTransfer = !!recipientUsername && !bankName && !bankAccount;
 
     return createPortal(
         <>
@@ -304,9 +310,9 @@ export default function TransactionPopup({ order, onClose }: TransactionPopupPro
                         </>
                     ) : (
                         <>
-                            <DetailRow label="Recipient" value={order.accountName || (order as any).bankAccountName || 'N/A'} />
-                            <DetailRow label="Bank" value={order.bankName || 'N/A'} />
-                            <DetailRow label="Account Number" value={order.bankAccount || (order as any).accountNumber || (order as any).bank_account || 'N/A'} />
+                            <DetailRow label="Recipient" value={accountName} />
+                            {!isUsernameTransfer && bankName && <DetailRow label="Bank" value={bankName} />}
+                            {!isUsernameTransfer && bankAccount && <DetailRow label="Account Number" value={bankAccount} />}
                             {order.profit != null && order.profit > 0 && (
                                 <DetailRow label="Fee" value={`$${order.profit.toFixed(2)}`} />
                             )}
@@ -318,7 +324,7 @@ export default function TransactionPopup({ order, onClose }: TransactionPopupPro
                                         ? 'Withdrawal (Off-Ramp)'
                                         : (order.orderType?.toLowerCase() === 'on-ramp' || order.orderType?.toLowerCase() === 'onramp' || order.orderType?.toLowerCase() === 'deposit')
                                             ? 'Deposit (On-Ramp)'
-                                            : (order.bankName === 'Linq' ? 'Deposit (On-Ramp)' : (order.bankName ? 'Withdrawal (Off-Ramp)' : (order.coin?.sui ? 'Deposit (On-Ramp)' : 'Withdrawal (Off-Ramp)')))
+                                            : (isUsernameTransfer ? 'Username Transfer' : (bankName === 'Linq' ? 'Deposit (On-Ramp)' : (bankName ? 'Withdrawal (Off-Ramp)' : (order.coin?.sui ? 'Deposit (On-Ramp)' : 'Withdrawal (Off-Ramp)'))))
                                 }
                                 isLast
                             />

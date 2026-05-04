@@ -38,7 +38,7 @@ const cardStyles: Record<ShareCardVariant, {
 }> = {
     purpleBlack: {
         background: '#07050F',
-        color: '#F8F5FF',
+        color: '#BFA7FF',
         muted: '#B8A9E8',
         border: '#2A174F',
         accent: '#8B5CF6',
@@ -190,35 +190,37 @@ export default function ShareToContactsPopup({ username, onClose }: ShareToConta
         setIsSharing(true);
 
         try {
-            if (nav.contacts?.select) {
-                await nav.contacts.select(['name', 'tel', 'email'], { multiple: true });
-            }
-
             const file = await createShareFile();
-            const shareData = {
+            const fileShareData = {
                 title: 'Try Linq',
                 text: shareText,
-                url: appUrl,
                 files: file ? [file] : undefined,
             } as ShareData;
 
-            if (nav.share && (!file || !nav.canShare || nav.canShare(shareData))) {
-                await nav.share(shareData);
-            } else if (file) {
-                await downloadCard(file);
-                if (navigator.clipboard) await navigator.clipboard.writeText(shareText);
+            if (nav.share && file && (!nav.canShare || nav.canShare(fileShareData))) {
+                await nav.share(fileShareData);
+                onClose();
             } else if (nav.share) {
                 await nav.share({
                     title: 'Try Linq',
                     text: shareText,
                     url: appUrl,
                 });
+                onClose();
+            } else if (file) {
+                await downloadCard(file);
+                if (navigator.clipboard) await navigator.clipboard.writeText(shareText);
+                onClose();
             } else if (navigator.clipboard) {
                 await navigator.clipboard.writeText(shareText);
+                onClose();
+            }
+        } catch (error) {
+            if ((error as DOMException).name !== 'AbortError') {
+                console.error('Failed to share Linq card:', error);
             }
         } finally {
             setIsSharing(false);
-            onClose();
         }
     };
 

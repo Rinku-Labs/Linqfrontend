@@ -13,6 +13,7 @@ import TransactionReceipt from '../../components/TransactionReceipt';
 import ShareToContactsPopup from '../../components/ShareToContactsPopup';
 import type { Order } from '../../components/TransactionPopup';
 import { useAuth } from '../../context/AuthContext';
+import { cleanDisplayValue } from '../../utils/displayValue';
 
 const FAST_TRANSACTION_PROMPT_MS = 6000;
 const SHARE_PROMPT_COOLDOWN_MS = 7 * 24 * 60 * 60 * 1000;
@@ -166,13 +167,15 @@ export default function Payment() {
     }, [status, endTime]);
 
     // Construct an Order object for TransactionReceipt
+    const recipientUsername = cleanDisplayValue(confirmState?.recipientUsername);
     const orderData: Order = {
         id: orderId || '',
         amountStableCoin: Number(amount),
         amountNgn: confirmState?.ngnAmount || 0,
-        bankAccount: confirmState?.accountNumber || '',
-        bankName: confirmState?.bankName || '',
-        accountName: confirmState?.recipientName || '',
+        bankAccount: cleanDisplayValue(confirmState?.accountNumber),
+        bankName: cleanDisplayValue(confirmState?.bankName),
+        accountName: cleanDisplayValue(confirmState?.recipientName) || (recipientUsername ? `@${recipientUsername}` : ''),
+        recipientUsername,
         description: confirmState?.description || '',
         status: status,
         createdAt: new Date().toISOString(),

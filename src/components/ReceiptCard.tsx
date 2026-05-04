@@ -3,6 +3,7 @@ import { Landmark } from 'lucide-react';
 import type { Order } from './TransactionPopup';
 import logo from '../assets/logo.png';
 import nairaLogo from '../assets/naira.png';
+import { cleanDisplayValue, displayOrFallback } from '../utils/displayValue';
 
 interface ReceiptCardProps {
     order: Order;
@@ -13,13 +14,15 @@ interface ReceiptCardProps {
  * Matching the "Spenda" reference design provided by user.
  */
 const ReceiptCard = forwardRef<HTMLDivElement, ReceiptCardProps>(({ order }, ref) => {
-    const accountName = order.accountName || 'N/A';
-    const bankAccount = order.bankAccount || 'N/A';
-    const bankName = order.bankName || 'N/A';
+    const recipientUsername = cleanDisplayValue(order.recipientUsername);
+    const accountName = displayOrFallback(order.accountName || (recipientUsername ? `@${recipientUsername}` : ''));
+    const bankAccount = cleanDisplayValue(order.bankAccount);
+    const bankName = cleanDisplayValue(order.bankName);
+    const isUsernameTransfer = !!recipientUsername && !bankName && !bankAccount;
     // Removed unused amountUsdc
     const amountNgn = order.amountNgn?.toLocaleString('en-NG', { maximumFractionDigits: 0 }) || '0';
     const transactionId = order.id || 'N/A';
-    const narration = order.description || 'FRM Linq User';
+    const narration = order.description || (recipientUsername ? `Transfer to @${recipientUsername}` : 'FRM Linq User');
     const dateStr = order.createdAt || order.created || '';
 
     // Format date like: "Thursday, Jan 22 • 04:11 PM"
@@ -65,7 +68,7 @@ const ReceiptCard = forwardRef<HTMLDivElement, ReceiptCardProps>(({ order }, ref
                     {/* Bank Indicator */}
                     <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#3B82F6' }}>
                         <Landmark size={18} fill="#3B82F6" />
-                        <span style={{ fontSize: '10px', fontWeight: 600 }}>Bank</span>
+                        <span style={{ fontSize: '10px', fontWeight: 600 }}>{isUsernameTransfer ? 'Username' : 'Bank'}</span>
                     </div>
                 </div>
 
@@ -97,7 +100,7 @@ const ReceiptCard = forwardRef<HTMLDivElement, ReceiptCardProps>(({ order }, ref
                     padding: '20px',
                     background: 'rgba(255,255,255,0.02)'
                 }}>
-                    <DetailRow label="Type" value="Bank Transfer" />
+                    <DetailRow label="Type" value={isUsernameTransfer ? 'Username Transfer' : 'Bank Transfer'} />
 
                     <DashedLine />
 
@@ -109,12 +112,16 @@ const ReceiptCard = forwardRef<HTMLDivElement, ReceiptCardProps>(({ order }, ref
 
                     <DashedLine />
 
-                    <DetailRow
-                        label="Receivers Account"
-                        value={`${bankName} ( ${bankAccount} )`}
-                    />
+                    {!isUsernameTransfer && bankName && bankAccount && (
+                        <>
+                            <DetailRow
+                                label="Receivers Account"
+                                value={`${bankName} (${bankAccount})`}
+                            />
 
-                    <DashedLine />
+                            <DashedLine />
+                        </>
+                    )}
 
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                         <span style={{ fontSize: '9px', color: '#9CA3AF' }}>Amount</span>
