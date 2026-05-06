@@ -229,12 +229,12 @@ function AnalyticsShareCard({ metrics, variant }: { metrics: AnalyticsShareMetri
         <div
             style={{
                 width: '100%',
-                aspectRatio: '4 / 5',
+                aspectRatio: '1 / 1.28',
                 background: style.background,
                 color: style.color,
                 border: `1px solid ${style.border}`,
-                borderRadius: '24px',
-                padding: '24px',
+                borderRadius: '22px',
+                padding: '18px',
                 display: 'flex',
                 flexDirection: 'column',
                 justifyContent: 'space-between',
@@ -242,13 +242,13 @@ function AnalyticsShareCard({ metrics, variant }: { metrics: AnalyticsShareMetri
             }}
         >
             <div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                         <div
                             style={{
-                                width: '30px',
-                                height: '30px',
-                                borderRadius: '10px',
+                                width: '28px',
+                                height: '28px',
+                                borderRadius: '9px',
                                 overflow: 'hidden',
                                 border: `1px solid ${style.border}`,
                                 background: style.panel,
@@ -258,33 +258,39 @@ function AnalyticsShareCard({ metrics, variant }: { metrics: AnalyticsShareMetri
                         </div>
                         <span style={{ fontSize: '12px', fontWeight: 800 }}>Linq</span>
                     </div>
-                    <span style={{ fontSize: '8px', color: style.muted, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+                    <span style={{ fontSize: '7px', color: style.muted, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
                         30 day recap
                     </span>
                 </div>
 
-                <p style={{ fontSize: '10px', color: style.muted, lineHeight: 1.6, marginBottom: '8px' }}>
-                    Stablecoin activity
-                </p>
-                <h3 style={{ fontSize: '23px', lineHeight: 1.2, fontWeight: 800, marginBottom: '18px' }}>
-                    How I move and spend with Linq
+                <h3 style={{ fontSize: '21px', lineHeight: 1.12, fontWeight: 800, marginBottom: '12px' }}>
+                    My Linq stablecoin recap
                 </h3>
 
-                <div style={{ display: 'grid', gap: '8px' }}>
+                <div style={{ display: 'grid', gap: '7px' }}>
                     {metrics.map((metric) => (
                         <div
                             key={metric.label}
                             style={{
                                 background: style.panel,
                                 border: `1px solid ${style.border}`,
-                                borderRadius: '14px',
-                                padding: '10px 12px',
+                                borderRadius: '12px',
+                                padding: '9px 10px',
                                 display: 'grid',
-                                gap: '4px',
+                                gridTemplateColumns: '1fr auto',
+                                alignItems: 'center',
+                                gap: '10px',
                             }}
                         >
-                            <span style={{ fontSize: '8px', color: style.muted, lineHeight: 1.35 }}>{metric.label}</span>
-                            <strong style={{ fontSize: '15px', color: metric.value === '0.00 USDC' ? style.muted : style.color }}>
+                            <span style={{ fontSize: '8px', color: style.muted, lineHeight: 1.25 }}>{metric.label}</span>
+                            <strong
+                                style={{
+                                    fontSize: metric.value.length > 13 ? '12px' : '13px',
+                                    color: metric.value === '0.00 USDC' ? style.muted : style.color,
+                                    textAlign: 'right',
+                                    whiteSpace: 'nowrap',
+                                }}
+                            >
                                 {metric.value}
                             </strong>
                         </div>
@@ -292,9 +298,9 @@ function AnalyticsShareCard({ metrics, variant }: { metrics: AnalyticsShareMetri
                 </div>
             </div>
 
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px' }}>
-                <span style={{ fontSize: '9px', color: style.muted }}>Built from my Linq activity</span>
-                <span style={{ fontSize: '10px', color: style.accent, fontWeight: 800 }}>{appUrl.replace('https://', '')}</span>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px', paddingTop: '10px' }}>
+                <span style={{ fontSize: '8px', color: style.muted }}>Built from my Linq activity</span>
+                <span style={{ fontSize: '9px', color: style.accent, fontWeight: 800, whiteSpace: 'nowrap' }}>{appUrl.replace('https://', '')}</span>
             </div>
         </div>
     );
@@ -437,7 +443,7 @@ function AnalyticsShareModal({
                     Pick a style and share your Linq stablecoin recap through your phone share sheet.
                 </p>
 
-                <div ref={cardRef} style={{ width: '300px', maxWidth: '100%', margin: '0 auto 14px' }}>
+                <div ref={cardRef} style={{ width: '310px', maxWidth: '100%', margin: '0 auto 14px' }}>
                     <AnalyticsShareCard metrics={metrics} variant={selectedVariant} />
                 </div>
 
