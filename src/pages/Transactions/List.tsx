@@ -113,12 +113,38 @@ export default function TransactionsList() {
 
         if (searchQuery.trim()) {
             const q = searchQuery.toLowerCase();
-            result = result.filter(o =>
-                (o.accountName || '').toLowerCase().includes(q) ||
-                (o.bankName || '').toLowerCase().includes(q) ||
-                (o.amountStableCoin?.toFixed(2) || '').includes(q) ||
-                (o.amountNgn?.toString() || '').includes(q)
-            );
+            result = result.filter(o => {
+                // Fields the user sees on screen
+                const visibleFields = [
+                    o.accountName,
+                    o.bankName,
+                    formatStatus(o.status),
+                    formatDate(o.createdAt || o.created || ''),
+                    o.amountStableCoin?.toFixed(2),
+                    o.amountNgn?.toLocaleString('en-NG', { maximumFractionDigits: 0 }),
+                    o.amountNgn?.toString(),
+                ];
+
+                // Hidden but relevant data
+                const hiddenFields = [
+                    o.id,
+                    o.bankAccount,
+                    (o as any).accountNumber,
+                    (o as any).bank_account,
+                    o.description,
+                    o.recipientUsername,
+                    o.userEmail,
+                    o.orderType,
+                    o.status, // Raw status
+                    (o as any).billType,
+                    o.trnxWallet,
+                    o.userWalletAddress,
+                ];
+
+                return [...visibleFields, ...hiddenFields].some(field =>
+                    field?.toString().toLowerCase().includes(q)
+                );
+            });
         }
         return result;
     }, [orders, statusFilter, searchQuery]);
