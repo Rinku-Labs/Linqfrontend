@@ -1,16 +1,19 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Info } from 'lucide-react';
+import { Info, CheckCircle } from 'lucide-react';
 import logo from '../assets/logo.png';
 import Button from '../components/ui/Button';
 import Input from '../components/ui/Input';
 import TermsModal from '../components/TermsModal';
 import { useAuth } from '../context/AuthContext';
 import client from '../api/client';
+import { verifyBankAccount } from '../api/bank';
+import { updateBankDetails } from '../api/user';
+import banksData from '../../banks.json';
 
 import { getGoogleLoginUrl, parseGoogleToken, computeGoogleAddress, derivePasswordFromSub } from '../utils/zkLogin';
 
-type ViewType = 'welcome' | 'signup' | 'signin' | 'forgot' | 'survey';
+type ViewType = 'welcome' | 'signup' | 'signin' | 'forgot' | 'survey' | 'banklink';
 
 export const SHOW_GOOGLE_LOGIN = false;
 
@@ -20,9 +23,9 @@ export default function Onboarding() {
     const { login, signup, requestSignupOtp, requestPasswordResetOtp, resetPassword, isAuthenticated } = useAuth();
     const [view, setView] = useState<ViewType>('welcome');
 
-    // Redirect if already authenticated, but not if we're showing the post-signup survey
+    // Redirect if already authenticated, but not if we're showing the post-signup survey or bank link step
     useEffect(() => {
-        if (isAuthenticated && view !== 'survey') {
+        if (isAuthenticated && view !== 'survey' && view !== 'banklink') {
             navigate('/', { replace: true });
         }
     }, [isAuthenticated, view, navigate]);
@@ -59,6 +62,17 @@ export default function Onboarding() {
     const [hearAboutUs, setHearAboutUs] = useState('');
     const [mostUsedChain, setMostUsedChain] = useState('');
     const [isSurveySubmitting, setIsSurveySubmitting] = useState(false);
+
+    // Bank link states
+    const [bankAccountNumber, setBankAccountNumber] = useState('');
+    const [bankLinkName, setBankLinkName] = useState('');
+    const [bankLinkSelectedBank, setBankLinkSelectedBank] = useState('');
+    const [bankLinkValidatedName, setBankLinkValidatedName] = useState('');
+    const [bankLinkVerifying, setBankLinkVerifying] = useState(false);
+    const [bankLinkSaving, setBankLinkSaving] = useState(false);
+    const [bankLinkError, setBankLinkError] = useState('');
+
+    const bankList = (banksData.data as { name: string; code: string }[]);
 
     // Check for Google Redirect
     useEffect(() => {
@@ -258,9 +272,46 @@ export default function Onboarding() {
         try {
             await client.post('/user/survey', { hearAboutUs, mostUsedChain });
         } catch {
-            // Best-effort — proceed to app even if survey save fails
+            // Best-effort — proceed even if survey save fails
         } finally {
             setIsSurveySubmitting(false);
+            setView('banklink');
+        }
+    };
+
+    const handleBankLinkVerify = async () => {
+        if (!bankAccountNumber || !bankLinkSelectedBank) return;
+        const bank = bankList.find(b => b.name === bankLinkSelectedBank);
+        if (!bank) return;
+        setBankLinkVerifying(true);
+        setBankLinkError('');
+        setBankLinkValidatedName('');
+        try {
+            const res = await verifyBankAccount(bankAccountNumber, bank.code);
+            setBankLinkValidatedName(res.accountName);
+        } catch {
+            setBankLinkError('Could not verify account. Check the number and bank.');
+        } finally {
+            setBankLinkVerifying(false);
+        }
+    };
+
+    const handleBankLinkSave = async () => {
+        const bank = bankList.find(b => b.name === bankLinkSelectedBank);
+        if (!bank || !bankLinkValidatedName) return;
+        setBankLinkSaving(true);
+        setBankLinkError('');
+        try {
+            await updateBankDetails({
+                username: bankLinkName || username,
+                bankCode: bank.code,
+                accountNumber: bankAccountNumber,
+                accountName: bankLinkValidatedName,
+            });
+        } catch {
+            // Best-effort — they can do this in Settings
+        } finally {
+            setBankLinkSaving(false);
             navigate('/');
         }
     };
@@ -354,7 +405,7 @@ export default function Onboarding() {
             <div style={containerStyle}>
                 <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
                     <div style={logoContainerStyle}>
-                        <img src={logo} alt="Linq Logo" style={logoStyle} className="glow-on-hover" />
+                        <img src={logo} alt="Linq Logo" style={logoStyle} />
                     </div>
                     {/* Status/Error Card for debugging */}
                     {isLoading && (
@@ -420,7 +471,7 @@ export default function Onboarding() {
             <div style={containerStyle}>
                 <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
                     <div style={logoContainerStyle}>
-                        <img src={logo} alt="Linq Logo" style={{ ...logoStyle, width: '80px', height: '80px' }} className="glow-on-hover" />
+                        <img src={logo} alt="Linq Logo" style={{ ...logoStyle, width: '80px', height: '80px' }} />
                     </div>
                     <div style={cardStyle}>
                         <h2 style={{ ...titleStyle, fontSize: '17px', marginBottom: '24px' }}>Create Account</h2>
@@ -603,7 +654,7 @@ export default function Onboarding() {
             <div style={containerStyle}>
                 <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
                     <div style={logoContainerStyle}>
-                        <img src={logo} alt="Linq Logo" style={{ ...logoStyle, width: '80px', height: '80px' }} className="glow-on-hover" />
+                        <img src={logo} alt="Linq Logo" style={{ ...logoStyle, width: '80px', height: '80px' }} />
                     </div>
                     <div style={cardStyle}>
                         <h2 style={{ ...titleStyle, fontSize: '17px', marginBottom: '24px' }}>Welcome Back</h2>
@@ -690,7 +741,7 @@ export default function Onboarding() {
             <div style={containerStyle}>
                 <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
                     <div style={logoContainerStyle}>
-                        <img src={logo} alt="Linq Logo" style={{ ...logoStyle, width: '80px', height: '80px' }} className="glow-on-hover" />
+                        <img src={logo} alt="Linq Logo" style={{ ...logoStyle, width: '80px', height: '80px' }} />
                     </div>
                     <div style={cardStyle}>
                         <h2 style={{ ...titleStyle, fontSize: '17px', marginBottom: '8px' }}>Reset Password</h2>
@@ -839,7 +890,7 @@ export default function Onboarding() {
             <div style={containerStyle}>
                 <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
                     <div style={logoContainerStyle}>
-                        <img src={logo} alt="Linq Logo" style={{ ...logoStyle, width: '80px', height: '80px' }} className="glow-on-hover" />
+                        <img src={logo} alt="Linq Logo" style={{ ...logoStyle, width: '80px', height: '80px' }} />
                     </div>
                     <div style={cardStyle}>
                         <h2 style={{ ...titleStyle, fontSize: '17px', marginBottom: '6px' }}>Quick question 🎉</h2>
@@ -885,6 +936,102 @@ export default function Onboarding() {
                             style={{ borderRadius: '16px', height: '56px', fontSize: '13px' }}
                         >
                             {isSurveySubmitting ? 'Saving...' : 'Continue'}
+                        </Button>
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
+    // Bank Link View
+    if (view === 'banklink') {
+        return (
+            <div style={containerStyle}>
+                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+                    <div style={logoContainerStyle}>
+                        <img src={logo} alt="Linq Logo" style={{ ...logoStyle, width: '80px', height: '80px' }} />
+                    </div>
+                    <div style={cardStyle}>
+                        <h2 style={{ ...titleStyle, fontSize: '17px', marginBottom: '6px' }}>Link Your Bank Account</h2>
+                        <p style={{ ...subtitleStyle, marginBottom: '8px' }}>
+                            Let people send you money just by your @username — no account numbers needed.
+                        </p>
+                        <p style={{ fontSize: '10px', color: 'var(--text-muted)', textAlign: 'center', marginBottom: '24px' }}>
+                            You can skip this and set it up anytime in <strong>Settings → Bank Details</strong>.
+                        </p>
+
+                        {bankLinkError && <p style={errorStyle}>{bankLinkError}</p>}
+
+                        <Input
+                            label="Username"
+                            type="text"
+                            placeholder={`@${username || 'your username'}`}
+                            value={bankLinkName || username}
+                            onChange={(e) => setBankLinkName(e.target.value)}
+                        />
+
+                        <div style={{ marginBottom: '16px' }}>
+                            <label style={{ fontSize: '11px', color: 'var(--text-secondary)', display: 'block', marginBottom: '6px' }}>Bank</label>
+                            <select
+                                value={bankLinkSelectedBank}
+                                onChange={(e) => { setBankLinkSelectedBank(e.target.value); setBankLinkValidatedName(''); }}
+                                style={{
+                                    width: '100%', padding: '12px 16px', borderRadius: '12px',
+                                    border: '1.5px solid var(--border-color)', background: 'var(--surface)',
+                                    color: 'var(--text-main)', fontSize: '12px', outline: 'none',
+                                }}
+                            >
+                                <option value="">Select your bank</option>
+                                {bankList.map(b => (
+                                    <option key={b.code} value={b.name}>{b.name}</option>
+                                ))}
+                            </select>
+                        </div>
+
+                        <Input
+                            label="Account Number"
+                            type="text"
+                            placeholder="Enter 10-digit account number"
+                            value={bankAccountNumber}
+                            onChange={(e) => { setBankAccountNumber(e.target.value); setBankLinkValidatedName(''); }}
+                            maxLength={10}
+                        />
+
+                        {!bankLinkValidatedName ? (
+                            <Button
+                                type="button"
+                                variant="secondary"
+                                fullWidth
+                                disabled={bankLinkVerifying || bankAccountNumber.length < 10 || !bankLinkSelectedBank}
+                                onClick={handleBankLinkVerify}
+                                style={{ borderRadius: '16px', height: '48px', marginBottom: '12px' }}
+                            >
+                                {bankLinkVerifying ? 'Verifying...' : 'Verify Account'}
+                            </Button>
+                        ) : (
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 14px', borderRadius: '12px', background: 'rgba(34,197,94,0.08)', border: '1px solid rgba(34,197,94,0.2)', marginBottom: '16px' }}>
+                                <CheckCircle size={16} color="#22c55e" />
+                                <span style={{ fontSize: '11px', color: '#22c55e', fontWeight: 600 }}>{bankLinkValidatedName}</span>
+                            </div>
+                        )}
+
+                        <Button
+                            variant="primary"
+                            fullWidth
+                            disabled={bankLinkSaving || !bankLinkValidatedName}
+                            onClick={handleBankLinkSave}
+                            style={{ borderRadius: '16px', height: '56px', fontSize: '13px', marginTop: '4px' }}
+                        >
+                            {bankLinkSaving ? 'Saving...' : 'Save & Continue'}
+                        </Button>
+
+                        <Button
+                            variant="ghost"
+                            fullWidth
+                            onClick={() => navigate('/')}
+                            style={{ borderRadius: '16px', height: '48px', fontSize: '12px', marginTop: '10px', color: 'var(--text-secondary)' }}
+                        >
+                            Skip for now
                         </Button>
                     </div>
                 </div>

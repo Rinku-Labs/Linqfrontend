@@ -10,8 +10,15 @@ import { invalidateOrdersCache } from '../../utils/ordersCache';
 import { getOrderStatus } from '../../api/order';
 import { playSuccessSound } from '../../utils/audio';
 import TransactionReceipt from '../../components/TransactionReceipt';
+import ShareToContactsPopup from '../../components/ShareToContactsPopup';
 import type { Order } from '../../components/TransactionPopup';
 import { useAuth } from '../../context/AuthContext';
+import { cleanDisplayValue } from '../../utils/displayValue';
+
+const FAST_TRANSACTION_PROMPT_MS = 6000;
+const SHARE_PROMPT_COOLDOWN_MS = 7 * 24 * 60 * 60 * 1000;
+const SHARE_PROMPT_STORAGE_KEY = 'linqLastFastTransactionSharePromptAt';
+const SHARE_PROMPT_RESET_KEY = 'linqSharePromptResetV3';
 
 export default function Payment() {
     const location = useLocation();
@@ -21,6 +28,7 @@ export default function Payment() {
 
     const [status, setStatus] = useState<'idle' | 'preparing' | 'signing' | 'processing' | 'success' | 'failed' | 'completed' | 'refunded' | 'cancelled'>('processing');
     const [message, setMessage] = useState('Verifying your transaction...');
+    const [showSharePrompt, setShowSharePrompt] = useState(false);
     const hasInitiatedRef = useRef(false);
 
     // Timer state
@@ -40,108 +48,103 @@ export default function Payment() {
         data: string | { status: string };
     }
 
-    const { token } = useAuth();
-    const { lastMessage, isConnected } = useWebSocket<WebSocketMessage>({ orderId, token: token ?? undefined });
+    const { token, user } = useAuth();
+    const { lastMessage, isConnected, stop: stopWs } = useWebSocket<WebSocketMessage>({ orderId, token: token ?? undefined });
 
     useEffect(() => {
-        if (lastMessage) {
-            // Determine the status string from various possible message formats
-            let statusStr = '';
-            const msg = lastMessage as any;
+        if (!lastMessage) return;
+        let statusStr = '';
+        const msg = lastMessage as any;
 
-            if (typeof msg === 'string') {
-                statusStr = msg;
-            } else if (msg && typeof msg === 'object') {
-                if ('data' in msg) {
-                    const data = msg.data;
-                    if (typeof data === 'string') {
-                        statusStr = data;
-                    } else if (data && typeof data === 'object' && 'status' in data) {
-                        statusStr = data.status;
-                    }
-                } else if ('status' in msg) {
-                    statusStr = msg.status;
-                }
+        if (typeof msg === 'string') {
+            statusStr = msg;
+        } else if (msg && typeof msg === 'object') {
+            if ('data' in msg) {
+                const data = msg.data;
+                if (typeof data === 'string') statusStr = data;
+                else if (data && typeof data === 'object' && 'status' in data) statusStr = data.status;
+            } else if ('status' in msg) {
+                statusStr = msg.status;
             }
+        }
 
-            if (!statusStr) {
-                return;
+        if (!statusStr) return;
+        const mappedStatus = mapTransactionStatus(statusStr);
+
+        if (mappedStatus === 'completed' && status !== 'completed') {
+            setStatus('completed');
+            setMessage('Transfer successful! Money sent.');
+            if (!endTime) setEndTime(Date.now());
+            invalidateOrdersCache();
+            stopWs();
+        } else if (mappedStatus === 'failed' && status !== 'failed') {
+            setStatus('failed');
+            setMessage('Transaction failed. You will be refunded.');
+            hasInitiatedRef.current = false;
+            stopWs();
+        } else if (mappedStatus === 'refunded' && status !== 'refunded') {
+            setStatus('refunded');
+            setMessage('Transaction was refunded.');
+            stopWs();
+        } else if (!['completed', 'failed', 'refunded'].includes(status)) {
+            if (status !== 'processing') setStatus('processing');
+            setMessage(statusStr === 'wallet_working' ? 'Verifying transaction...' : 'Processing payment...');
+        }
+    }, [lastMessage, endTime, status]);
+
+    // One-shot status check on mount — catches orders already completed before WS connected
+    useEffect(() => {
+        if (!orderId) return;
+        getOrderStatus(orderId).then(data => {
+            if (!data?.status) return;
+            const mapped = mapTransactionStatus(data.status);
+            if (mapped === 'completed') {
+                setStatus('completed');
+                setMessage('Transfer successful! Money sent.');
+                if (!endTime) setEndTime(Date.now());
+                invalidateOrdersCache();
+                stopWs();
+            } else if (mapped === 'failed') {
+                setStatus('failed');
+                setMessage('Transaction failed. You will be refunded.');
+            } else if (mapped === 'refunded') {
+                setStatus('refunded');
+                setMessage('Transaction was refunded.');
             }
+        }).catch(() => { /* WS will cover it */ });
+    }, [orderId]);
 
-            const mappedStatus = mapTransactionStatus(statusStr);
+    // Polling fallback — only runs when WS is disconnected and status is non-terminal
+    useEffect(() => {
+        if (!orderId) return;
+        if (isConnected) return;
+        if (['completed', 'failed', 'refunded', 'cancelled'].includes(status)) return;
 
-            if (mappedStatus === 'completed') {
-                if (status !== 'completed') {
+        const interval = setInterval(() => {
+            getOrderStatus(orderId).then(data => {
+                if (!data?.status) return;
+                const mapped = mapTransactionStatus(data.status);
+                if (mapped === 'completed' && status !== 'completed') {
                     setStatus('completed');
                     setMessage('Transfer successful! Money sent.');
                     if (!endTime) setEndTime(Date.now());
                     invalidateOrdersCache();
-                }
-            } else if (mappedStatus === 'failed') {
-                if (status !== 'failed') {
+                    stopWs();
+                    clearInterval(interval);
+                } else if (mapped === 'failed' && status !== 'failed') {
                     setStatus('failed');
                     setMessage('Transaction failed. You will be refunded.');
-                    hasInitiatedRef.current = false;
-                }
-            } else if (mappedStatus === 'refunded') {
-                if (status !== 'refunded') {
+                    clearInterval(interval);
+                } else if (mapped === 'refunded' && status !== 'refunded') {
                     setStatus('refunded');
                     setMessage('Transaction was refunded.');
+                    clearInterval(interval);
                 }
-            } else {
-                // For intermediate states
-                // Prevent reverting from terminal states
-                if (status === 'completed' || status === 'failed' || status === 'refunded') {
-                    return;
-                }
+            }).catch(() => {});
+        }, 8000);
 
-                if (status !== 'processing') setStatus('processing');
-                setMessage(statusStr === 'wallet_working' ? 'Verifying transaction...' : 'Processing payment...');
-            }
-        }
-    }, [lastMessage, endTime, status]);
-
-    // Polling Integration (always runs as a safety net, even when WS is connected)
-    useEffect(() => {
-        if (!orderId) return;
-
-        const checkStatus = async () => {
-            // Should stop polling if we reached a terminal state
-            if (['completed', 'failed', 'refunded', 'cancelled'].includes(status)) return;
-
-            try {
-                const data = await getOrderStatus(orderId);
-
-                if (data && data.status) {
-                    const mappedStatus = mapTransactionStatus(data.status);
-                    if (mappedStatus === 'completed' && status !== 'completed') {
-                        setStatus('completed');
-                        setMessage('Transfer successful! Money sent.');
-                        if (!endTime) setEndTime(Date.now());
-                        invalidateOrdersCache();
-                    } else if (mappedStatus === 'failed' && status !== 'failed') {
-                        setStatus('failed');
-                        setMessage('Transaction failed. You will be refunded.');
-                        hasInitiatedRef.current = false;
-                    } else if (mappedStatus === 'refunded' && status !== 'refunded') {
-                        setStatus('refunded');
-                        setMessage('Transaction was refunded.');
-                    } else {
-                        // For intermediate states via polling
-                        if (status !== 'processing') setStatus('processing');
-                        setMessage(data.status === 'wallet_working' ? 'Verifying transaction...' : 'Processing payment...');
-                    }
-                }
-            } catch (err) {
-            }
-        };
-
-        // Always poll as a safety net regardless of WS state.
-        // Use shorter interval when WS is disconnected (4s) and longer when connected (12s).
-        // This prevents the gap where the WS is reconnecting and polling has stopped.
-        const interval = setInterval(checkStatus, isConnected ? 12000 : 4000);
         return () => clearInterval(interval);
-    }, [orderId, status, endTime, isConnected]);
+    }, [orderId, isConnected, status, endTime]);
 
     // Play success sound when payment is completed
     useEffect(() => {
@@ -150,14 +153,35 @@ export default function Payment() {
         }
     }, [status]);
 
+    useEffect(() => {
+        if (status !== 'completed' || !endTime) return;
+
+        const elapsedMs = endTime - startTimeRef.current;
+        if (elapsedMs >= FAST_TRANSACTION_PROMPT_MS) return;
+
+        if (localStorage.getItem(SHARE_PROMPT_RESET_KEY) !== 'true') {
+            localStorage.removeItem(SHARE_PROMPT_STORAGE_KEY);
+            localStorage.setItem(SHARE_PROMPT_RESET_KEY, 'true');
+        }
+
+        const lastPromptAt = Number(localStorage.getItem(SHARE_PROMPT_STORAGE_KEY) || 0);
+        const now = Date.now();
+        if (now - lastPromptAt < SHARE_PROMPT_COOLDOWN_MS) return;
+
+        localStorage.setItem(SHARE_PROMPT_STORAGE_KEY, String(now));
+        setShowSharePrompt(true);
+    }, [status, endTime]);
+
     // Construct an Order object for TransactionReceipt
+    const recipientUsername = cleanDisplayValue(confirmState?.recipientUsername);
     const orderData: Order = {
         id: orderId || '',
         amountStableCoin: Number(amount),
         amountNgn: confirmState?.ngnAmount || 0,
-        bankAccount: confirmState?.accountNumber || '',
-        bankName: confirmState?.bankName || '',
-        accountName: confirmState?.recipientName || '',
+        bankAccount: cleanDisplayValue(confirmState?.accountNumber),
+        bankName: cleanDisplayValue(confirmState?.bankName),
+        accountName: cleanDisplayValue(confirmState?.recipientName) || (recipientUsername ? `@${recipientUsername}` : ''),
+        recipientUsername,
         description: confirmState?.description || '',
         status: status,
         createdAt: new Date().toISOString(),
@@ -208,6 +232,12 @@ export default function Payment() {
                     </>
                 )}
             </div>
+            {showSharePrompt && (
+                <ShareToContactsPopup
+                    username={user?.username}
+                    onClose={() => setShowSharePrompt(false)}
+                />
+            )}
         </div>
     );
 }

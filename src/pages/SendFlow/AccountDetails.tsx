@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { CheckCircle, User, Trash2 } from 'lucide-react';
+import { toast } from 'sonner';
 import Header from '../../components/Layout/Header';
 import Button from '../../components/ui/Button';
 import Input from '../../components/ui/Input';
@@ -41,6 +42,7 @@ export default function AccountDetails() {
     const [bankCode, setBankCode] = useState('');
     const [validatedName, setValidatedName] = useState('');
     const [isLoading, setIsLoading] = useState(false);
+    const [isSavingBeneficiary, setIsSavingBeneficiary] = useState(false);
     const [verificationError, setVerificationError] = useState('');
     const [suggestedBanks, setSuggestedBanks] = useState<MatchResult[]>([]);
 
@@ -174,24 +176,36 @@ export default function AccountDetails() {
     }, [accountNumber, sendType, showBeneficiarySuggestions, validatedName]);
 
     // Save beneficiary via cache (keeps cache in sync automatically)
-    const saveBeneficiaryToStorage = async () => {
-        if (!accountNumber || !bankName || !bankCode) return;
+    const saveBeneficiaryToStorage = async (): Promise<boolean> => {
+        if (!accountNumber || !bankName || !bankCode) return true;
 
-        const newEntry = await addBeneficiaryAndUpdateCache({
-            bankName,
-            bankCode,
-            bankAccount: accountNumber,
-            accountName: validatedName || 'Unknown',
-        });
-        if (newEntry) {
-            // Update local state directly from the returned entry — no re-fetch needed
-            setBeneficiaries(prev => [...prev, {
+        try {
+            const newEntry = await addBeneficiaryAndUpdateCache({
+                bankName,
+                bankCode,
+                bankAccount: accountNumber,
+                accountName: validatedName || 'Unknown',
+            });
+
+            const mappedEntry = {
                 id: newEntry.id,
                 name: newEntry.accountName,
                 bank: newEntry.bankName,
                 bankCode: newEntry.bankCode,
                 account: newEntry.bankAccount,
-            }]);
+            };
+
+            // Update local state directly from the returned entry, replacing duplicates from a refreshed cache.
+            setBeneficiaries(prev => {
+                const withoutDuplicate = prev.filter(b => !(b.account === mappedEntry.account && b.bankCode === mappedEntry.bankCode));
+                return [mappedEntry, ...withoutDuplicate];
+            });
+            toast.success('Beneficiary saved');
+            return true;
+        } catch (error: unknown) {
+            const message = (error as { response?: { data?: { message?: string } } }).response?.data?.message || 'Failed to save beneficiary';
+            toast.error(message);
+            return false;
         }
     };
 
@@ -288,10 +302,13 @@ export default function AccountDetails() {
     }, [accountNumber, bankName, username, sendType]);
 
     // Handle confirm button
-    const handleConfirm = () => {
+    const handleConfirm = async () => {
         if (sendType === 'bank') {
             if (saveBeneficiary && accountNumber && bankName && bankCode) {
-                saveBeneficiaryToStorage(); // fire & forget — async but don't block nav
+                setIsSavingBeneficiary(true);
+                const didSave = await saveBeneficiaryToStorage();
+                setIsSavingBeneficiary(false);
+                if (!didSave) return;
             }
             const bankLogo = getBankLogo(bankName);
 
@@ -635,7 +652,8 @@ export default function AccountDetails() {
                     <Button
                         fullWidth
                         onClick={handleConfirm}
-                        disabled={sendType === 'bank' ? (!accountNumber || !bankName || isLoading || !validatedName) : (!username || isLoading || !validatedName)}
+                        isLoading={isSavingBeneficiary}
+                        disabled={sendType === 'bank' ? (!accountNumber || !bankName || isLoading || isSavingBeneficiary || !validatedName) : (!username || isLoading || !validatedName)}
                     >
                         Confirm Amount
                     </Button>

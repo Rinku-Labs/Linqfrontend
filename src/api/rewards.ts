@@ -1,4 +1,5 @@
 import client from './client';
+import { getCachedRewards, setCachedRewards } from '../utils/rewardsCache';
 
 export interface RewardsData {
     totalXp: number;
@@ -21,8 +22,13 @@ export interface LeaderboardEntry {
     xp: number;
 }
 
-export async function getRewardsData(): Promise<RewardsData> {
+export async function getRewardsData(forceRefresh = false): Promise<RewardsData> {
+    if (!forceRefresh) {
+        const cached = getCachedRewards();
+        if (cached) return cached;
+    }
     const { data } = await client.get<RewardsData>('/rewards');
+    setCachedRewards(data);
     return data;
 }
 

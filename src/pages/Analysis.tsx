@@ -1,9 +1,13 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { BarChart3, ArrowLeft, TrendingUp, DollarSign } from 'lucide-react';
+import { BarChart3, ArrowLeft, TrendingUp, DollarSign, Download, Share2, X } from 'lucide-react';
+import { createPortal } from 'react-dom';
+import html2canvas from 'html2canvas';
 import { fetchOrders } from '../utils/ordersCache';
+import { useSavings } from '../context/SavingsContext';
 import { AnalysisStatSkeleton } from '../components/ui/SkeletonLoader';
 import EmptyState from '../components/ui/EmptyState';
+import logo from '../assets/logo.png';
 import {
     AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
     PieChart, Pie, Cell,
@@ -17,6 +21,18 @@ interface Order {
     amountNgn: number;
     status: string;
     createdAt: string;
+    orderType?: string;
+    bankName?: string;
+    coin?: { sui?: boolean };
+}
+
+interface CachedOrder {
+    id: string;
+    amountStableCoin: number | string;
+    amountNgn: number;
+    status: string;
+    createdAt?: string;
+    created?: string;
     orderType?: string;
     bankName?: string;
     coin?: { sui?: boolean };
@@ -150,23 +166,354 @@ const prepareBarData = (orders: Order[], timeFilter: string) => {
 
 const PIE_COLORS = ['#8b5cf6', '#22c55e', '#f59e0b']; // On-Ramp, Off-Ramp, Bills
 
+type ShareCardVariant = 'midnight' | 'clean' | 'plum';
+
+type AnalyticsShareMetric = {
+    label: string;
+    value: string;
+};
+
+type SharingNavigator = Navigator & {
+    canShare?: (data: ShareData) => boolean;
+    share?: (data: ShareData) => Promise<void>;
+};
+
+const shareCardVariants: Array<{ id: ShareCardVariant; label: string }> = [
+    { id: 'midnight', label: 'Midnight' },
+    { id: 'clean', label: 'Clean' },
+    { id: 'plum', label: 'Plum' },
+];
+
+const shareCardStyles: Record<ShareCardVariant, {
+    background: string;
+    color: string;
+    muted: string;
+    border: string;
+    accent: string;
+    panel: string;
+}> = {
+    midnight: {
+        background: '#07050F',
+        color: '#F9FAFB',
+        muted: '#B8A9E8',
+        border: '#2A174F',
+        accent: '#8B5CF6',
+        panel: '#100A1F',
+    },
+    clean: {
+        background: '#FFFFFF',
+        color: '#111827',
+        muted: '#6B7280',
+        border: '#E5E7EB',
+        accent: '#7C3AED',
+        panel: '#F7F4FF',
+    },
+    plum: {
+        background: '#210B3B',
+        color: '#FFFFFF',
+        muted: '#D8C7FF',
+        border: '#5B21B6',
+        accent: '#C4B5FD',
+        panel: '#331257',
+    },
+};
+
+const appUrl = 'https://app.uselinq.xyz';
+
+const formatUsdc = (value: number) => `${value.toLocaleString('en-US', { maximumFractionDigits: 2 })} USDC`;
+
+function AnalyticsShareCard({ metrics, variant }: { metrics: AnalyticsShareMetric[]; variant: ShareCardVariant }) {
+    const style = shareCardStyles[variant];
+
+    return (
+        <div
+            style={{
+                width: '100%',
+                aspectRatio: '1 / 1.28',
+                background: style.background,
+                color: style.color,
+                border: `1px solid ${style.border}`,
+                borderRadius: '22px',
+                padding: '18px',
+                display: 'flex',
+                flexDirection: 'column',
+                justifyContent: 'space-between',
+                letterSpacing: '0px',
+            }}
+        >
+            <div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <div
+                            style={{
+                                width: '28px',
+                                height: '28px',
+                                borderRadius: '9px',
+                                overflow: 'hidden',
+                                border: `1px solid ${style.border}`,
+                                background: style.panel,
+                            }}
+                        >
+                            <img src={logo} alt="Linq" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                        </div>
+                        <span style={{ fontSize: '12px', fontWeight: 800 }}>Linq</span>
+                    </div>
+                    <span style={{ fontSize: '7px', color: style.muted, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+                        30 day recap
+                    </span>
+                </div>
+
+                <h3 style={{ fontSize: '21px', lineHeight: 1.12, fontWeight: 800, marginBottom: '12px' }}>
+                    My Linq stablecoin recap
+                </h3>
+
+                <div style={{ display: 'grid', gap: '7px' }}>
+                    {metrics.map((metric) => (
+                        <div
+                            key={metric.label}
+                            style={{
+                                background: style.panel,
+                                border: `1px solid ${style.border}`,
+                                borderRadius: '12px',
+                                padding: '9px 10px',
+                                display: 'grid',
+                                gridTemplateColumns: '1fr auto',
+                                alignItems: 'center',
+                                gap: '10px',
+                            }}
+                        >
+                            <span style={{ fontSize: '8px', color: style.muted, lineHeight: 1.25 }}>{metric.label}</span>
+                            <strong
+                                style={{
+                                    fontSize: metric.value.length > 13 ? '12px' : '13px',
+                                    color: metric.value === '0.00 USDC' ? style.muted : style.color,
+                                    textAlign: 'right',
+                                    whiteSpace: 'nowrap',
+                                }}
+                            >
+                                {metric.value}
+                            </strong>
+                        </div>
+                    ))}
+                </div>
+            </div>
+
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px', paddingTop: '10px' }}>
+                <span style={{ fontSize: '8px', color: style.muted }}>Built from my Linq activity</span>
+                <span style={{ fontSize: '9px', color: style.accent, fontWeight: 800, whiteSpace: 'nowrap' }}>{appUrl.replace('https://', '')}</span>
+            </div>
+        </div>
+    );
+}
+
+function AnalyticsShareModal({
+    metrics,
+    shareText,
+    onClose,
+}: {
+    metrics: AnalyticsShareMetric[];
+    shareText: string;
+    onClose: () => void;
+}) {
+    const cardRef = useRef<HTMLDivElement>(null);
+    const [selectedVariant, setSelectedVariant] = useState<ShareCardVariant>('midnight');
+    const [isSharing, setIsSharing] = useState(false);
+
+    const createShareFile = async () => {
+        if (!cardRef.current) return null;
+
+        const canvas = await html2canvas(cardRef.current, {
+            backgroundColor: shareCardStyles[selectedVariant].background,
+            scale: 2,
+            useCORS: true,
+            logging: false,
+        });
+
+        const blob = await new Promise<Blob | null>((resolve) => {
+            canvas.toBlob(resolve, 'image/png', 0.95);
+        });
+
+        if (!blob) return null;
+        return new File([blob], `linq-analytics-${selectedVariant}.png`, { type: 'image/png' });
+    };
+
+    const downloadCard = async (file: File) => {
+        const link = document.createElement('a');
+        link.download = file.name;
+        link.href = URL.createObjectURL(file);
+        link.click();
+        URL.revokeObjectURL(link.href);
+    };
+
+    const handleShare = async () => {
+        const nav = navigator as SharingNavigator;
+        setIsSharing(true);
+
+        try {
+            const file = await createShareFile();
+            const fileShareData = {
+                title: 'My Linq stablecoin recap',
+                text: shareText,
+                files: file ? [file] : undefined,
+            } as ShareData;
+
+            if (nav.share && file && (!nav.canShare || nav.canShare(fileShareData))) {
+                await nav.share(fileShareData);
+                onClose();
+            } else if (nav.share) {
+                await nav.share({
+                    title: 'My Linq stablecoin recap',
+                    text: shareText,
+                    url: appUrl,
+                });
+                onClose();
+            } else if (file) {
+                await downloadCard(file);
+                if (navigator.clipboard) await navigator.clipboard.writeText(shareText);
+                onClose();
+            } else if (navigator.clipboard) {
+                await navigator.clipboard.writeText(shareText);
+                onClose();
+            }
+        } catch (error) {
+            if ((error as DOMException).name !== 'AbortError') {
+                console.error('Failed to share analytics card:', error);
+            }
+        } finally {
+            setIsSharing(false);
+        }
+    };
+
+    return createPortal(
+        <div
+            style={{
+                position: 'fixed',
+                inset: 0,
+                zIndex: 9999,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                background: 'rgba(0, 0, 0, 0.58)',
+                backdropFilter: 'blur(6px)',
+                padding: '24px',
+                animation: 'fadeIn 0.25s ease-out',
+            }}
+            onClick={onClose}
+        >
+            <div
+                className="animate-scaleIn"
+                style={{
+                    width: '100%',
+                    maxWidth: '380px',
+                    background: 'var(--surface)',
+                    color: 'var(--text-main)',
+                    border: '1px solid var(--border-color)',
+                    borderRadius: '20px',
+                    padding: '20px',
+                    boxShadow: '0 20px 48px rgba(0, 0, 0, 0.2)',
+                    position: 'relative',
+                }}
+                onClick={(event) => event.stopPropagation()}
+            >
+                <button
+                    type="button"
+                    onClick={onClose}
+                    aria-label="Close"
+                    style={{
+                        position: 'absolute',
+                        top: '12px',
+                        right: '12px',
+                        width: '32px',
+                        height: '32px',
+                        borderRadius: '50%',
+                        background: 'var(--input-bg)',
+                        color: 'var(--text-secondary)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                    }}
+                >
+                    <X size={16} />
+                </button>
+
+                <h2 style={{ fontSize: '14px', fontWeight: 700, marginBottom: '8px', paddingRight: '34px' }}>
+                    Share analytics card
+                </h2>
+                <p style={{ fontSize: '10px', lineHeight: 1.7, color: 'var(--text-secondary)', marginBottom: '16px' }}>
+                    Pick a style and share your Linq stablecoin recap through your phone share sheet.
+                </p>
+
+                <div ref={cardRef} style={{ width: '310px', maxWidth: '100%', margin: '0 auto 14px' }}>
+                    <AnalyticsShareCard metrics={metrics} variant={selectedVariant} />
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px', marginBottom: '14px' }}>
+                    {shareCardVariants.map((variant) => (
+                        <button
+                            key={variant.id}
+                            type="button"
+                            onClick={() => setSelectedVariant(variant.id)}
+                            style={{
+                                height: '34px',
+                                borderRadius: '12px',
+                                background: selectedVariant === variant.id ? 'var(--primary)' : 'var(--input-bg)',
+                                color: selectedVariant === variant.id ? '#ffffff' : 'var(--text-secondary)',
+                                fontSize: '9px',
+                                fontWeight: 700,
+                            }}
+                        >
+                            {variant.label}
+                        </button>
+                    ))}
+                </div>
+
+                <button
+                    type="button"
+                    onClick={handleShare}
+                    disabled={isSharing}
+                    style={{
+                        width: '100%',
+                        height: '46px',
+                        borderRadius: '14px',
+                        background: 'var(--primary)',
+                        color: '#ffffff',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '8px',
+                        fontSize: '12px',
+                        fontWeight: 700,
+                        opacity: isSharing ? 0.7 : 1,
+                    }}
+                >
+                    <Share2 size={16} />
+                    {isSharing ? 'Preparing...' : 'Share Card'}
+                </button>
+            </div>
+        </div>,
+        document.body
+    );
+}
+
 export default function Analysis() {
     const navigate = useNavigate();
+    const { config: savingsConfig, totalSaved } = useSavings();
     const [orders, setOrders] = useState<Order[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [timeFilter, setTimeFilter] = useState<string>('all');
+    const [showShareCard, setShowShareCard] = useState(false);
 
     useEffect(() => {
         const loadOrders = async () => {
             try {
                 setIsLoading(true);
                 const cachedOrders = await fetchOrders();
-                const mappedOrders: Order[] = cachedOrders.map((order: any) => ({
+                const mappedOrders: Order[] = (cachedOrders as CachedOrder[]).map((order) => ({
                     id: order.id,
                     amountStableCoin: Number(order.amountStableCoin),
                     amountNgn: order.amountNgn,
                     status: order.status,
-                    createdAt: order.createdAt || order.created,
+                    createdAt: order.createdAt || order.created || '',
                     orderType: order.orderType,
                     bankName: order.bankName,
                     coin: order.coin,
@@ -211,6 +558,43 @@ export default function Analysis() {
     // Volume totals for the top glass card
     const totalNgn = filteredOrders.reduce((sum, o) => sum + (o.amountNgn || 0), 0);
     const totalUsd = filteredOrders.reduce((sum, o) => sum + (o.amountStableCoin || 0), 0);
+    const thirtyDaysAgo = useMemo(() => {
+        const date = new Date();
+        date.setDate(date.getDate() - 30);
+        return date;
+    }, []);
+    const completedOrders = useMemo(
+        () => orders.filter(o => normalizeStatus(o.status) === 'completed'),
+        [orders]
+    );
+    const lastThirtyDayOrders = useMemo(
+        () => completedOrders.filter(o => new Date(o.createdAt) >= thirtyDaysAgo),
+        [completedOrders, thirtyDaysAgo]
+    );
+    const shareMetrics = useMemo(() => {
+        const onramped = lastThirtyDayOrders
+            .filter(o => getOrderType(o) === 'On-Ramp')
+            .reduce((sum, o) => sum + (o.amountStableCoin || 0), 0);
+        const offramped = lastThirtyDayOrders
+            .filter(o => getOrderType(o) === 'Off-Ramp')
+            .reduce((sum, o) => sum + (o.amountStableCoin || 0), 0);
+        const utilities = lastThirtyDayOrders
+            .filter(o => getOrderType(o) === 'Bills')
+            .reduce((sum, o) => sum + (o.amountStableCoin || 0), 0);
+        const cumulativeVolume = completedOrders.reduce((sum, o) => sum + (o.amountStableCoin || 0), 0);
+        const savedPercentage = cumulativeVolume > 0
+            ? (totalSaved / cumulativeVolume) * 100
+            : (savingsConfig.enabled ? savingsConfig.percentage : 0);
+
+        return [
+            { label: 'USDC offramped in the last 30 days', value: formatUsdc(offramped) },
+            { label: 'USDC onramped in the last 30 days', value: formatUsdc(onramped) },
+            { label: 'USDC spent on utilities in the last 30 days', value: formatUsdc(utilities) },
+            { label: 'Total percentage saved', value: `${Math.max(0, savedPercentage).toFixed(1)}%` },
+            { label: 'Cumulative transaction volume', value: formatUsdc(cumulativeVolume) },
+        ];
+    }, [completedOrders, lastThirtyDayOrders, savingsConfig.enabled, savingsConfig.percentage, totalSaved]);
+    const shareText = `My Linq stablecoin recap: ${shareMetrics.map(metric => `${metric.label}: ${metric.value}`).join(', ')}. ${appUrl}`;
 
     const statCards = [
         { label: 'Total Volume', value: `$${stats.totalVolume.toLocaleString('en-US', { maximumFractionDigits: 2 })}` },
@@ -240,7 +624,36 @@ export default function Analysis() {
                     pointerEvents: 'none',
                     color: 'var(--text-main)'
                 }}>Analytics</h2>
+                <button
+                    type="button"
+                    onClick={() => setShowShareCard(true)}
+                    aria-label="Share analytics card"
+                    style={{
+                        marginLeft: 'auto',
+                        width: '36px',
+                        height: '36px',
+                        borderRadius: '12px',
+                        background: 'var(--surface)',
+                        border: '1px solid var(--border-color)',
+                        color: 'var(--text-main)',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        position: 'relative',
+                        zIndex: 1,
+                    }}
+                >
+                    <Download size={18} />
+                </button>
             </div>
+            {showShareCard && (
+                <AnalyticsShareModal
+                    metrics={shareMetrics}
+                    shareText={shareText}
+                    onClose={() => setShowShareCard(false)}
+                />
+            )}
 
             {/* Time Filter Pills */}
             <div style={{ display: 'flex', gap: '8px', marginBottom: '24px', overflowX: 'auto', paddingBottom: '4px', scrollbarWidth: 'none' }}>
@@ -339,7 +752,7 @@ export default function Analysis() {
                         border: '1px solid var(--border-color)'
                     }}>
                         <h3 style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-main)', marginBottom: '16px' }}>Transaction Volume</h3>
-                        <ResponsiveContainer width="100%" height="85%">
+                        <ResponsiveContainer width="100%" height={250} minWidth={0}>
                             <AreaChart data={chartData}>
                                 <defs>
                                     <linearGradient id="colorValue" x1="0" y1="0" x2="0" y2="1">
@@ -367,7 +780,7 @@ export default function Analysis() {
                                         borderRadius: '12px'
                                     }}
                                     itemStyle={{ color: 'var(--text-main)' }}
-                                    formatter={(value: any) => [value ? `$${Number(value).toLocaleString()}` : '$0', 'Volume']}
+                                    formatter={(value: unknown) => [value ? `$${Number(value).toLocaleString()}` : '$0', 'Volume']}
                                 />
                                 <CartesianGrid vertical={false} stroke="var(--border-color)" strokeDasharray="3 3" opacity={0.3} />
                                 <Area
@@ -393,7 +806,7 @@ export default function Analysis() {
                         }}>
                             <h3 style={{ fontSize: '10px', fontWeight: 600, color: 'var(--text-main)', marginBottom: '8px' }}>Type Breakdown</h3>
                             {typeData.length > 0 ? (
-                                <ResponsiveContainer width="100%" height={180}>
+                                <ResponsiveContainer width="100%" height={180} minWidth={0}>
                                     <PieChart>
                                         <Pie
                                             data={typeData}
@@ -417,7 +830,7 @@ export default function Analysis() {
                                                 borderRadius: '12px',
                                                 fontSize: '10px',
                                             }}
-                                            formatter={(value: any) => [`$${Number(value).toLocaleString()}`, 'Volume']}
+                                            formatter={(value: unknown) => [`$${Number(value).toLocaleString()}`, 'Volume']}
                                         />
                                     </PieChart>
                                 </ResponsiveContainer>
@@ -450,7 +863,7 @@ export default function Analysis() {
                         }}>
                             <h3 style={{ fontSize: '10px', fontWeight: 600, color: 'var(--text-main)', marginBottom: '8px' }}>Tx Count</h3>
                             {barData.length > 0 ? (
-                                <ResponsiveContainer width="100%" height={180}>
+                                <ResponsiveContainer width="100%" height={180} minWidth={0}>
                                     <BarChart data={barData}>
                                         <defs>
                                             <linearGradient id="barGradient" x1="0" y1="0" x2="0" y2="1">
@@ -478,7 +891,7 @@ export default function Analysis() {
                                                 borderRadius: '12px',
                                                 fontSize: '10px',
                                             }}
-                                            formatter={(value: any) => [value, 'Transactions']}
+                                            formatter={(value: unknown) => [Number(value).toLocaleString(), 'Transactions']}
                                         />
                                         <Bar dataKey="count" fill="url(#barGradient)" radius={[6, 6, 0, 0]} />
                                     </BarChart>

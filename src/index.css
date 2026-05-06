@@ -542,25 +542,6 @@ select {
 }
 
 
-.status-dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  display: inline-block;
-}
-
-.status-dot--pending {
-  background: #f59e0b;
-}
-
-.status-dot--completed {
-  background: var(--success);
-}
-
-.status-dot--failed {
-  background: var(--error);
-}
-
 /* ========== ANIMATED CHECK FOR SUCCESS ========== */
 
 @keyframes checkDraw {

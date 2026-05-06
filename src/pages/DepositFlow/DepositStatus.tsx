@@ -35,46 +35,64 @@ export default function DepositStatus() {
 
     const { token } = useAuth();
     // WebSocket hook
-    const { lastMessage } = useWebSocket<OnrampStatusResponse>({ orderId, token: token ?? undefined });
+    const { lastMessage, isConnected, stop: stopWs } = useWebSocket<OnrampStatusResponse>({ orderId, token: token ?? undefined });
 
-    // Initial load
+    // One-shot status check on mount — catches orders already completed before WS connected
     useEffect(() => {
         if (orderId) {
-            getOnrampStatus(orderId).then(setStatusData).catch(console.error);
+            getOnrampStatus(orderId).then(setStatusData).catch(() => { /* WS will cover it */ });
         }
     }, [orderId]);
 
+    // Polling fallback — only runs when WS is disconnected and status is non-terminal
+    useEffect(() => {
+        if (!orderId) return;
+        if (isConnected) return;
+        if (displayedStatus === 'completed' || displayedStatus === 'failed') return;
+
+        const interval = setInterval(() => {
+            getOnrampStatus(orderId).then(data => {
+                setStatusData(data);
+                const mapped = mapTransactionStatus(data.status);
+                if (mapped === 'completed' && !endTime) {
+                    setEndTime(Date.now());
+                    invalidateOrdersCache();
+                    stopWs();
+                    clearInterval(interval);
+                } else if (mapped === 'failed') {
+                    clearInterval(interval);
+                }
+            }).catch(() => {});
+        }, 8000);
+
+        return () => clearInterval(interval);
+    }, [orderId, isConnected, displayedStatus, endTime]);
+
     // Handle WebSocket updates
     useEffect(() => {
-        if (lastMessage) {
-            // The backend sends { orderId, data } wrapper
-            // data can be a string (status) or an object (full order)
-            const messageData = (lastMessage as any).data;
-            let newStatus = '';
+        if (!lastMessage) return;
 
-            if (typeof messageData === 'string') {
-                newStatus = messageData;
-            } else if (messageData && typeof messageData === 'object' && 'status' in messageData) {
-                newStatus = messageData.status;
-            }
+        const messageData = (lastMessage as any).data;
+        let newStatus = '';
 
-            if (newStatus && statusData) {
-                // Only update if status changed
-                if (newStatus !== statusData.status) {
-                    setStatusData(prev => prev ? { ...prev, status: newStatus as any } : null);
+        if (typeof messageData === 'string') {
+            newStatus = messageData;
+        } else if (messageData && typeof messageData === 'object' && 'status' in messageData) {
+            newStatus = messageData.status;
+        }
 
-                    const mapped = mapTransactionStatus(newStatus);
-                    if (mapped === 'completed' && !endTime) {
-                        setEndTime(Date.now());
-                        invalidateOrdersCache();
-                    }
+        if (newStatus && statusData) {
+            if (newStatus !== statusData.status) {
+                setStatusData(prev => prev ? { ...prev, status: newStatus as any } : null);
+                const mapped = mapTransactionStatus(newStatus);
+                if (mapped === 'completed' && !endTime) {
+                    setEndTime(Date.now());
+                    invalidateOrdersCache();
+                    stopWs();
                 }
-            } else if (newStatus && !statusData) {
-                // If we somehow got WS message before initial load (unlikely but possible)
-                // We might not have amount/etc, so we can't fully construct statusData yet.
-                // Ideally we fetch it.
-                getOnrampStatus(orderId).then(setStatusData).catch(console.error);
             }
+        } else if (newStatus && !statusData) {
+            getOnrampStatus(orderId).then(setStatusData).catch(() => { /* ignore */ });
         }
     }, [lastMessage, endTime, statusData, orderId]);
 

@@ -6,17 +6,21 @@ export const useWebSocket = <T>(params: { orderId?: string; userId?: string; tok
     const [isConnected, setIsConnected] = useState(false);
     const socketRef = useRef<WebSocket | null>(null);
     const reconnectTimeoutRef = useRef<NodeJS.Timeout | undefined>(undefined);
+    const stoppedRef = useRef(false);
+    const mountedRef = useRef(false);
 
     useEffect(() => {
         if (!params || (!params.orderId && !params.userId)) return;
-        // Don't connect if no token is available — backend will reject unauthenticated WS
         if (!params.token) return;
 
+        mountedRef.current = true;
+        stoppedRef.current = false;
         let reconnectAttempts = 0;
         const maxReconnectAttempts = 5;
 
         const connect = () => {
-            // Determine WS URL from existing API URL or default
+            if (!mountedRef.current || stoppedRef.current) return;
+
             const apiUrl = import.meta.env.VITE_API_URL || 'https://api.linq.pxxl.click';
             const queryParts: string[] = [];
             if (params.orderId) queryParts.push(`orderId=${params.orderId}`);
@@ -24,28 +28,27 @@ export const useWebSocket = <T>(params: { orderId?: string; userId?: string; tok
             if (params.token) queryParts.push(`token=${encodeURIComponent(params.token)}`);
 
             const wsUrl = apiUrl.replace(/^http/, 'ws') + `/ws?${queryParts.join('&')}`;
-
             const socket = new WebSocket(wsUrl);
 
             socket.onopen = () => {
+                if (!mountedRef.current) { socket.close(); return; }
                 setIsConnected(true);
-                reconnectAttempts = 0; // Reset attempts on successful connection
+                reconnectAttempts = 0;
             };
 
             socket.onmessage = (event) => {
+                if (!mountedRef.current) return;
                 try {
                     const message = JSON.parse(event.data);
                     setLastMessage(message);
-                } catch (_) {
-                    // Silently ignore parse errors
-                }
+                } catch (_) { /* ignore parse errors */ }
             };
 
             socket.onclose = () => {
                 setIsConnected(false);
-                // Exponential backoff for reconnection
+                if (!mountedRef.current || stoppedRef.current) return;
                 if (reconnectAttempts < maxReconnectAttempts) {
-                    const timeout = Math.min(1000 * Math.pow(2, reconnectAttempts), 30000); // Max 30s
+                    const timeout = Math.min(1000 * Math.pow(2, reconnectAttempts), 30000);
                     reconnectTimeoutRef.current = setTimeout(() => {
                         reconnectAttempts++;
                         connect();
@@ -54,25 +57,37 @@ export const useWebSocket = <T>(params: { orderId?: string; userId?: string; tok
             };
 
             socket.onerror = () => {
-                socket.close(); // Triggers onclose
+                socket.close();
             };
 
             socketRef.current = socket;
         };
 
-        connect();
+        // Small delay prevents React StrictMode double-mount from spawning duplicate connections
+        const startTimeout = setTimeout(connect, 50);
 
         return () => {
+            mountedRef.current = false;
+            clearTimeout(startTimeout);
+            if (reconnectTimeoutRef.current) clearTimeout(reconnectTimeoutRef.current);
             if (socketRef.current) {
-                // Prevent reconnect logic from firing on intentional close
                 socketRef.current.onclose = null;
                 socketRef.current.close();
-            }
-            if (reconnectTimeoutRef.current) {
-                clearTimeout(reconnectTimeoutRef.current);
+                socketRef.current = null;
             }
         };
     }, [params?.orderId, params?.userId, params?.token]);
 
-    return { lastMessage, isConnected };
+    const stop = () => {
+        stoppedRef.current = true;
+        mountedRef.current = false;
+        if (reconnectTimeoutRef.current) clearTimeout(reconnectTimeoutRef.current);
+        if (socketRef.current) {
+            socketRef.current.onclose = null;
+            socketRef.current.close();
+            socketRef.current = null;
+        }
+    };
+
+    return { lastMessage, isConnected, stop };
 };

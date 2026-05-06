@@ -193,10 +193,6 @@ export default function TransactionsList() {
                             flexShrink: 0,
                         }}
                     >
-                        {value !== 'all' && (
-                            <span className={`status-dot status-dot--${value === 'completed' ? 'completed' : value === 'failed' ? 'failed' : 'pending'}`}
-                                style={{ marginRight: '6px', display: statusFilter === value ? 'none' : 'inline-block' }} />
-                        )}
                         {label}
                     </button>
                 ))}
@@ -257,7 +253,6 @@ export default function TransactionsList() {
                                                         background: statusStyle.bg, color: statusStyle.color,
                                                         padding: '2px 8px', borderRadius: '6px', fontSize: '9px',
                                                     }}>
-                                                        <span className={`status-dot status-dot--${['completed', 'settled', 'disbursed'].includes(formattedStatus.toLowerCase()) ? 'completed' : ['failed', 'refunded'].includes(formattedStatus.toLowerCase()) ? 'failed' : 'pending'}`} />
                                                         {formattedStatus}
                                                     </span>
                                                 </div>

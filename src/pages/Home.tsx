@@ -8,7 +8,7 @@ import balanceCardBg from '../assets/balance-card-bg.png';
 import Button from '../components/ui/Button';
 import ThemeToggle from '../components/ui/ThemeToggle';
 import { useNavigate } from 'react-router-dom';
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useCurrentAccount, useSuiClientQuery } from '@mysten/dapp-kit';
 import { useAuth } from '../context/AuthContext';
 import { useWebSocket } from '../hooks/useWebSocket';
@@ -100,8 +100,11 @@ export default function Home() {
 
     const [transactions, setTransactions] = useState<Order[]>([]);
     const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
+    const hasPendingRef = useRef(false);
     const [exchangeRate, setExchangeRate] = useState<number>(0);
-    const [isDataLoading, setIsDataLoading] = useState(true);
+    const [isOrdersLoading, setIsOrdersLoading] = useState(true);
+    const [isRateLoading, setIsRateLoading] = useState(true);
+    const [isRewardsLoading, setIsRewardsLoading] = useState(true);
     const [rewardsData, setRewardsData] = useState<RewardsData | null>(null);
     const { history: savingsHistory } = useSavings();
 
@@ -200,20 +203,27 @@ export default function Home() {
         fetchTronBalance();
     }, [selectedChain, tronAddress]);
 
-    const loadAllData = useCallback(async (isSilent = false, forceRefresh = false) => {
-        if (!isSilent) setIsDataLoading(true);
-        try {
-            const [orders, rate, rewards] = await Promise.all([
-                fetchOrders(100, forceRefresh),
-                fetchRate(),
-                getRewardsData().catch(() => null),
-            ]);
-            setTransactions(orders);
-            setExchangeRate(rate);
-            if (rewards) setRewardsData(rewards);
-        } finally {
-            if (!isSilent) setIsDataLoading(false);
+    const loadAllData = useCallback((isSilent = false, forceRefresh = false) => {
+        if (!isSilent) {
+            setIsOrdersLoading(true);
+            setIsRateLoading(true);
+            setIsRewardsLoading(true);
         }
+
+        fetchOrders(100, forceRefresh)
+            .then(orders => setTransactions(orders))
+            .catch(() => { /* keep previous */ })
+            .finally(() => { if (!isSilent) setIsOrdersLoading(false); });
+
+        fetchRate()
+            .then(rate => setExchangeRate(rate))
+            .catch(() => { /* keep previous */ })
+            .finally(() => { if (!isSilent) setIsRateLoading(false); });
+
+        getRewardsData()
+            .then(rewards => setRewardsData(rewards))
+            .catch(() => { /* keep previous */ })
+            .finally(() => { if (!isSilent) setIsRewardsLoading(false); });
     }, []);
 
     // Use WebSocket to listen for real-time updates for this user
@@ -250,7 +260,7 @@ export default function Home() {
         transactions,
         rewardsData,
         savingsHistory.length > 0,
-        !isDataLoading
+        !isOrdersLoading && !isRewardsLoading
     );
 
     // Format USDC balance (USDC has 6 decimals on most chains, 18 on BSC)
@@ -316,9 +326,8 @@ export default function Home() {
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                     <div style={{
-                        width: '40px', height: '40px', background: 'var(--surface-elevated)', borderRadius: '12px',
+                        width: '40px', height: '40px', borderRadius: '12px',
                         display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden',
-                        transition: 'background-color 0.3s ease'
                     }}>
                         <img src={logo} alt="Logo" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                     </div>
@@ -362,8 +371,8 @@ export default function Home() {
                 </div>
             </div>
 
-            {/* Balance Card — show skeleton while initial load */}
-            {isDataLoading ? (
+            {/* Balance Card — show skeleton until rate is loaded */}
+            {isRateLoading ? (
                 <BalanceCardSkeleton />
             ) : (
                 <div className="glow-on-hover" style={{
@@ -454,8 +463,8 @@ export default function Home() {
                 </div>
             )}
 
-            {/* Quick Actions */}
-            {isDataLoading ? (
+            {/* Quick Actions — always visible, no data dependency */}
+            {false ? (
                 <QuickActionsSkeleton />
             ) : (
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px', marginBottom: '24px' }}>
@@ -539,7 +548,7 @@ export default function Home() {
             )} */}
 
             {/* Recent Transactions */}
-            {isDataLoading ? (
+            {isOrdersLoading ? (
                 <TransactionListSkeleton count={4} />
             ) : (
                 <div className="glass-card animate-slideUp stagger-3" style={{ borderRadius: '24px', padding: '24px', animationFillMode: 'backwards', transition: 'background-color 0.3s ease' }}>
@@ -592,7 +601,6 @@ export default function Home() {
                                                     flexShrink: 0,
                                                     whiteSpace: 'nowrap'
                                                 }}>
-                                                    <span className={`status-dot status-dot--${formatStatus(trx.status).toLowerCase() === 'completed' ? 'completed' : formatStatus(trx.status).toLowerCase() === 'failed' ? 'failed' : 'pending'}`} />
                                                     {formatStatus(trx.status)}
                                                 </span>
                                             </div>

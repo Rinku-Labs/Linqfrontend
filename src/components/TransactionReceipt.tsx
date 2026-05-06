@@ -7,6 +7,7 @@ import type { Order } from './TransactionPopup';
 import { formatStatus, getStatusStyle } from './TransactionPopup';
 import { downloadReceiptAsImage } from '../utils/receiptGenerator';
 import balanceCardBg from '../assets/balance-card-bg.png';
+import { cleanDisplayValue, displayOrFallback } from '../utils/displayValue';
 
 
 interface TransactionReceiptProps {
@@ -39,14 +40,16 @@ export default function TransactionReceipt({ order, onDone, showDoneButton = tru
 
     // Use order data if provided, otherwise show fallback
     // Fix: Sometimes offramp data might be in different fields depending on the API. We'll use fallbacks.
-    const accountName = order?.accountName || (order as any)?.bankAccountName || 'N/A';
-    const bankAccount = order?.bankAccount || (order as any)?.accountNumber || (order as any)?.bank_account || 'N/A';
-    const bankName = order?.bankName || 'N/A';
+    const recipientUsername = cleanDisplayValue(order?.recipientUsername);
+    const accountName = displayOrFallback(order?.accountName || (order as any)?.bankAccountName || (recipientUsername ? `@${recipientUsername}` : ''));
+    const bankAccount = cleanDisplayValue(order?.bankAccount || (order as any)?.accountNumber || (order as any)?.bank_account);
+    const bankName = cleanDisplayValue(order?.bankName);
+    const isUsernameTransfer = !!recipientUsername && !bankName && !bankAccount;
     const amountNgn = order?.amountNgn?.toLocaleString('en-NG', { maximumFractionDigits: 0 }) || '0';
     const transactionId = order?.id || 'N/A';
     const dateStr = order?.createdAt || order?.created || '';
     const status = order?.status || 'completed';
-    const narration = order?.description || 'FRM Linq User';
+    const narration = order?.description || (recipientUsername ? `Transfer to @${recipientUsername}` : 'FRM Linq User');
 
     // Copy handlers
     const [copiedRef, setCopiedRef] = useState(false);
@@ -105,7 +108,7 @@ export default function TransactionReceipt({ order, onDone, showDoneButton = tru
                     border: '1px solid rgba(255, 255, 255, 0.1)'
                 }}>
                     <Landmark size={12} strokeWidth={2.5} />
-                    <span style={{ fontSize: '10px', fontWeight: 600 }}>Bank Transfer</span>
+                    <span style={{ fontSize: '10px', fontWeight: 600 }}>{isUsernameTransfer ? 'Username Transfer' : 'Bank Transfer'}</span>
                 </div>
 
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px', marginBottom: '16px' }}>
@@ -135,15 +138,19 @@ export default function TransactionReceipt({ order, onDone, showDoneButton = tru
                     <span style={{ fontWeight: 600, fontSize: '10px', color: 'var(--text-main)', textAlign: 'right', textTransform: 'uppercase' }}>{accountName}</span>
                 </div>
 
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '20px' }}>
-                    <span style={{ color: 'var(--text-muted)', fontSize: '10px' }}>Bank</span>
-                    <span style={{ fontWeight: 600, fontSize: '10px', color: 'var(--text-main)' }}>{bankName}</span>
-                </div>
+                {!isUsernameTransfer && bankName && (
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '20px' }}>
+                        <span style={{ color: 'var(--text-muted)', fontSize: '10px' }}>Bank</span>
+                        <span style={{ fontWeight: 600, fontSize: '10px', color: 'var(--text-main)' }}>{bankName}</span>
+                    </div>
+                )}
 
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '20px' }}>
-                    <span style={{ color: 'var(--text-muted)', fontSize: '10px' }}>Account Number</span>
-                    <span style={{ fontWeight: 600, fontSize: '10px', color: 'var(--text-main)' }}>{bankAccount}</span>
-                </div>
+                {!isUsernameTransfer && bankAccount && (
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '20px' }}>
+                        <span style={{ color: 'var(--text-muted)', fontSize: '10px' }}>Account Number</span>
+                        <span style={{ fontWeight: 600, fontSize: '10px', color: 'var(--text-main)' }}>{bankAccount}</span>
+                    </div>
+                )}
 
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '20px' }}>
                     <span style={{ color: 'var(--text-muted)', fontSize: '10px' }}>Amount</span>

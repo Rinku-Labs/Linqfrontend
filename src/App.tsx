@@ -15,7 +15,6 @@ import TransactionDetail from './pages/Transactions/Detail';
 import Analysis from './pages/Analysis';
 import Settings from './pages/Settings';
 import BankDetails from './pages/BankDetails';
-import CreatePin from './pages/CreatePin';
 import Verification from './pages/Verification';
 import PrivacyPolicy from './pages/PrivacyPolicy';
 import Topup from './pages/BillsFlow/Topup';
@@ -53,9 +52,6 @@ function App() {
         <Route path="/onboarding" element={<><SEO title="Welcome" description="Join Linq today." /><Onboarding /></>} />
         <Route path="/privacy-policy" element={<><SEO title="Privacy Policy" /><PrivacyPolicy /></>} />
         
-        <Route path="/create-pin" element={<RequireAuth><SEO title="Create PIN" /><CreatePin /></RequireAuth>} /> // Secured route
-
-
         <Route path="/verification" element={<RequireAuth><SEO title="Account Verification" /><Verification /></RequireAuth>} /> // Secured route
 
         <Route element={<RequireAuth><MainLayout /></RequireAuth>}>
