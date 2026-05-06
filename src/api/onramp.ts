@@ -23,7 +23,6 @@ export interface OnrampOrderResponse {
     amountStableCoin: number;
     expiresAt: string;
     status: string;
-    accountName?: string;
 }
 
 export interface OnrampStatusResponse {
