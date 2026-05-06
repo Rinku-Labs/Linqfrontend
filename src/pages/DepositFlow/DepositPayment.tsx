@@ -148,6 +148,26 @@ export default function DepositPayment() {
                     </div>
 
                     <div style={{ marginBottom: '24px' }}>
+                        <p style={{ fontSize: '9px', color: 'var(--text-secondary)', marginBottom: '4px' }}>Account Name</p>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <p style={{
+                                fontSize: '15px',
+                                fontWeight: 600,
+                                color: 'var(--text-main)',
+                                textTransform: 'uppercase'
+                            }}>
+                                {order.accountName || 'Resolving...'}
+                            </p>
+                            <button
+                                onClick={() => copyToClipboard(order.accountName || '', "Account Name")}
+                                style={{ background: 'var(--surface-elevated)', border: 'none', padding: '8px', borderRadius: '8px', cursor: 'pointer', color: 'var(--text-main)' }}
+                            >
+                                <Copy size={16} />
+                            </button>
+                        </div>
+                    </div>
+
+                    <div style={{ marginBottom: '24px' }}>
                         <p style={{ fontSize: '9px', color: 'var(--text-secondary)', marginBottom: '4px' }}>Amount to Pay</p>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                             <p style={{
