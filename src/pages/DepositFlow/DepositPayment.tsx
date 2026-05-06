@@ -120,8 +120,29 @@ export default function DepositPayment() {
                 {/* Account Details Card */}
                 <div className="glass-card" style={{ padding: '24px', borderRadius: '24px', flexShrink: 0 }}>
                     <div style={{ marginBottom: '24px' }}>
-                        <p style={{ fontSize: '9px', color: 'var(--text-secondary)', marginBottom: '4px' }}>BSB / Bank Name</p>
+                        <p style={{ fontSize: '9px', color: 'var(--text-secondary)', marginBottom: '4px' }}>Bank Name</p>
                         <p style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-main)' }}>{order.bankName}</p>
+                    </div>
+
+                    <div style={{ marginBottom: '24px' }}>
+                        <p style={{ fontSize: '9px', color: 'var(--text-secondary)', marginBottom: '4px' }}>Account Name</p>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <p style={{
+                                fontSize: '13px',
+                                fontWeight: 600,
+                                color: 'var(--text-main)',
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis'
+                            }}>
+                                {order.accountName}
+                            </p>
+                            <button
+                                onClick={() => copyToClipboard(order.accountName, "Account Name")}
+                                style={{ background: 'var(--surface-elevated)', border: 'none', padding: '8px', borderRadius: '8px', cursor: 'pointer', color: 'var(--text-main)' }}
+                            >
+                                <Copy size={16} />
+                            </button>
+                        </div>
                     </div>
 
                     <div style={{ marginBottom: '24px' }}>
