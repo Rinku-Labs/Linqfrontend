@@ -22,6 +22,12 @@ export interface LeaderboardEntry {
     xp: number;
 }
 
+export interface FullLeaderboardData {
+    week: LeaderboardEntry[];
+    month: LeaderboardEntry[];
+    all: LeaderboardEntry[];
+}
+
 export async function getRewardsData(forceRefresh = false): Promise<RewardsData> {
     if (!forceRefresh) {
         const cached = getCachedRewards();
@@ -36,5 +42,10 @@ export async function getLeaderboard(period: 'week' | 'month' | 'all'): Promise<
     const { data } = await client.get<LeaderboardEntry[]>('/leaderboard', {
         params: { period },
     });
+    return data;
+}
+
+export async function getFullLeaderboard(): Promise<FullLeaderboardData> {
+    const { data } = await client.get<FullLeaderboardData>('/leaderboard/all');
     return data;
 }

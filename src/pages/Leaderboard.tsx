@@ -1,8 +1,8 @@
 import { ArrowLeft } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useState, useEffect } from 'react';
-import { getLeaderboard } from '../api/rewards';
-import type { LeaderboardEntry } from '../api/rewards';
+import { getFullLeaderboard } from '../api/rewards';
+import type { LeaderboardEntry, FullLeaderboardData } from '../api/rewards';
 import medalGold from '../assets/medal-gold.png';
 import medalSilver from '../assets/medal-silver.png';
 import medalBronze from '../assets/medal-bronze.png';
@@ -19,15 +19,17 @@ const TABS: { label: string; value: Period }[] = [
 export default function Leaderboard() {
     const navigate = useNavigate();
     const [period, setPeriod] = useState<Period>('week');
-    const [entries, setEntries] = useState<LeaderboardEntry[]>([]);
+    const [fullData, setFullData] = useState<FullLeaderboardData | null>(null);
     const [isLoading, setIsLoading] = useState(true);
 
     useEffect(() => {
         setIsLoading(true);
-        getLeaderboard(period)
-            .then(setEntries)
+        getFullLeaderboard()
+            .then(setFullData)
             .finally(() => setIsLoading(false));
-    }, [period]);
+    }, []);
+
+    const entries = fullData ? fullData[period] : [];
 
     const top3 = entries.slice(0, 3);
     const rest = entries.slice(3);
