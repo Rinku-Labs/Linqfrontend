@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { BarChart3, ArrowLeft, TrendingUp, DollarSign, Download, Share2, X } from 'lucide-react';
+import { BarChart3, ArrowLeft, TrendingUp, DollarSign, Download, Share2, X, ChevronDown } from 'lucide-react';
 import { createPortal } from 'react-dom';
 import html2canvas from 'html2canvas';
 import { fetchOrders } from '../utils/ordersCache';
@@ -112,6 +112,12 @@ const prepareChartData = (orders: Order[], timeFilter: string) => {
             key = days[date.getDay()];
         } else if (timeFilter === 'month') {
             key = date.getDate().toString();
+        } else if (timeFilter === '6months' || timeFilter === '1year') {
+            key = date.toLocaleDateString('en-US', { month: 'short', year: '2-digit' });
+        } else if (timeFilter === '2months' || timeFilter === '3months') {
+            const weekStart = new Date(date);
+            weekStart.setDate(date.getDate() - date.getDay() + 1);
+            key = weekStart.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
         } else {
             key = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
         }
@@ -153,6 +159,12 @@ const prepareBarData = (orders: Order[], timeFilter: string) => {
             key = days[date.getDay()];
         } else if (timeFilter === 'month') {
             key = date.getDate().toString();
+        } else if (timeFilter === '6months' || timeFilter === '1year') {
+            key = date.toLocaleDateString('en-US', { month: 'short', year: '2-digit' });
+        } else if (timeFilter === '2months' || timeFilter === '3months') {
+            const weekStart = new Date(date);
+            weekStart.setDate(date.getDate() - date.getDay() + 1);
+            key = weekStart.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
         } else {
             key = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
         }
@@ -502,6 +514,8 @@ export default function Analysis() {
     const [isLoading, setIsLoading] = useState(true);
     const [timeFilter, setTimeFilter] = useState<string>('all');
     const [showShareCard, setShowShareCard] = useState(false);
+    const [showTimeDropdown, setShowTimeDropdown] = useState(false);
+    const timeDropdownRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
         const loadOrders = async () => {
@@ -529,6 +543,31 @@ export default function Analysis() {
     }, []);
 
     // Filter orders by time
+    const timeFilterOptions: { label: string; value: string; primary?: boolean }[] = [
+        { label: 'All Time', value: 'all', primary: true },
+        { label: 'Today', value: 'today', primary: true },
+        { label: 'This Week', value: 'week', primary: true },
+        { label: 'This Month', value: 'month', primary: true },
+        { label: '2 Months', value: '2months' },
+        { label: '3 Months', value: '3months' },
+        { label: '6 Months', value: '6months' },
+        { label: '1 Year', value: '1year' },
+    ];
+
+    const activeFilterLabel = timeFilterOptions.find(f => f.value === timeFilter)?.label || 'All Time';
+    const isExtendedFilter = !timeFilterOptions.find(f => f.value === timeFilter)?.primary;
+
+    // Close dropdown on outside click
+    useEffect(() => {
+        const handleClickOutside = (e: MouseEvent) => {
+            if (timeDropdownRef.current && !timeDropdownRef.current.contains(e.target as Node)) {
+                setShowTimeDropdown(false);
+            }
+        };
+        if (showTimeDropdown) document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, [showTimeDropdown]);
+
     const filterOrdersByTime = (orders: Order[]) => {
         const now = new Date();
         const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
@@ -542,6 +581,22 @@ export default function Analysis() {
                 return orders.filter(o => new Date(o.createdAt) >= thisWeek);
             case 'month':
                 return orders.filter(o => new Date(o.createdAt) >= thisMonth);
+            case '2months': {
+                const cutoff = new Date(now.getFullYear(), now.getMonth() - 2, 1);
+                return orders.filter(o => new Date(o.createdAt) >= cutoff);
+            }
+            case '3months': {
+                const cutoff = new Date(now.getFullYear(), now.getMonth() - 3, 1);
+                return orders.filter(o => new Date(o.createdAt) >= cutoff);
+            }
+            case '6months': {
+                const cutoff = new Date(now.getFullYear(), now.getMonth() - 6, 1);
+                return orders.filter(o => new Date(o.createdAt) >= cutoff);
+            }
+            case '1year': {
+                const cutoff = new Date(now.getFullYear() - 1, now.getMonth(), now.getDate());
+                return orders.filter(o => new Date(o.createdAt) >= cutoff);
+            }
             default:
                 return orders;
         }
@@ -656,33 +711,116 @@ export default function Analysis() {
             )}
 
             {/* Time Filter Pills */}
-            <div style={{ display: 'flex', gap: '8px', marginBottom: '24px', overflowX: 'auto', paddingBottom: '4px', scrollbarWidth: 'none' }}>
-                {[
-                    { label: 'All Time', value: 'all' },
-                    { label: 'Today', value: 'today' },
-                    { label: 'This Week', value: 'week' },
-                    { label: 'This Month', value: 'month' }
-                ].map(({ label, value }) => (
+            <div style={{ display: 'flex', gap: '8px', marginBottom: '24px', alignItems: 'center', overflowX: 'auto', paddingBottom: '4px', scrollbarWidth: 'none' }}>
+                {timeFilterOptions.filter(f => f.primary).map(({ label, value }) => {
+                    // If an extended filter is active, replace the "This Month" pill with the active extended label
+                    const showAsActive = isExtendedFilter && value === 'month' ? false : timeFilter === value;
+                    const displayLabel = isExtendedFilter && value === 'month' ? activeFilterLabel : label;
+                    const isActiveExtendedSlot = isExtendedFilter && value === 'month';
+
+                    return (
+                        <button
+                            key={value}
+                            onClick={() => {
+                                if (isActiveExtendedSlot) {
+                                    // Clicking the extended label pill — do nothing or toggle dropdown
+                                    setShowTimeDropdown(!showTimeDropdown);
+                                } else {
+                                    setTimeFilter(value);
+                                    setShowTimeDropdown(false);
+                                }
+                            }}
+                            style={{
+                                padding: '8px 16px',
+                                borderRadius: '20px',
+                                fontSize: '9px',
+                                fontWeight: 500,
+                                cursor: 'pointer',
+                                transition: 'all 0.2s ease',
+                                background: isActiveExtendedSlot ? 'var(--primary)' : showAsActive ? 'var(--primary)' : 'var(--surface)',
+                                color: isActiveExtendedSlot ? 'white' : showAsActive ? 'white' : 'var(--text-secondary)',
+                                border: isActiveExtendedSlot ? 'none' : showAsActive ? 'none' : '1px solid var(--border-color)',
+                                whiteSpace: 'nowrap',
+                                flexShrink: 0,
+                            }}
+                        >
+                            {displayLabel}
+                        </button>
+                    );
+                })}
+
+                {/* Dropdown trigger */}
+                <div ref={timeDropdownRef} style={{ position: 'relative', flexShrink: 0 }}>
                     <button
-                        key={value}
-                        onClick={() => setTimeFilter(value)}
+                        onClick={() => setShowTimeDropdown(!showTimeDropdown)}
                         style={{
-                            padding: '8px 16px',
+                            padding: '8px 12px',
                             borderRadius: '20px',
                             fontSize: '9px',
                             fontWeight: 500,
                             cursor: 'pointer',
                             transition: 'all 0.2s ease',
-                            background: timeFilter === value ? 'var(--primary)' : 'var(--surface)',
-                            color: timeFilter === value ? 'white' : 'var(--text-secondary)',
-                            border: timeFilter === value ? 'none' : '1px solid var(--border-color)',
+                            background: showTimeDropdown ? 'rgba(139, 92, 246, 0.1)' : 'var(--surface)',
+                            color: showTimeDropdown ? 'var(--primary)' : 'var(--text-secondary)',
+                            border: `1px solid ${showTimeDropdown ? 'var(--primary)' : 'var(--border-color)'}`,
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '4px',
                             whiteSpace: 'nowrap',
-                            flexShrink: 0,
                         }}
                     >
-                        {label}
+                        More
+                        <ChevronDown size={12} style={{ transform: showTimeDropdown ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s ease' }} />
                     </button>
-                ))}
+
+                    {/* Dropdown menu */}
+                    {showTimeDropdown && (
+                        <div style={{
+                            position: 'absolute',
+                            top: 'calc(100% + 6px)',
+                            right: 0,
+                            zIndex: 50,
+                            background: 'var(--surface)',
+                            border: '1px solid var(--border-color)',
+                            borderRadius: '16px',
+                            boxShadow: '0 12px 32px rgba(0,0,0,0.18)',
+                            padding: '6px',
+                            minWidth: '140px',
+                            animation: 'fadeIn 0.15s ease-out',
+                        }}>
+                            {timeFilterOptions.filter(f => !f.primary).map(({ label, value }) => (
+                                <button
+                                    key={value}
+                                    onClick={() => {
+                                        setTimeFilter(value);
+                                        setShowTimeDropdown(false);
+                                    }}
+                                    style={{
+                                        width: '100%',
+                                        padding: '10px 14px',
+                                        borderRadius: '12px',
+                                        fontSize: '11px',
+                                        fontWeight: timeFilter === value ? 600 : 400,
+                                        cursor: 'pointer',
+                                        transition: 'all 0.15s ease',
+                                        background: timeFilter === value ? 'rgba(139, 92, 246, 0.08)' : 'transparent',
+                                        color: timeFilter === value ? 'var(--primary)' : 'var(--text-main)',
+                                        border: 'none',
+                                        textAlign: 'left',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'space-between',
+                                    }}
+                                >
+                                    {label}
+                                    {timeFilter === value && (
+                                        <div style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--primary)' }} />
+                                    )}
+                                </button>
+                            ))}
+                        </div>
+                    )}
+                </div>
             </div>
 
             {/* Content */}
