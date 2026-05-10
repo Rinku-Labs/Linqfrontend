@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { BarChart3, ArrowLeft, TrendingUp, DollarSign, Download, Share2, X, ChevronDown } from 'lucide-react';
+import { BarChart3, ArrowLeft, TrendingUp, DollarSign, Download, Share2, X, Plus } from 'lucide-react';
 import { createPortal } from 'react-dom';
 import html2canvas from 'html2canvas';
 import { fetchOrders } from '../utils/ordersCache';
@@ -543,19 +543,23 @@ export default function Analysis() {
     }, []);
 
     // Filter orders by time
-    const timeFilterOptions: { label: string; value: string; primary?: boolean }[] = [
-        { label: 'All Time', value: 'all', primary: true },
-        { label: 'Today', value: 'today', primary: true },
-        { label: 'This Week', value: 'week', primary: true },
-        { label: 'This Month', value: 'month', primary: true },
+    const primaryOptions = [
+        { label: 'All Time', value: 'all' },
+        { label: 'Today', value: 'today' },
+        { label: 'This Week', value: 'week' },
+    ];
+    
+    const extendedOptions = [
+        { label: '1 Month', value: 'month' },
         { label: '2 Months', value: '2months' },
         { label: '3 Months', value: '3months' },
         { label: '6 Months', value: '6months' },
         { label: '1 Year', value: '1year' },
     ];
 
-    const activeFilterLabel = timeFilterOptions.find(f => f.value === timeFilter)?.label || 'All Time';
-    const isExtendedFilter = !timeFilterOptions.find(f => f.value === timeFilter)?.primary;
+    const activeExtended = extendedOptions.find(o => o.value === timeFilter);
+    const displayExtendedLabel = activeExtended ? activeExtended.label : '1 Month';
+    const isExtendedActive = !!activeExtended;
 
     // Close dropdown on outside click
     useEffect(() => {
@@ -710,25 +714,16 @@ export default function Analysis() {
                 />
             )}
 
-            {/* Time Filter Pills */}
-            <div style={{ display: 'flex', gap: '8px', marginBottom: '24px', alignItems: 'center', overflowX: 'auto', paddingBottom: '4px', scrollbarWidth: 'none' }}>
-                {timeFilterOptions.filter(f => f.primary).map(({ label, value }) => {
-                    // If an extended filter is active, replace the "This Month" pill with the active extended label
-                    const showAsActive = isExtendedFilter && value === 'month' ? false : timeFilter === value;
-                    const displayLabel = isExtendedFilter && value === 'month' ? activeFilterLabel : label;
-                    const isActiveExtendedSlot = isExtendedFilter && value === 'month';
-
-                    return (
+            {/* Time Filter System */}
+            <div style={{ display: 'flex', gap: '8px', marginBottom: '24px', alignItems: 'center' }}>
+                {/* Scrollable Pills Area */}
+                <div style={{ display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '4px', scrollbarWidth: 'none', flex: 1 }}>
+                    {primaryOptions.map(({ label, value }) => (
                         <button
                             key={value}
                             onClick={() => {
-                                if (isActiveExtendedSlot) {
-                                    // Clicking the extended label pill — do nothing or toggle dropdown
-                                    setShowTimeDropdown(!showTimeDropdown);
-                                } else {
-                                    setTimeFilter(value);
-                                    setShowTimeDropdown(false);
-                                }
+                                setTimeFilter(value);
+                                setShowTimeDropdown(false);
                             }}
                             style={{
                                 padding: '8px 16px',
@@ -737,27 +732,52 @@ export default function Analysis() {
                                 fontWeight: 500,
                                 cursor: 'pointer',
                                 transition: 'all 0.2s ease',
-                                background: isActiveExtendedSlot ? 'var(--primary)' : showAsActive ? 'var(--primary)' : 'var(--surface)',
-                                color: isActiveExtendedSlot ? 'white' : showAsActive ? 'white' : 'var(--text-secondary)',
-                                border: isActiveExtendedSlot ? 'none' : showAsActive ? 'none' : '1px solid var(--border-color)',
+                                background: timeFilter === value ? 'var(--primary)' : 'var(--surface)',
+                                color: timeFilter === value ? 'white' : 'var(--text-secondary)',
+                                border: timeFilter === value ? 'none' : '1px solid var(--border-color)',
                                 whiteSpace: 'nowrap',
                                 flexShrink: 0,
                             }}
                         >
-                            {displayLabel}
+                            {label}
                         </button>
-                    );
-                })}
+                    ))}
 
-                {/* Dropdown trigger */}
-                <div ref={timeDropdownRef} style={{ position: 'relative', flexShrink: 0 }}>
+                    {/* Extended Placeholder Pill (Defaults to 1 Month) */}
                     <button
-                        onClick={() => setShowTimeDropdown(!showTimeDropdown)}
+                        onClick={() => {
+                            if (!isExtendedActive) {
+                                setTimeFilter('month');
+                            } else {
+                                setShowTimeDropdown(!showTimeDropdown);
+                            }
+                        }}
                         style={{
-                            padding: '8px 12px',
+                            padding: '8px 16px',
                             borderRadius: '20px',
                             fontSize: '9px',
                             fontWeight: 500,
+                            cursor: 'pointer',
+                            transition: 'all 0.2s ease',
+                            background: isExtendedActive ? 'var(--primary)' : 'var(--surface)',
+                            color: isExtendedActive ? 'white' : 'var(--text-secondary)',
+                            border: isExtendedActive ? 'none' : '1px solid var(--border-color)',
+                            whiteSpace: 'nowrap',
+                            flexShrink: 0,
+                        }}
+                    >
+                        {displayExtendedLabel}
+                    </button>
+                </div>
+
+                {/* Dropdown Trigger (Outside overflow-x to prevent clipping) */}
+                <div ref={timeDropdownRef} style={{ position: 'relative', flexShrink: 0, zIndex: 50 }}>
+                    <button
+                        onClick={() => setShowTimeDropdown(!showTimeDropdown)}
+                        style={{
+                            width: '30px',
+                            height: '30px',
+                            borderRadius: '50%',
                             cursor: 'pointer',
                             transition: 'all 0.2s ease',
                             background: showTimeDropdown ? 'rgba(139, 92, 246, 0.1)' : 'var(--surface)',
@@ -765,21 +785,18 @@ export default function Analysis() {
                             border: `1px solid ${showTimeDropdown ? 'var(--primary)' : 'var(--border-color)'}`,
                             display: 'flex',
                             alignItems: 'center',
-                            gap: '4px',
-                            whiteSpace: 'nowrap',
+                            justifyContent: 'center',
                         }}
                     >
-                        More
-                        <ChevronDown size={12} style={{ transform: showTimeDropdown ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s ease' }} />
+                        <Plus size={14} style={{ transform: showTimeDropdown ? 'rotate(45deg)' : 'none', transition: 'transform 0.2s ease' }} />
                     </button>
 
                     {/* Dropdown menu */}
                     {showTimeDropdown && (
                         <div style={{
                             position: 'absolute',
-                            top: 'calc(100% + 6px)',
+                            top: 'calc(100% + 8px)',
                             right: 0,
-                            zIndex: 50,
                             background: 'var(--surface)',
                             border: '1px solid var(--border-color)',
                             borderRadius: '16px',
@@ -788,7 +805,7 @@ export default function Analysis() {
                             minWidth: '140px',
                             animation: 'fadeIn 0.15s ease-out',
                         }}>
-                            {timeFilterOptions.filter(f => !f.primary).map(({ label, value }) => (
+                            {extendedOptions.map(({ label, value }) => (
                                 <button
                                     key={value}
                                     onClick={() => {
