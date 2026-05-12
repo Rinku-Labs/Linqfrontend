@@ -196,7 +196,7 @@ const WhatsAppWidget: React.FC = () => {
                   justifyContent: 'center',
                   flexShrink: 0
                 }}>
-                  <MessageCircle size={14} fill="#fff" color="#fff" />
+                  <WhatsAppIcon size={14} />
                 </div>
                 <div style={{
                   backgroundColor: 'var(--card)',
