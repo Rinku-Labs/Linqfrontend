@@ -2,6 +2,7 @@ import { Outlet } from 'react-router-dom';
 import BottomNav from '../components/Layout/BottomNav';
 import { Toaster } from 'sonner';
 import VerificationOverlay from '../components/VerificationOverlay';
+import WhatsAppWidget from '../components/WhatsAppWidget';
 import { useAuth } from '../context/AuthContext';
 import '../index.css';
 
@@ -25,6 +26,7 @@ export default function MainLayout() {
             <BottomNav />
             <Toaster position="top-center" />
             <VerificationOverlay isVerified={isVerified} isCheckingVerification={isCheckingVerification} hasTrialRemaining={hasTrialRemaining} />
+            <WhatsAppWidget />
         </div>
     );
 }
