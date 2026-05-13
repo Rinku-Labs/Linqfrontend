@@ -90,7 +90,8 @@ export function SavingsProvider({ children }: { children: React.ReactNode }) {
                     const savedLocalConfig = getSavingsConfig(selectedChain);
                     // Only auto-enable if we never configured it before on this device
                     if (!savedLocalConfig.savingsAddress && latestAddress) {
-                        const newConfig = { ...prev, savingsAddress: latestAddress, enabled: true };
+                        // Only backfill the address — never override the user's enabled/disabled choice
+                        const newConfig = { ...prev, savingsAddress: latestAddress };
                         persistConfig(selectedChain, newConfig);
                         return newConfig;
                     }
