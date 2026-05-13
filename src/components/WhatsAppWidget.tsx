@@ -16,7 +16,7 @@ const WhatsAppWidget: React.FC = () => {
   const { user } = useAuth();
   const chatBodyRef = useRef<HTMLDivElement>(null);
 
-  const phoneNumber = '2349023172973'; // Business Support Number
+  const phoneNumber = import.meta.env.VITE_CUSTOMERCARELINE || '2349023172973'; // Business Support Number
 
   const userName = user?.username || 'there';
 
