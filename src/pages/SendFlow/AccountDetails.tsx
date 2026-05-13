@@ -45,6 +45,7 @@ export default function AccountDetails() {
     const [isSavingBeneficiary, setIsSavingBeneficiary] = useState(false);
     const [verificationError, setVerificationError] = useState('');
     const [suggestedBanks, setSuggestedBanks] = useState<MatchResult[]>([]);
+    const [usernameBankDetails, setUsernameBankDetails] = useState<{bankName: string, bankCode: string, bankAccount: string} | null>(null);
 
     // Beneficiaries from backend API
     const [beneficiaries, setBeneficiaries] = useState<Beneficiary[]>([]);
@@ -259,6 +260,7 @@ export default function AccountDetails() {
             // Reset states
             setVerificationError('');
             setValidatedName('');
+            setUsernameBankDetails(null);
 
             if (sendType === 'bank') {
                 // Bank Verification Logic
@@ -287,6 +289,11 @@ export default function AccountDetails() {
                     const { checkUsername } = await import('../../api/user');
                     const response = await checkUsername(username);
                     setValidatedName(response.data.accountName);
+                    setUsernameBankDetails({
+                        bankName: response.data.bankName,
+                        bankCode: response.data.bankCode,
+                        bankAccount: response.data.bankAccount
+                    });
                 } catch (error: unknown) {
                     console.error("Username check failed", error);
                     const err = error as { response?: { data?: { message?: string } } };
@@ -323,9 +330,16 @@ export default function AccountDetails() {
             });
         } else {
             // Send by Username
+            const finalBankName = usernameBankDetails?.bankName || '';
+            const bankLogo = finalBankName ? getBankLogo(finalBankName) : undefined;
             navigate('/send/amount', {
                 state: {
-                    recipientUsername: username
+                    recipientUsername: username,
+                    recipientName: validatedName,
+                    bankName: usernameBankDetails?.bankName,
+                    bankCode: usernameBankDetails?.bankCode,
+                    accountNumber: usernameBankDetails?.bankAccount,
+                    bankLogo
                 }
             });
         }
