@@ -30,9 +30,6 @@ export interface CheckUsernameResponse {
     message: string;
     data: {
         accountName: string;
-        bankName: string;
-        bankCode: string;
-        bankAccount: string;
     };
 }
 
