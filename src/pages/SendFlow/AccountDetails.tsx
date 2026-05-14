@@ -41,6 +41,7 @@ export default function AccountDetails() {
     const [bankName, setBankName] = useState('');
     const [bankCode, setBankCode] = useState('');
     const [validatedName, setValidatedName] = useState('');
+    const [usernameBankDetails, setUsernameBankDetails] = useState<{bankName: string, bankCode: string, bankAccount: string} | null>(null);
     const [isLoading, setIsLoading] = useState(false);
     const [isSavingBeneficiary, setIsSavingBeneficiary] = useState(false);
     const [verificationError, setVerificationError] = useState('');
@@ -278,7 +279,7 @@ export default function AccountDetails() {
                 }
             } else {
                 // Username Verification Logic
-                if (!username || username.length < 3) return;
+                if (!username || username.length < 2) return;
 
                 setIsLoading(true);
                 try {
@@ -287,6 +288,11 @@ export default function AccountDetails() {
                     const { checkUsername } = await import('../../api/user');
                     const response = await checkUsername(username);
                     setValidatedName(response.data.accountName);
+                    setUsernameBankDetails({
+                        bankName: response.data.bankName,
+                        bankCode: response.data.bankCode,
+                        bankAccount: response.data.bankAccount
+                    });
                 } catch (error: unknown) {
                     console.error("Username check failed", error);
                     const err = error as { response?: { data?: { message?: string } } };
@@ -325,7 +331,11 @@ export default function AccountDetails() {
             // Send by Username
             navigate('/send/amount', {
                 state: {
-                    recipientUsername: username
+                    recipientUsername: username,
+                    bankName: usernameBankDetails?.bankName,
+                    bankCode: usernameBankDetails?.bankCode,
+                    accountNumber: usernameBankDetails?.bankAccount,
+                    recipientName: validatedName
                 }
             });
         }

@@ -6,8 +6,8 @@ import Input from '../components/ui/Input';
 import BankSelector from '../components/ui/BankSelector';
 import banksData from '../../banks.json';
 import { verifyBankAccount, type VerifyBankError } from '../api/bank';
-import { updateBankDetails } from '../api/user';
-import { Loader2, CheckCircle2 } from 'lucide-react';
+import { updateBankDetails, getBankDetails, requestBankDetailsOtp } from '../api/user';
+import { Loader2, CheckCircle2, ShieldAlert } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
 export default function BankDetails() {
@@ -21,25 +21,48 @@ export default function BankDetails() {
     const [validatedName, setValidatedName] = useState('');
 
     // UI state
+    const [isLoadingDetails, setIsLoadingDetails] = useState(true);
+    const [existingDetails, setExistingDetails] = useState<any>(null);
+    const [isEditMode, setIsEditMode] = useState(true);
+    const [isRequestingOtp, setIsRequestingOtp] = useState(false);
+    const [showOtpInput, setShowOtpInput] = useState(false);
+    const [otp, setOtp] = useState('');
+
     const [isValidating, setIsValidating] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
     const [validationError, setValidationError] = useState('');
     const [saveError, setSaveError] = useState('');
     const [successMessage, setSuccessMessage] = useState('');
 
-    // Pre-fill data if available (mock for now, or from user context)
+    // Fetch existing details
     useEffect(() => {
-        if (user) {
-            // In a real scenario, we might want to fetch existing details first
-            // But for now, we assume this is mostly for setting up
-            if (user.username) setUsername(user.username);
-        }
+        const fetchDetails = async () => {
+            try {
+                const res = await getBankDetails();
+                if (res.data && res.data.bankAccount) {
+                    setExistingDetails(res.data);
+                    setUsername(res.data.username);
+                    setAccountNumber(res.data.bankAccount);
+                    setBankName(res.data.bankName);
+                    setValidatedName(res.data.accountName);
+                    setIsEditMode(false);
+                } else if (user?.username) {
+                    setUsername(user.username);
+                }
+            } catch (error) {
+                if (user?.username) setUsername(user.username);
+            } finally {
+                setIsLoadingDetails(false);
+            }
+        };
+        fetchDetails();
     }, [user]);
 
-    // Verify Bank Account Logic (copied/adapted from AccountDetails)
+    // Verify Bank Account Logic
     useEffect(() => {
+        if (!isEditMode) return;
+
         const verify = async () => {
-            // Reset states
             setValidationError('');
             setValidatedName('');
 
@@ -47,7 +70,6 @@ export default function BankDetails() {
                 return;
             }
 
-            // Find bank code
             const bank = (banksData.data as { name: string, code: string }[]).find(b => b.name === bankName);
             if (!bank) return;
 
@@ -65,7 +87,30 @@ export default function BankDetails() {
 
         const timeoutId = setTimeout(verify, 500);
         return () => clearTimeout(timeoutId);
-    }, [accountNumber, bankName]);
+    }, [accountNumber, bankName, isEditMode]);
+
+    const handleEditClick = async () => {
+        setIsRequestingOtp(true);
+        setSaveError('');
+        try {
+            await requestBankDetailsOtp();
+            setShowOtpInput(true);
+        } catch (error: any) {
+            setSaveError(error.response?.data?.message || "Failed to send OTP");
+        } finally {
+            setIsRequestingOtp(false);
+        }
+    };
+
+    const handleVerifyOtp = () => {
+        if (otp.length < 4) {
+            setSaveError("Please enter a valid OTP");
+            return;
+        }
+        setSaveError('');
+        setShowOtpInput(false);
+        setIsEditMode(true);
+    };
 
     const handleSave = async () => {
         setSaveError('');
@@ -78,7 +123,8 @@ export default function BankDetails() {
             await updateBankDetails({
                 username,
                 bankCode: bank.code,
-                bankAccount: accountNumber
+                bankAccount: accountNumber,
+                otp: existingDetails ? otp : undefined
             });
 
             setSuccessMessage("Bank details updated successfully!");
@@ -92,6 +138,17 @@ export default function BankDetails() {
             setIsSaving(false);
         }
     };
+
+    if (isLoadingDetails) {
+        return (
+            <div className="page-enter" style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
+                <Header title="Bank Details" showBack />
+                <div style={{ flex: 1, display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+                    <Loader2 className="animate-spin" size={32} color="var(--primary)" />
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className="page-enter" style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
@@ -107,85 +164,173 @@ export default function BankDetails() {
                         Set up your username and bank details to receive payments easily.
                     </p>
 
-                    <div style={{ marginBottom: '16px' }}>
-                        <Input
-                            label="Username"
-                            placeholder="Enter a username"
-                            value={username}
-                            onChange={(e) => setUsername(e.target.value)}
-                        />
-                    </div>
+                    {/* Read-Only View */}
+                    {!isEditMode && !showOtpInput && existingDetails && (
+                        <div>
+                            <div style={{ marginBottom: '16px', background: 'var(--surface)', padding: '16px', borderRadius: '12px' }}>
+                                <div style={{ color: 'var(--text-secondary)', fontSize: '12px', marginBottom: '4px' }}>Username</div>
+                                <div style={{ color: 'var(--text-main)', fontWeight: 600 }}>@{existingDetails.username}</div>
+                            </div>
+                            <div style={{ marginBottom: '16px', background: 'var(--surface)', padding: '16px', borderRadius: '12px' }}>
+                                <div style={{ color: 'var(--text-secondary)', fontSize: '12px', marginBottom: '4px' }}>Bank</div>
+                                <div style={{ color: 'var(--text-main)', fontWeight: 600 }}>{existingDetails.bankName}</div>
+                            </div>
+                            <div style={{ marginBottom: '16px', background: 'var(--surface)', padding: '16px', borderRadius: '12px' }}>
+                                <div style={{ color: 'var(--text-secondary)', fontSize: '12px', marginBottom: '4px' }}>Account</div>
+                                <div style={{ color: 'var(--text-main)', fontWeight: 600 }}>{existingDetails.bankAccount}</div>
+                            </div>
+                            <div style={{ marginBottom: '24px', background: 'var(--surface)', padding: '16px', borderRadius: '12px' }}>
+                                <div style={{ color: 'var(--text-secondary)', fontSize: '12px', marginBottom: '4px' }}>Account Name</div>
+                                <div style={{ color: 'var(--text-main)', fontWeight: 600 }}>{existingDetails.accountName}</div>
+                            </div>
 
-                    <div style={{ marginBottom: '16px' }}>
-                        <Input
-                            label="Account Number"
-                            placeholder="Enter account number"
-                            value={accountNumber}
-                            inputMode="numeric"
-                            pattern="[0-9]*"
-                            showCount
-                            maxLength={10}
-                            onChange={(e) => {
-                                const val = e.target.value.replace(/\D/g, '');
-                                if (val.length <= 10) setAccountNumber(val);
-                            }}
-                        />
-                    </div>
-
-                    <div style={{ marginBottom: '24px' }}>
-                        <BankSelector
-                            selectedBank={bankName}
-                            onSelect={(name) => {
-                                setBankName(name);
-                                if (name !== bankName) setValidatedName('');
-                            }}
-                        />
-                    </div>
-
-                    {/* Validation Status */}
-                    {isValidating && (
-                        <div style={{
-                            marginBottom: '24px', display: 'flex', alignItems: 'center', gap: '8px',
-                            color: 'var(--text-secondary)', fontSize: '10px'
-                        }}>
-                            <Loader2 className="animate-spin" size={16} />
-                            <span>Verifying account...</span>
+                            <Button 
+                                fullWidth 
+                                onClick={handleEditClick} 
+                                disabled={isRequestingOtp}
+                            >
+                                {isRequestingOtp ? 'Sending OTP...' : 'Edit Details'}
+                            </Button>
                         </div>
                     )}
 
-                    {!isValidating && validationError && (
-                        <div style={{
-                            marginBottom: '24px', color: '#ef4444', fontSize: '10px',
-                            background: 'rgba(239, 68, 68, 0.1)', padding: '12px', borderRadius: '8px'
-                        }}>
-                            {validationError}
+                    {/* OTP Input View */}
+                    {showOtpInput && (
+                        <div>
+                            <div style={{
+                                background: 'rgba(245, 158, 11, 0.1)', borderRadius: '12px', padding: '16px',
+                                display: 'flex', alignItems: 'flex-start', gap: '8px', marginBottom: '24px'
+                            }}>
+                                <ShieldAlert size={20} color="#F59E0B" style={{ flexShrink: 0, marginTop: '2px' }} />
+                                <span style={{ color: '#F59E0B', fontSize: '12px', lineHeight: 1.5 }}>
+                                    To protect your account, we've sent an OTP to your email. Enter it below to edit your receiving bank details.
+                                </span>
+                            </div>
+
+                            <div style={{ marginBottom: '24px' }}>
+                                <Input
+                                    label="Enter OTP"
+                                    placeholder="6-digit code"
+                                    value={otp}
+                                    onChange={(e) => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                                    inputMode="numeric"
+                                    maxLength={6}
+                                />
+                            </div>
+
+                            <Button 
+                                fullWidth 
+                                onClick={handleVerifyOtp} 
+                                disabled={otp.length < 4}
+                            >
+                                Verify & Edit
+                            </Button>
                         </div>
                     )}
 
-                    {!isValidating && validatedName && (
-                        <div style={{
-                            background: 'rgba(124, 58, 237, 0.1)', borderRadius: '12px', padding: '16px',
-                            display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '24px'
-                        }}>
-                            <CheckCircle2 size={16} color="var(--primary)" fill="rgba(124, 58, 237, 0.2)" />
-                            <span style={{ color: 'var(--primary)', fontWeight: 500 }}>{validatedName}</span>
+                    {/* Edit Form */}
+                    {isEditMode && !showOtpInput && (
+                        <div>
+                            {existingDetails && (
+                                <div style={{
+                                    background: 'rgba(16, 185, 129, 0.1)', borderRadius: '12px', padding: '16px',
+                                    display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '24px'
+                                }}>
+                                    <CheckCircle2 size={16} color="#10B981" />
+                                    <span style={{ color: '#10B981', fontSize: '12px' }}>
+                                        OTP verified. You can now update your details.
+                                    </span>
+                                </div>
+                            )}
+
+                            <div style={{ marginBottom: '16px' }}>
+                                <Input
+                                    label="Username"
+                                    placeholder="Enter a username"
+                                    value={username}
+                                    onChange={(e) => setUsername(e.target.value)}
+                                />
+                            </div>
+
+                            <div style={{ marginBottom: '16px' }}>
+                                <Input
+                                    label="Account Number"
+                                    placeholder="Enter account number"
+                                    value={accountNumber}
+                                    inputMode="numeric"
+                                    pattern="[0-9]*"
+                                    showCount
+                                    maxLength={10}
+                                    onChange={(e) => {
+                                        const val = e.target.value.replace(/\D/g, '');
+                                        if (val.length <= 10) setAccountNumber(val);
+                                    }}
+                                />
+                            </div>
+
+                            <div style={{ marginBottom: '24px' }}>
+                                <BankSelector
+                                    selectedBank={bankName}
+                                    onSelect={(name) => {
+                                        setBankName(name);
+                                        if (name !== bankName) setValidatedName('');
+                                    }}
+                                />
+                            </div>
+
+                            {/* Validation Status */}
+                            {isValidating && (
+                                <div style={{
+                                    marginBottom: '24px', display: 'flex', alignItems: 'center', gap: '8px',
+                                    color: 'var(--text-secondary)', fontSize: '10px'
+                                }}>
+                                    <Loader2 className="animate-spin" size={16} />
+                                    <span>Verifying account...</span>
+                                </div>
+                            )}
+
+                            {!isValidating && validationError && (
+                                <div style={{
+                                    marginBottom: '24px', color: '#ef4444', fontSize: '10px',
+                                    background: 'rgba(239, 68, 68, 0.1)', padding: '12px', borderRadius: '8px'
+                                }}>
+                                    {validationError}
+                                </div>
+                            )}
+
+                            {!isValidating && validatedName && (
+                                <div style={{
+                                    background: 'rgba(124, 58, 237, 0.1)', borderRadius: '12px', padding: '16px',
+                                    display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '24px'
+                                }}>
+                                    <CheckCircle2 size={16} color="var(--primary)" fill="rgba(124, 58, 237, 0.2)" />
+                                    <span style={{ color: 'var(--primary)', fontWeight: 500 }}>{validatedName}</span>
+                                </div>
+                            )}
+
+                            <Button
+                                fullWidth
+                                onClick={handleSave}
+                                disabled={!username || !accountNumber || !bankName || isValidating || !validatedName || isSaving}
+                            >
+                                {isSaving ? 'Saving...' : 'Save Details'}
+                            </Button>
                         </div>
                     )}
 
-                    {/* Save Error */}
+                    {/* Global Errors / Success messages at the bottom */}
                     {saveError && (
                         <div style={{
-                            marginBottom: '24px', color: '#ef4444', fontSize: '10px',
+                            marginTop: '24px', color: '#ef4444', fontSize: '10px',
                             background: 'rgba(239, 68, 68, 0.1)', padding: '12px', borderRadius: '8px'
                         }}>
                             {saveError}
                         </div>
                     )}
 
-                    {/* Success Message */}
                     {successMessage && (
                         <div style={{
-                            marginBottom: '24px', color: '#10B981', fontSize: '10px',
+                            marginTop: '24px', color: '#10B981', fontSize: '10px',
                             background: 'rgba(16, 185, 129, 0.1)', padding: '12px', borderRadius: '8px',
                             display: 'flex', alignItems: 'center', gap: '8px'
                         }}>
@@ -194,13 +339,6 @@ export default function BankDetails() {
                         </div>
                     )}
 
-                    <Button
-                        fullWidth
-                        onClick={handleSave}
-                        disabled={!username || !accountNumber || !bankName || isValidating || !validatedName || isSaving}
-                    >
-                        {isSaving ? 'Saving...' : 'Save Details'}
-                    </Button>
                 </div>
             </div>
         </div>

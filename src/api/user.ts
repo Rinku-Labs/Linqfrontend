@@ -17,12 +17,39 @@ export interface UpdateBankDetailsResponse {
     };
 }
 
+export interface GetBankDetailsResponse {
+    message: string;
+    data: {
+        username: string;
+        accountName: string;
+        bankName: string;
+        bankCode: string;
+        bankAccount: string;
+    };
+}
+
 /**
  * Updates the user's bank details and username.
  * @param details The bank details and username to update.
  */
-export const updateBankDetails = async (details: UpdateBankDetailsPayload): Promise<UpdateBankDetailsResponse> => {
+export const updateBankDetails = async (details: {
+    username: string;
+    bankName?: string;
+    bankCode: string;
+    bankAccount: string;
+    otp?: string;
+}) => {
     const response = await client.post<UpdateBankDetailsResponse>('/user/bank-details', details);
+    return response.data;
+};
+
+export const getBankDetails = async () => {
+    const response = await client.get<GetBankDetailsResponse>('/user/bank-details');
+    return response.data;
+};
+
+export const requestBankDetailsOtp = async () => {
+    const response = await client.post<{ message: string }>('/user/bank-details/otp');
     return response.data;
 };
 
@@ -30,6 +57,9 @@ export interface CheckUsernameResponse {
     message: string;
     data: {
         accountName: string;
+        bankName: string;
+        bankCode: string;
+        bankAccount: string;
     };
 }
 
