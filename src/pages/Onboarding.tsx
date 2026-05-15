@@ -60,6 +60,7 @@ export default function Onboarding() {
 
     // Survey states
     const [hearAboutUs, setHearAboutUs] = useState('');
+    const [hearAboutUsOther, setHearAboutUsOther] = useState('');
     const [mostUsedChain, setMostUsedChain] = useState('');
     const [isSurveySubmitting, setIsSurveySubmitting] = useState(false);
 
@@ -270,7 +271,10 @@ export default function Onboarding() {
     const handleSurveySubmit = async () => {
         setIsSurveySubmitting(true);
         try {
-            await client.post('/user/survey', { hearAboutUs, mostUsedChain });
+            await client.post('/user/survey', {
+            hearAboutUs: hearAboutUs === 'other' ? hearAboutUsOther.trim() : hearAboutUs,
+            mostUsedChain,
+        });
         } catch {
             // Best-effort — proceed even if survey save fails
         } finally {
@@ -905,12 +909,35 @@ export default function Onboarding() {
                                     key={opt.value}
                                     type="button"
                                     style={hearAboutUs === opt.value ? optionActive : optionBase}
-                                    onClick={() => setHearAboutUs(opt.value)}
+                                    onClick={() => { setHearAboutUs(opt.value); if (opt.value !== 'other') setHearAboutUsOther(''); }}
                                 >
                                     {opt.label}
                                 </button>
                             ))}
                         </div>
+
+                        {hearAboutUs === 'other' && (
+                            <input
+                                type="text"
+                                placeholder="Please specify..."
+                                value={hearAboutUsOther}
+                                onChange={e => setHearAboutUsOther(e.target.value)}
+                                maxLength={100}
+                                autoFocus
+                                style={{
+                                    width: '100%',
+                                    padding: '10px 14px',
+                                    borderRadius: '12px',
+                                    border: '1.5px solid var(--primary)',
+                                    background: 'var(--surface)',
+                                    color: 'var(--text-main)',
+                                    fontSize: '12px',
+                                    outline: 'none',
+                                    marginBottom: '24px',
+                                    boxSizing: 'border-box',
+                                }}
+                            />
+                        )}
 
                         <p style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-main)', marginBottom: '10px' }}>
                             What chain do you use most?
@@ -931,7 +958,7 @@ export default function Onboarding() {
                         <Button
                             variant="primary"
                             fullWidth
-                            disabled={!hearAboutUs || !mostUsedChain || isSurveySubmitting}
+                            disabled={!hearAboutUs || !mostUsedChain || isSurveySubmitting || (hearAboutUs === 'other' && !hearAboutUsOther.trim())}
                             onClick={handleSurveySubmit}
                             style={{ borderRadius: '16px', height: '56px', fontSize: '13px' }}
                         >
