@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react';
-import { X, Download, Twitter } from 'lucide-react';
+import { X, Download, ExternalLink } from 'lucide-react';
 import html2canvas from 'html2canvas';
 import logo from '../assets/logo.png';
 import type { Order } from './TransactionPopup';
@@ -80,21 +80,25 @@ export default function StatsShareModal({ orders, username, onClose }: Props) {
     };
 
     return (
-        <div
-            onClick={onClose}
-            style={{
-                position: 'fixed', inset: 0, zIndex: 1000,
-                background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)',
-                display: 'flex', alignItems: 'flex-end', justifyContent: 'center',
-            }}
-        >
+        <>
+            {/* Backdrop */}
+            <div
+                onClick={onClose}
+                style={{
+                    position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+                    background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)',
+                    zIndex: 1000, animation: 'fadeIn 0.2s ease-out',
+                }}
+            />
+            {/* Sheet */}
             <div
                 onClick={e => e.stopPropagation()}
-                className="animate-slideUp"
                 style={{
-                    width: '100%', maxWidth: '480px',
+                    position: 'fixed', bottom: 0, left: 0, right: 0,
                     background: 'var(--surface)', borderRadius: '24px 24px 0 0',
                     padding: '24px 20px 40px',
+                    zIndex: 1001, animation: 'slideUp 0.3s ease-out',
+                    maxHeight: '90vh', overflowY: 'auto',
                 }}
             >
                 {/* Sheet header */}
@@ -195,12 +199,12 @@ export default function StatsShareModal({ orders, username, onClose }: Props) {
                             display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px',
                         }}
                     >
-                        <Twitter size={15} />
+                        <ExternalLink size={15} />
                         Share on X
                     </button>
                 </div>
 
-                {navigator.share && (
+                {'share' in navigator && (
                     <button
                         onClick={handleNativeShare}
                         disabled={isCapturing}
@@ -216,6 +220,6 @@ export default function StatsShareModal({ orders, username, onClose }: Props) {
                     </button>
                 )}
             </div>
-        </div>
+        </>
     );
 }
