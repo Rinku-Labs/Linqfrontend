@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Inbox, Search, X, BarChart3 } from 'lucide-react';
+import { Inbox, Search, X, BarChart3, SlidersHorizontal } from 'lucide-react';
 import { getTransactionIcon } from '../../utils/transactionIcons';
 import TransactionPopup, { formatStatus, getStatusStyle } from '../../components/TransactionPopup';
 import type { Order } from '../../components/TransactionPopup';
@@ -77,6 +77,7 @@ export default function TransactionsList() {
     const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
     const [statusFilter, setStatusFilter] = useState<string>('all');
     const [chainFilter, setChainFilter] = useState<string>('all');
+    const [showChainFilter, setShowChainFilter] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState('');
     const [showSearch, setShowSearch] = useState(false);
@@ -185,7 +186,7 @@ export default function TransactionsList() {
             {/* Header */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
                 <h2 style={{ fontSize: '14px', fontWeight: 700, color: 'var(--text-main)' }}>Transactions</h2>
-                <div style={{ display: 'flex', gap: '8px' }}>
+                <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
                     <button
                         onClick={() => navigate('/transactions/analysis')}
                         style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '6px' }}
@@ -198,6 +199,47 @@ export default function TransactionsList() {
                     >
                         {showSearch ? <X size={20} color="var(--text-muted)" /> : <Search size={20} color="var(--text-muted)" />}
                     </button>
+                    {availableChains.length > 1 && (
+                        <div style={{ position: 'relative' }}>
+                            <button
+                                onClick={() => setShowChainFilter(v => !v)}
+                                style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '6px', position: 'relative' }}
+                            >
+                                <SlidersHorizontal size={20} color={chainFilter !== 'all' ? 'var(--primary)' : 'var(--text-muted)'} />
+                                {chainFilter !== 'all' && (
+                                    <span style={{
+                                        position: 'absolute', top: '4px', right: '4px',
+                                        width: '6px', height: '6px', borderRadius: '50%',
+                                        background: 'var(--primary)', border: '2px solid var(--bg-main)',
+                                    }} />
+                                )}
+                            </button>
+                            {showChainFilter && (
+                                <div style={{
+                                    position: 'absolute', right: 0, top: 'calc(100% + 4px)', zIndex: 100,
+                                    background: 'var(--surface)', borderRadius: '12px',
+                                    boxShadow: 'var(--card-shadow)', padding: '8px',
+                                    display: 'flex', flexDirection: 'column', gap: '4px', minWidth: '130px',
+                                }}>
+                                    {[{ label: 'All Chains', value: 'all' }, ...availableChains.map(c => ({ label: c.toUpperCase(), value: c }))].map(({ label, value }) => (
+                                        <button
+                                            key={value}
+                                            onClick={() => { setChainFilter(value); setShowChainFilter(false); }}
+                                            style={{
+                                                padding: '8px 12px', borderRadius: '8px', fontSize: '9px',
+                                                fontWeight: 500, cursor: 'pointer', textAlign: 'left',
+                                                background: chainFilter === value ? 'var(--primary)' : 'transparent',
+                                                color: chainFilter === value ? 'white' : 'var(--text-secondary)',
+                                                border: 'none', width: '100%',
+                                            }}
+                                        >
+                                            {label}
+                                        </button>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                    )}
                 </div>
             </div>
 
@@ -249,33 +291,6 @@ export default function TransactionsList() {
                     </button>
                 ))}
             </div>
-
-            {/* Chain Filter Pills */}
-            {availableChains.length > 1 && (
-                <div style={{ display: 'flex', gap: '8px', marginBottom: '24px', overflowX: 'auto', paddingBottom: '4px', scrollbarWidth: 'none' }}>
-                    {[{ label: 'All Chains', value: 'all' }, ...availableChains.map(c => ({ label: c.toUpperCase(), value: c }))].map(({ label, value }) => (
-                        <button
-                            key={value}
-                            onClick={() => setChainFilter(value)}
-                            style={{
-                                padding: '8px 16px',
-                                borderRadius: '20px',
-                                fontSize: '9px',
-                                fontWeight: 500,
-                                cursor: 'pointer',
-                                transition: 'all 0.2s ease',
-                                background: chainFilter === value ? 'var(--primary)' : 'var(--surface)',
-                                color: chainFilter === value ? 'white' : 'var(--text-secondary)',
-                                border: chainFilter === value ? 'none' : '1px solid var(--border-color)',
-                                whiteSpace: 'nowrap',
-                                flexShrink: 0,
-                            }}
-                        >
-                            {label}
-                        </button>
-                    ))}
-                </div>
-            )}
 
             {/* Content */}
             {isLoading ? (
