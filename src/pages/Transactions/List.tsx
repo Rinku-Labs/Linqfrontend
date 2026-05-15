@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Inbox, Search, X, BarChart3, Funnel } from 'lucide-react';
+import { Inbox, Search, X, BarChart3, Funnel, Share2 } from 'lucide-react';
 import { getTransactionIcon } from '../../utils/transactionIcons';
 import TransactionPopup, { formatStatus, getStatusStyle } from '../../components/TransactionPopup';
 import type { Order } from '../../components/TransactionPopup';
@@ -11,6 +11,7 @@ import EmptyState from '../../components/ui/EmptyState';
 import usePullToRefresh, { PullToRefreshIndicator } from '../../hooks/usePullToRefresh';
 import { useAuth } from '../../context/AuthContext';
 import { useWebSocket } from '../../hooks/useWebSocket';
+import StatsShareModal from '../../components/StatsShareModal';
 
 // Helper to normalize status for filtering
 const normalizeStatusForFilter = (status: string): string => {
@@ -78,6 +79,7 @@ export default function TransactionsList() {
     const [statusFilter, setStatusFilter] = useState<string>('all');
     const [chainFilter, setChainFilter] = useState<string>('all');
     const [showChainFilter, setShowChainFilter] = useState(false);
+    const [showShareModal, setShowShareModal] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState('');
     const [showSearch, setShowSearch] = useState(false);
@@ -187,6 +189,12 @@ export default function TransactionsList() {
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
                 <h2 style={{ fontSize: '14px', fontWeight: 700, color: 'var(--text-main)' }}>Transactions</h2>
                 <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                    <button
+                        onClick={() => setShowShareModal(true)}
+                        style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '6px' }}
+                    >
+                        <Share2 size={20} color="var(--text-muted)" />
+                    </button>
                     <button
                         onClick={() => navigate('/transactions/analysis')}
                         style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '6px' }}
@@ -369,6 +377,13 @@ export default function TransactionsList() {
             )}
 
             <TransactionPopup order={selectedOrder} onClose={() => setSelectedOrder(null)} />
+            {showShareModal && (
+                <StatsShareModal
+                    orders={orders}
+                    username={user?.username}
+                    onClose={() => setShowShareModal(false)}
+                />
+            )}
         </div>
     );
 }
