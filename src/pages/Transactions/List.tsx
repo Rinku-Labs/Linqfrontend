@@ -32,6 +32,18 @@ const getOrderChain = (order: Order): string | null => {
     return null;
 };
 
+const getOrderChain = (order: Order): string | null => {
+    if (!order.coin) return null;
+    if (order.coin.sui) return 'sui';
+    if (order.coin.solana) return 'solana';
+    if (order.coin.base) return 'base';
+    if (order.coin.bsc) return 'bsc';
+    if (order.coin.aptos) return 'aptos';
+    if (order.coin.tron) return 'tron';
+    if (order.coin.ethereum) return 'ethereum';
+    return null;
+};
+
 // Helper to group transactions by date
 const groupByDate = (orders: Order[]) => {
     const groups: { [key: string]: Order[] } = {};
@@ -277,6 +289,33 @@ export default function TransactionsList() {
                     </button>
                 ))}
             </div>
+
+            {/* Chain Filter Pills */}
+            {availableChains.length > 1 && (
+                <div style={{ display: 'flex', gap: '8px', marginBottom: '24px', overflowX: 'auto', paddingBottom: '4px', scrollbarWidth: 'none' }}>
+                    {[{ label: 'All Chains', value: 'all' }, ...availableChains.map(c => ({ label: c.toUpperCase(), value: c }))].map(({ label, value }) => (
+                        <button
+                            key={value}
+                            onClick={() => setChainFilter(value)}
+                            style={{
+                                padding: '8px 16px',
+                                borderRadius: '20px',
+                                fontSize: '9px',
+                                fontWeight: 500,
+                                cursor: 'pointer',
+                                transition: 'all 0.2s ease',
+                                background: chainFilter === value ? 'var(--primary)' : 'var(--surface)',
+                                color: chainFilter === value ? 'white' : 'var(--text-secondary)',
+                                border: chainFilter === value ? 'none' : '1px solid var(--border-color)',
+                                whiteSpace: 'nowrap',
+                                flexShrink: 0,
+                            }}
+                        >
+                            {label}
+                        </button>
+                    ))}
+                </div>
+            )}
 
             {/* Content */}
             {isLoading ? (
