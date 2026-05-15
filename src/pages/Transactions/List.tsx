@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Inbox, Search, X, BarChart3, SlidersHorizontal } from 'lucide-react';
+import { Inbox, Search, X, BarChart3, Funnel } from 'lucide-react';
 import { getTransactionIcon } from '../../utils/transactionIcons';
 import TransactionPopup, { formatStatus, getStatusStyle } from '../../components/TransactionPopup';
 import type { Order } from '../../components/TransactionPopup';
@@ -205,7 +205,7 @@ export default function TransactionsList() {
                                 onClick={() => setShowChainFilter(v => !v)}
                                 style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '6px', position: 'relative' }}
                             >
-                                <SlidersHorizontal size={20} color={chainFilter !== 'all' ? 'var(--primary)' : 'var(--text-muted)'} />
+                                <Funnel size={20} color={chainFilter !== 'all' ? 'var(--primary)' : 'var(--text-muted)'} />
                                 {chainFilter !== 'all' && (
                                     <span style={{
                                         position: 'absolute', top: '4px', right: '4px',
