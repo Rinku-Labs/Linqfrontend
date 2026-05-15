@@ -41,6 +41,18 @@ const normalizeStatusForFilter = (status: string): string => {
     }
 };
 
+const getOrderChain = (order: Order): string | null => {
+    if (!order.coin) return null;
+    if (order.coin.sui) return 'sui';
+    if (order.coin.solana) return 'solana';
+    if (order.coin.base) return 'base';
+    if (order.coin.bsc) return 'bsc';
+    if (order.coin.aptos) return 'aptos';
+    if (order.coin.tron) return 'tron';
+    if (order.coin.ethereum) return 'ethereum';
+    return null;
+};
+
 // Helper to group transactions by date
 const groupByDate = (orders: Order[]) => {
     const groups: { [key: string]: Order[] } = {};
@@ -64,6 +76,7 @@ export default function TransactionsList() {
     const [orders, setOrders] = useState<Order[]>([]);
     const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
     const [statusFilter, setStatusFilter] = useState<string>('all');
+    const [chainFilter, setChainFilter] = useState<string>('all');
     const [isLoading, setIsLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState('');
     const [showSearch, setShowSearch] = useState(false);
@@ -105,11 +118,24 @@ export default function TransactionsList() {
 
 
 
+    const availableChains = useMemo(() => {
+        const chains = new Set<string>();
+        orders.forEach(o => {
+            const c = getOrderChain(o);
+            if (c) chains.add(c);
+        });
+        return Array.from(chains);
+    }, [orders]);
+
     // Filter and search
     const filteredOrders = useMemo(() => {
         let result = statusFilter === 'all'
             ? orders
             : orders.filter(o => normalizeStatusForFilter(o.status) === statusFilter);
+
+        if (chainFilter !== 'all') {
+            result = result.filter(o => getOrderChain(o) === chainFilter);
+        }
 
         if (searchQuery.trim()) {
             const q = searchQuery.toLowerCase();
@@ -147,7 +173,7 @@ export default function TransactionsList() {
             });
         }
         return result;
-    }, [orders, statusFilter, searchQuery]);
+    }, [orders, statusFilter, chainFilter, searchQuery]);
 
     // Group by date
     const groupedOrders = groupByDate(filteredOrders);
@@ -224,13 +250,40 @@ export default function TransactionsList() {
                 ))}
             </div>
 
+            {/* Chain Filter Pills */}
+            {availableChains.length > 1 && (
+                <div style={{ display: 'flex', gap: '8px', marginBottom: '24px', overflowX: 'auto', paddingBottom: '4px', scrollbarWidth: 'none' }}>
+                    {[{ label: 'All Chains', value: 'all' }, ...availableChains.map(c => ({ label: c.toUpperCase(), value: c }))].map(({ label, value }) => (
+                        <button
+                            key={value}
+                            onClick={() => setChainFilter(value)}
+                            style={{
+                                padding: '8px 16px',
+                                borderRadius: '20px',
+                                fontSize: '9px',
+                                fontWeight: 500,
+                                cursor: 'pointer',
+                                transition: 'all 0.2s ease',
+                                background: chainFilter === value ? 'var(--primary)' : 'var(--surface)',
+                                color: chainFilter === value ? 'white' : 'var(--text-secondary)',
+                                border: chainFilter === value ? 'none' : '1px solid var(--border-color)',
+                                whiteSpace: 'nowrap',
+                                flexShrink: 0,
+                            }}
+                        >
+                            {label}
+                        </button>
+                    ))}
+                </div>
+            )}
+
             {/* Content */}
             {isLoading ? (
                 <TransactionListSkeleton count={6} />
             ) : filteredOrders.length === 0 ? (
                 <EmptyState
                     icon={searchQuery ? Search : Inbox}
-                    title={searchQuery ? 'No results found' : (statusFilter !== 'all' ? `No ${statusFilter} transactions` : 'No transactions yet')}
+                    title={searchQuery ? 'No results found' : chainFilter !== 'all' ? `No ${chainFilter.toUpperCase()} transactions` : statusFilter !== 'all' ? `No ${statusFilter} transactions` : 'No transactions yet'}
                     description={searchQuery
                         ? `No transactions matching "${searchQuery}". Try a different search.`
                         : 'Your transaction history will appear here once you make your first transfer.'}
