@@ -40,7 +40,17 @@ export const setCachedBeneficiaries = (data: BeneficiaryData[]) => {
 export const fetchAndCacheBeneficiaries = async (forceRefresh = false): Promise<BeneficiaryData[]> => {
     if (!forceRefresh) {
         const cached = getCachedBeneficiaries();
-        if (cached) return cached.data;
+        if (cached) {
+            // Deduplicate corrupted cache just in case
+            const seen = new Set<string>();
+            const uniqueData = cached.data.filter(b => {
+                const key = `${b.bankAccount}-${b.bankCode}`;
+                if (seen.has(key)) return false;
+                seen.add(key);
+                return true;
+            });
+            return uniqueData;
+        }
     }
 
     try {
@@ -65,7 +75,13 @@ export const addBeneficiaryAndUpdateCache = async (payload: AddBeneficiaryPayloa
         // Append to cache
         const cached = getCachedBeneficiaries();
         const currentData = cached?.data || [];
-        setCachedBeneficiaries([...currentData, newEntry]);
+        
+        // Prevent duplicate entries in cache by filtering out matches
+        const withoutDuplicate = currentData.filter(b => 
+            !(b.bankAccount === newEntry.bankAccount && b.bankCode === newEntry.bankCode)
+        );
+        
+        setCachedBeneficiaries([newEntry, ...withoutDuplicate]);
         return newEntry;
     } catch (error: unknown) {
         const status = (error as { response?: { status?: number } }).response?.status;
