@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Check, Loader2, Landmark, Copy } from 'lucide-react';
 import Button from './ui/Button';
 import ReceiptCard from './ReceiptCard';
+import ReportModal from './ReportModal';
 import type { Order } from './TransactionPopup';
 import { formatStatus, getStatusStyle } from './TransactionPopup';
 import { downloadReceiptAsImage } from '../utils/receiptGenerator';
@@ -22,6 +23,7 @@ export default function TransactionReceipt({ order, onDone, showDoneButton = tru
     const handleDone = onDone || (() => navigate('/'));
     const receiptRef = useRef<HTMLDivElement>(null);
     const [isDownloading, setIsDownloading] = useState(false);
+    const [showReportModal, setShowReportModal] = useState(false);
 
     // Handle download receipt
     const handleDownloadReceipt = async () => {
@@ -220,13 +222,21 @@ export default function TransactionReceipt({ order, onDone, showDoneButton = tru
                 ) : (
                     <Button
                         style={{ flex: 1, background: '#F3F4F6', color: '#000000', borderRadius: '16px', height: '52px', fontSize: '12px', fontWeight: 600 }}
-                        onClick={() => { }} // Placeholder for Report
+                        onClick={() => setShowReportModal(true)}
                         variant="ghost"
                     >
                         Report
                     </Button>
                 )}
             </div>
+
+            {/* Report Modal */}
+            {showReportModal && order && (
+                <ReportModal
+                    order={order}
+                    onClose={() => setShowReportModal(false)}
+                />
+            )}
 
         </div>
     );
