@@ -219,8 +219,8 @@ export default function DepositPayment() {
                     </div>
 
                     <div style={{
-                        background: timeLeft === 'Expired' ? 'rgba(239, 68, 68, 0.1)' : 'rgba(249, 115, 22, 0.1)',
-                        border: `1px solid ${timeLeft === 'Expired' ? 'rgba(239, 68, 68, 0.2)' : 'rgba(249, 115, 22, 0.2)'}`,
+                        background: timeLeft === 'Expired' ? 'rgba(239, 68, 68, 0.1)' : 'rgba(124, 58, 237, 0.1)',
+                        border: `1px solid ${timeLeft === 'Expired' ? 'rgba(239, 68, 68, 0.2)' : 'rgba(124, 58, 237, 0.2)'}`,
                         borderRadius: '12px',
                         padding: '16px',
                         textAlign: 'center',
@@ -229,10 +229,10 @@ export default function DepositPayment() {
                         alignItems: 'center',
                         gap: '4px'
                     }}>
-                        <p style={{ fontSize: '11px', fontWeight: 600, color: timeLeft === 'Expired' ? '#ef4444' : '#f97316' }}>
+                        <p style={{ fontSize: '11px', fontWeight: 600, color: timeLeft === 'Expired' ? '#ef4444' : '#000000' }}>
                             {timeLeft === 'Expired' ? 'This account has expired' : 'Account expires in'}
                         </p>
-                        <p style={{ fontSize: '28px', fontWeight: 700, color: timeLeft === 'Expired' ? '#ef4444' : '#f97316', fontVariantNumeric: 'tabular-nums', letterSpacing: '1px' }}>
+                        <p style={{ fontSize: '28px', fontWeight: 700, color: timeLeft === 'Expired' ? '#ef4444' : '#000000', fontVariantNumeric: 'tabular-nums', letterSpacing: '1px' }}>
                             {timeLeft || '00:00'}
                         </p>
                     </div>
