@@ -7,6 +7,7 @@ import ChainSelector from '../../components/ChainSelector';
 import { getBillers, validateMeter, type BillCategory } from '../../api/bills';
 import { useChain } from '../../context/ChainContext';
 import { NETWORK_LOGOS, detectNetwork } from '../../utils/networkUtils';
+import { getBillBeneficiaries, type BillBeneficiary } from '../../api/user';
 
 // Nigerian network operators — airtime biller codes
 const AIRTIME_NETWORKS = [
@@ -105,6 +106,23 @@ export default function Topup() {
     const [tvVerifiedName, setTvVerifiedName] = useState<string | null>(null);
     const [isTvVerifying, setIsTvVerifying] = useState(false);
     const [isLoadingTv, setIsLoadingTv] = useState(false);
+
+    // Beneficiaries State
+    const [airtimeBeneficiaries, setAirtimeBeneficiaries] = useState<BillBeneficiary[]>([]);
+    const [dataBeneficiaries, setDataBeneficiaries] = useState<BillBeneficiary[]>([]);
+    const [tvBeneficiaries, setTvBeneficiaries] = useState<BillBeneficiary[]>([]);
+    const [showPhoneDropdown, setShowPhoneDropdown] = useState(false);
+
+    useEffect(() => {
+        getBillBeneficiaries()
+            .then(res => {
+                const data = res.data || [];
+                setAirtimeBeneficiaries(data.filter(b => b.billType === 'AIRTIME'));
+                setDataBeneficiaries(data.filter(b => b.billType === 'MOBILEDATA'));
+                setTvBeneficiaries(data.filter(b => b.billType === 'CABLETV'));
+            })
+            .catch(err => console.error('Failed to load bill beneficiaries', err));
+    }, []);
 
     // Helper to get a clean base name for grouping (removing Prepaid, Postpaid, Topup etc)
     const getCleanedCompanyName = (b: BillCategory) => {
@@ -687,30 +705,91 @@ export default function Topup() {
                         </p>
 
                         {/* Phone Number Input */}
-                        <div style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            background: 'var(--input-bg)',
-                            borderRadius: '14px',
-                            padding: '14px 16px',
-                            border: '1px solid var(--border-color)',
-                            marginBottom: '12px',
-                            transition: 'all 0.3s ease',
-                        }}>
-                            <input
-                                type="tel"
-                                placeholder="Enter phone number"
-                                value={phoneNumber}
-                                onChange={(e) => setPhoneNumber(e.target.value.replace(/\D/g, '').slice(0, 11))}
-                                style={{
-                                    flex: 1,
-                                    border: 'none',
-                                    background: 'none',
-                                    fontSize: '11px',
-                                    color: 'var(--text-main)',
-                                    outline: 'none',
-                                }}
-                            />
+                        <div style={{ position: 'relative' }}>
+                            <div style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                background: 'var(--input-bg)',
+                                borderRadius: '14px',
+                                padding: '14px 16px',
+                                border: '1px solid var(--border-color)',
+                                marginBottom: '12px',
+                                transition: 'all 0.3s ease',
+                            }}>
+                                <input
+                                    type="tel"
+                                    placeholder="Enter phone number"
+                                    value={phoneNumber}
+                                    onChange={(e) => setPhoneNumber(e.target.value.replace(/\D/g, '').slice(0, 11))}
+                                    onFocus={() => setShowPhoneDropdown(true)}
+                                    onBlur={() => setTimeout(() => setShowPhoneDropdown(false), 200)}
+                                    style={{
+                                        flex: 1,
+                                        border: 'none',
+                                        background: 'none',
+                                        fontSize: '11px',
+                                        color: 'var(--text-main)',
+                                        outline: 'none',
+                                    }}
+                                />
+                                {(activeTab === 'airtime' ? airtimeBeneficiaries : dataBeneficiaries).length > 0 && (
+                                    <ChevronDown
+                                        size={18}
+                                        color="var(--text-secondary)"
+                                        style={{ transform: showPhoneDropdown ? 'rotate(180deg)' : 'none', cursor: 'pointer', transition: 'transform 0.2s ease' }}
+                                        onClick={() => setShowPhoneDropdown(!showPhoneDropdown)}
+                                    />
+                                )}
+                            </div>
+
+                            {/* Dropdown for Recent Numbers */}
+                            {showPhoneDropdown && (activeTab === 'airtime' ? airtimeBeneficiaries : dataBeneficiaries).length > 0 && (
+                                <div style={{
+                                    position: 'absolute',
+                                    top: '100%',
+                                    left: 0,
+                                    right: 0,
+                                    background: 'var(--surface)',
+                                    borderRadius: '14px',
+                                    border: '1px solid var(--border-color)',
+                                    boxShadow: '0 8px 32px rgba(0,0,0,0.12)',
+                                    marginTop: '-8px',
+                                    marginBottom: '12px',
+                                    zIndex: 10,
+                                    overflow: 'hidden',
+                                }}>
+                                    <div style={{ padding: '8px 16px', fontSize: '10px', color: 'var(--text-muted)', borderBottom: '1px solid var(--border-color)' }}>
+                                        Recent Numbers
+                                    </div>
+                                    {(activeTab === 'airtime' ? airtimeBeneficiaries : dataBeneficiaries).map((ben) => (
+                                        <button
+                                            key={ben.id}
+                                            onClick={() => {
+                                                setPhoneNumber(ben.customerId);
+                                                if (ben.network) setSelectedNetwork(ben.network);
+                                                setShowPhoneDropdown(false);
+                                            }}
+                                            style={{
+                                                width: '100%',
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                justifyContent: 'space-between',
+                                                padding: '12px 16px',
+                                                border: 'none',
+                                                background: 'transparent',
+                                                cursor: 'pointer',
+                                                color: 'var(--text-main)',
+                                                fontSize: '13px',
+                                                transition: 'background 0.15s ease',
+                                                borderBottom: '1px solid var(--border-color)',
+                                            }}
+                                        >
+                                            <span style={{ fontWeight: 600 }}>{ben.customerId}</span>
+                                            <span style={{ fontSize: '10px', color: 'var(--primary)' }}>{ben.network}</span>
+                                        </button>
+                                    ))}
+                                </div>
+                            )}
                         </div>
 
                         {/* Network Selector Dropdown */}
@@ -1053,6 +1132,48 @@ export default function Topup() {
                             </div>
                         ) : (
                             <>
+                                {/* Quick Renew Button */}
+                                {tvBeneficiaries.length > 0 && (
+                                    <div style={{ marginBottom: '16px' }}>
+                                        <button
+                                            onClick={() => {
+                                                const recent = tvBeneficiaries[0];
+                                                setTvProvider(recent.network);
+                                                setSmartcardNumber(recent.customerId);
+                                                setTvVerifiedName(null);
+                                                
+                                                // Find the bouquet if possible
+                                                const relatedBillers = tvBillers.filter(b => {
+                                                    const name = (b.biller_name || b.name || '').toUpperCase();
+                                                    return name.includes(recent.network);
+                                                });
+                                                const foundBouquet = relatedBillers.find(b => b.item_code === recent.itemCode) || null;
+                                                setTvBouquet(foundBouquet);
+                                            }}
+                                            style={{
+                                                width: '100%',
+                                                background: 'rgba(139, 92, 246, 0.1)',
+                                                border: '1px dashed var(--primary)',
+                                                borderRadius: '14px',
+                                                padding: '12px',
+                                                display: 'flex',
+                                                flexDirection: 'column',
+                                                alignItems: 'center',
+                                                cursor: 'pointer',
+                                                transition: 'all 0.2s ease',
+                                            }}
+                                        >
+                                            <span style={{ fontSize: '10px', color: 'var(--text-secondary)', marginBottom: '4px' }}>Renew Previous Subscription</span>
+                                            <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--primary)' }}>
+                                                {tvBeneficiaries[0].network} - {tvBeneficiaries[0].itemName || 'Package'}
+                                            </span>
+                                            <span style={{ fontSize: '10px', color: 'var(--text-muted)', marginTop: '4px' }}>
+                                                IUC: {tvBeneficiaries[0].customerId}
+                                            </span>
+                                        </button>
+                                    </div>
+                                )}
+
                                 {/* TV Provider Dropdown */}
                                 <div style={{ position: 'relative', marginBottom: '12px' }}>
                                     <button
@@ -1109,8 +1230,42 @@ export default function Topup() {
                                     )}
                                 </div>
 
-                                {/* Bouquet / Package Dropdown */}
+                                {/* Smartcard Number Input (Moved before Bouquet) */}
                                 {tvProvider && (
+                                    <div style={{ position: 'relative' }}>
+                                        <div style={{
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            background: 'var(--input-bg)',
+                                            borderRadius: '14px',
+                                            padding: '14px 16px',
+                                            border: tvVerifiedName ? '1px solid var(--success)' : '1px solid var(--border-color)',
+                                            marginBottom: '12px',
+                                            transition: 'all 0.3s ease',
+                                        }}>
+                                            <input
+                                                type="text"
+                                                inputMode="numeric"
+                                                placeholder="Smartcard/IUC Number (10+ digits)"
+                                                value={smartcardNumber}
+                                                onChange={(e) => {
+                                                    setSmartcardNumber(e.target.value.replace(/\D/g, ''));
+                                                    setTvVerifiedName(null);
+                                                }}
+                                                style={{
+                                                    flex: 1, border: 'none', background: 'none',
+                                                    fontSize: '15px', color: 'var(--text-main)', outline: 'none',
+                                                }}
+                                            />
+                                            {tvVerifiedName ? (
+                                                <CheckCircle2 size={18} color="var(--success)" />
+                                            ) : null}
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* Bouquet / Package Dropdown */}
+                                {tvProvider && smartcardNumber.length >= 10 && (
                                     <div style={{ position: 'relative', marginBottom: '12px' }}>
                                         <button
                                             onClick={() => { setShowTvBouquetDropdown(!showTvBouquetDropdown); setShowTvProviderDropdown(false); }}
@@ -1173,38 +1328,6 @@ export default function Topup() {
                                                 ))}
                                             </div>
                                         )}
-                                    </div>
-                                )}
-
-                                {/* Smartcard Number Input */}
-                                {tvBouquet && (
-                                    <div style={{
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        background: 'var(--input-bg)',
-                                        borderRadius: '14px',
-                                        padding: '14px 16px',
-                                        border: tvVerifiedName ? '1px solid var(--success)' : '1px solid var(--border-color)',
-                                        marginBottom: '12px',
-                                        transition: 'all 0.3s ease',
-                                    }}>
-                                        <input
-                                            type="text"
-                                            inputMode="numeric"
-                                            placeholder="Smartcard/IUC Number (10+ digits)"
-                                            value={smartcardNumber}
-                                            onChange={(e) => {
-                                                setSmartcardNumber(e.target.value.replace(/\D/g, ''));
-                                                setTvVerifiedName(null);
-                                            }}
-                                            style={{
-                                                flex: 1, border: 'none', background: 'none',
-                                                fontSize: '15px', color: 'var(--text-main)', outline: 'none',
-                                            }}
-                                        />
-                                        {tvVerifiedName ? (
-                                            <CheckCircle2 size={18} color="var(--success)" />
-                                        ) : null}
                                     </div>
                                 )}
 

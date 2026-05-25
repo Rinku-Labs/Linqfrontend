@@ -25,6 +25,7 @@ import { invalidateOrdersCache } from '../../utils/ordersCache';
 import { getOrderStatus } from '../../api/order';
 import { useAuth } from '../../context/AuthContext';
 import { sanitizeErrorMessage } from '../../utils/sanitize';
+import { addBillBeneficiary, type AddBillBeneficiaryPayload } from '../../api/user';
 
 const SUI_USDC_COIN_TYPE = "0xdba34672e30cb065b1f93e3ab55318768fd6fef66c15942c9f7cb846e2f900e7::usdc::USDC";
 const SOLANA_USDC_MINT = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v";
@@ -388,6 +389,9 @@ export default function BillPayment() {
             setStatus('completed');
             setMessage('Bill payment successful!');
             if (orderId) sessionStorage.removeItem(`billPayment_${orderId}`);
+            if (billData) {
+                addBillBeneficiary(billData as AddBillBeneficiaryPayload).catch(err => console.error('Failed to save beneficiary:', err));
+            }
             invalidateOrdersCache();
         } else if (orderStatus === 'failed' || orderStatus === 'timeout: no deposit received') {
             if (orderId) sessionStorage.removeItem(`billPayment_${orderId}`);
@@ -417,6 +421,9 @@ export default function BillPayment() {
                 setStatus('completed');
                 setMessage('Bill payment successful!');
                 sessionStorage.removeItem(`billPayment_${orderId}`);
+                if (billData) {
+                    addBillBeneficiary(billData as AddBillBeneficiaryPayload).catch(err => console.error('Failed to save beneficiary:', err));
+                }
                 invalidateOrdersCache();
             } else if ((data.status === 'failed' || data.status === 'timeout: no deposit received') && status !== 'failed') {
                 sessionStorage.removeItem(`billPayment_${orderId}`);
@@ -442,6 +449,9 @@ export default function BillPayment() {
                     setStatus('completed');
                     setMessage('Bill payment successful!');
                     sessionStorage.removeItem(`billPayment_${orderId}`);
+                    if (billData) {
+                        addBillBeneficiary(billData as AddBillBeneficiaryPayload).catch(err => console.error('Failed to save beneficiary:', err));
+                    }
                     invalidateOrdersCache();
                     clearInterval(interval);
                 } else if ((data.status === 'failed' || data.status === 'timeout: no deposit received') && status !== 'failed') {

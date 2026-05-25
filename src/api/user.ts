@@ -120,3 +120,56 @@ export const deleteBeneficiary = async (id: number): Promise<DeleteBeneficiaryRe
     const response = await client.delete<DeleteBeneficiaryResponse>(`/user/beneficiaries/${id}`);
     return response.data;
 };
+
+// --- Bill Beneficiaries ---
+
+export interface BillBeneficiary {
+    id: number;
+    billType: string;
+    network: string;
+    customerId: string;
+    customerLabel: string;
+    itemCode?: string;
+    billerCode?: string;
+    itemName?: string;
+    amountNgn?: number;
+    CreatedAt?: string;
+    UpdatedAt?: string;
+}
+
+export interface AddBillBeneficiaryPayload {
+    billType: string;
+    network: string;
+    customerId: string;
+    customerLabel: string;
+    itemCode?: string;
+    billerCode?: string;
+    itemName?: string;
+    amountNgn?: number;
+}
+
+export interface BillBeneficiaryResponse {
+    message: string;
+    data: BillBeneficiary;
+}
+
+export interface BillBeneficiariesListResponse {
+    message: string;
+    data: BillBeneficiary[];
+}
+
+export const addBillBeneficiary = async (payload: AddBillBeneficiaryPayload): Promise<BillBeneficiaryResponse> => {
+    const response = await client.post<BillBeneficiaryResponse>('/user/bill-beneficiaries', payload);
+    return response.data;
+};
+
+export const getBillBeneficiaries = async (): Promise<BillBeneficiariesListResponse> => {
+    const response = await client.get<BillBeneficiariesListResponse>('/user/bill-beneficiaries');
+    return response.data;
+};
+
+export const deleteBillBeneficiary = async (id: number): Promise<DeleteBeneficiaryResponse> => {
+    const response = await client.delete<DeleteBeneficiaryResponse>(`/user/bill-beneficiaries/${id}`);
+    return response.data;
+};
+
