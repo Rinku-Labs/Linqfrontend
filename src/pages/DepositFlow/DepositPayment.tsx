@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import Header from '../../components/Layout/Header';
 import Button from '../../components/ui/Button';
@@ -20,6 +20,32 @@ export default function DepositPayment() {
         navigate('/');
         return null;
     }
+
+    const [timeLeft, setTimeLeft] = useState<string>('');
+
+    useEffect(() => {
+        if (!order?.expiresAt) return;
+        
+        const targetDate = new Date(order.expiresAt).getTime();
+        
+        const updateTimer = () => {
+            const now = new Date().getTime();
+            const difference = targetDate - now;
+
+            if (difference <= 0) {
+                setTimeLeft('Expired');
+            } else {
+                const minutes = Math.floor(difference / (1000 * 60));
+                const seconds = Math.floor((difference % (1000 * 60)) / 1000);
+                setTimeLeft(`${minutes}m ${seconds}s`);
+            }
+        };
+        
+        updateTimer();
+        const interval = setInterval(updateTimer, 1000);
+
+        return () => clearInterval(interval);
+    }, [order?.expiresAt]);
 
     const copyToClipboard = (text: string, label: string) => {
         navigator.clipboard.writeText(text);
@@ -196,8 +222,8 @@ export default function DepositPayment() {
                         padding: '12px',
                         textAlign: 'center'
                     }}>
-                        <p style={{ fontSize: '9px', color: 'var(--text-secondary)' }}>
-                            Expires at: {formatDate(order.expiresAt)}
+                        <p style={{ fontSize: '11px', fontWeight: 500, color: timeLeft === 'Expired' ? '#ef4444' : 'var(--text-secondary)' }}>
+                            Expires in: {timeLeft || 'Calculating...'}
                         </p>
                     </div>
                 </div>
