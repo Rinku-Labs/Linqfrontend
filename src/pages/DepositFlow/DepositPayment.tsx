@@ -37,7 +37,9 @@ export default function DepositPayment() {
             } else {
                 const minutes = Math.floor(difference / (1000 * 60));
                 const seconds = Math.floor((difference % (1000 * 60)) / 1000);
-                setTimeLeft(`${minutes}m ${seconds}s`);
+                const m = minutes.toString().padStart(2, '0');
+                const s = seconds.toString().padStart(2, '0');
+                setTimeLeft(`${m}:${s}`);
             }
         };
         
@@ -217,13 +219,21 @@ export default function DepositPayment() {
                     </div>
 
                     <div style={{
-                        background: 'var(--surface)',
+                        background: timeLeft === 'Expired' ? 'rgba(239, 68, 68, 0.1)' : 'rgba(249, 115, 22, 0.1)',
+                        border: `1px solid ${timeLeft === 'Expired' ? 'rgba(239, 68, 68, 0.2)' : 'rgba(249, 115, 22, 0.2)'}`,
                         borderRadius: '12px',
-                        padding: '12px',
-                        textAlign: 'center'
+                        padding: '16px',
+                        textAlign: 'center',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        gap: '4px'
                     }}>
-                        <p style={{ fontSize: '11px', fontWeight: 500, color: timeLeft === 'Expired' ? '#ef4444' : 'var(--text-secondary)' }}>
-                            Expires in: {timeLeft || 'Calculating...'}
+                        <p style={{ fontSize: '11px', fontWeight: 600, color: timeLeft === 'Expired' ? '#ef4444' : '#f97316' }}>
+                            {timeLeft === 'Expired' ? 'This account has expired' : 'Account expires in'}
+                        </p>
+                        <p style={{ fontSize: '28px', fontWeight: 700, color: timeLeft === 'Expired' ? '#ef4444' : '#f97316', fontVariantNumeric: 'tabular-nums', letterSpacing: '1px' }}>
+                            {timeLeft || '00:00'}
                         </p>
                     </div>
                 </div>
