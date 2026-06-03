@@ -169,7 +169,7 @@ export default function DepositAmount() {
 
     // Check against liquidity balance
     if (liquidityBalance !== null && amountStableCoin > liquidityBalance) {
-        toast.error(`Amount exceeds available liquidity (${liquidityBalance.toFixed(2)} USDC). Please try a smaller amount.`);
+        toast.error(`Amount exceeds available liquidity. Please try a smaller amount.`);
         return;
     }
 
