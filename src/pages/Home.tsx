@@ -502,19 +502,20 @@ export default function Home() {
                 onClick={() => navigate('/rewards')}
                 className="card-interactive"
                 style={{
-                    backgroundImage: `url(${clickToEarnImg})`,
-                    backgroundSize: 'cover',
-                    backgroundPosition: 'center',
-                    borderRadius: '20px',
-                    padding: '16px 20px',
                     marginBottom: '24px',
-                    display: 'flex',
-                    alignItems: 'center',
                     cursor: 'pointer',
                     boxShadow: 'var(--card-shadow)',
-                    minHeight: '80px',
+                    borderRadius: '20px',
+                    overflow: 'hidden',
+                    display: 'flex'
                 }}
-            />
+            >
+                <img 
+                    src={clickToEarnImg} 
+                    alt="Earn Rewards" 
+                    style={{ width: '100%', height: 'auto', display: 'block' }} 
+                />
+            </div>
 
             {/* Volume Tracker - HIDDEN */}
             {/* {isDataLoading ? (
