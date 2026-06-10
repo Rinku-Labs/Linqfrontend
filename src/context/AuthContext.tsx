@@ -245,6 +245,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         localStorage.removeItem('linqAuthToken');
         localStorage.removeItem('linqUser');
         localStorage.removeItem('linqIsVerified');
+        localStorage.removeItem('linqTrialVolumeUsed');
+        localStorage.removeItem('selectedChain');
+        localStorage.removeItem('activeWalletSource');
+        localStorage.removeItem('zkLoginAddress');
+        localStorage.removeItem('linqPinHash');
+        
+        // Clear any savings config/history that might belong to the previous user
+        Object.keys(localStorage).forEach(key => {
+            if (key.startsWith('linq_savings_')) {
+                localStorage.removeItem(key);
+            }
+        });
+
         // Clear session cookie for landing page
         document.cookie = "linq_session_active=; domain=.uselinq.xyz; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax";
         invalidateBeneficiariesCache();
@@ -252,6 +265,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setToken(null);
         setIsAuthenticated(false);
         setIsVerified(false);
+        setHasPin(false);
         window.location.href = '/onboarding';
     };
 
