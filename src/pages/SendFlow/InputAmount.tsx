@@ -296,7 +296,6 @@ export default function InputAmount() {
     };
 
     const [isAnimating, setIsAnimating] = useState(false);
-    const [isFetchingRate, setIsFetchingRate] = useState(false);
 
     useEffect(() => {
         setIsAnimating(true);
@@ -414,7 +413,6 @@ export default function InputAmount() {
 
                     <Button
                         fullWidth
-                        disabled={isFetchingRate}
                         onClick={async () => {
                             setError(null);
 
@@ -435,7 +433,6 @@ export default function InputAmount() {
 
                             // Fetch a fresh rate right before proceeding so the confirm page
                             // never receives a stale rate that the backend would reject.
-                            setIsFetchingRate(true);
                             let freshRate = exchangeRate;
                             try {
                                 const fetched = await fetchCachedRate(true);
@@ -445,8 +442,6 @@ export default function InputAmount() {
                                 }
                             } catch {
                                 // keep the last known rate on network failure
-                            } finally {
-                                setIsFetchingRate(false);
                             }
 
                             // Calculate NGN equivalent using the just-fetched rate
