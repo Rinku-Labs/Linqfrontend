@@ -413,7 +413,7 @@ export default function InputAmount() {
 
                     <Button
                         fullWidth
-                        onClick={() => {
+                        onClick={async () => {
                             setError(null);
 
                             const numAmount = parseFloat(amount) || 0;
@@ -431,8 +431,21 @@ export default function InputAmount() {
                                 return;
                             }
 
-                            // Calculate NGN equivalent for receiver
-                            const ngnAmount = currency === 'NGN' ? numAmount : numAmount * exchangeRate;
+                            // Fetch a fresh rate right before proceeding so the confirm page
+                            // never receives a stale rate that the backend would reject.
+                            let freshRate = exchangeRate;
+                            try {
+                                const fetched = await fetchCachedRate(true);
+                                if (fetched > 0) {
+                                    freshRate = fetched;
+                                    setExchangeRate(fetched);
+                                }
+                            } catch {
+                                // keep the last known rate on network failure
+                            }
+
+                            // Calculate NGN equivalent using the just-fetched rate
+                            const ngnAmount = currency === 'NGN' ? numAmount : usdAmount * freshRate;
 
                             navigate('/send/confirm', {
                                 state: {
@@ -440,7 +453,7 @@ export default function InputAmount() {
                                     amount: usdAmount,
                                     ngnAmount: ngnAmount,
                                     currency: currency,
-                                    rate: exchangeRate
+                                    rate: freshRate
                                 }
                             });
                         }}
