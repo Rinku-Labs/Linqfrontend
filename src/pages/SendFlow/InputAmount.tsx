@@ -463,7 +463,7 @@ export default function InputAmount() {
                             });
                         }}
                     >
-                        {isFetchingRate ? 'Getting rate…' : 'Confirm Amount'}
+                        Confirm Amount
                     </Button>
                 </div>
             </div>
