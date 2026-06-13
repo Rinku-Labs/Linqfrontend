@@ -69,6 +69,7 @@ interface SendFlowState {
     accountNumber?: string;
     rate?: number;
     bankLogo?: string;
+    balanceAvailable?: number;
 }
 
 export default function Confirm() {
@@ -120,6 +121,7 @@ export default function Confirm() {
     }, [state, navigate]);
 
     const amount = state?.amount ?? 0;
+    const balanceAvailable = state?.balanceAvailable ?? 0;
     // Recalculate NGN amount with current rate if rate was fetched
     const recipientName = state?.recipientName ?? '--';
     const recipientUsername = state?.recipientUsername;
@@ -147,7 +149,12 @@ export default function Confirm() {
     const savingsConfigUI = getSavingsConfig(selectedChain);
     const hasSavingsUI = savingsConfigUI.enabled && savingsConfigUI.savingsAddress && savingsConfigUI.percentage > 0;
     const savingsAmountUI = hasSavingsUI ? parseFloat((amount * savingsConfigUI.percentage / 100).toFixed(6)) : 0;
-    const totalYouPay = amount + feeApprox + savingsAmountUI;
+
+    // If the user's balance can't cover amount + fee + savings, savings will be auto-skipped at payment time.
+    // Detect this upfront so the UI can show an honest total.
+    const savingsWillBeSkipped = hasSavingsUI && balanceAvailable > 0 && (amount + feeApprox + savingsAmountUI) > balanceAvailable;
+    const effectiveSavingsAmount = savingsWillBeSkipped ? 0 : savingsAmountUI;
+    const totalYouPay = amount + feeApprox + effectiveSavingsAmount;
 
 
     // Payment Handlers
@@ -1102,8 +1109,20 @@ export default function Confirm() {
 
                     {hasSavingsUI && savingsAmountUI > 0 && (
                         <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '16px' }}>
-                            <span style={{ color: 'var(--text-muted)', fontSize: '13px', fontWeight: 500 }}>Savings contribution</span>
-                            <span style={{ color: 'var(--text-main)', fontSize: '13px', fontWeight: 600 }}>
+                            <span style={{ color: 'var(--text-muted)', fontSize: '13px', fontWeight: 500 }}>
+                                Spend & Save
+                                {savingsWillBeSkipped && (
+                                    <span style={{ color: 'var(--text-secondary)', fontSize: '11px', marginLeft: '6px' }}>
+                                        (skipped — low balance)
+                                    </span>
+                                )}
+                            </span>
+                            <span style={{
+                                color: savingsWillBeSkipped ? 'var(--text-muted)' : 'var(--text-main)',
+                                fontSize: '13px',
+                                fontWeight: 600,
+                                textDecoration: savingsWillBeSkipped ? 'line-through' : 'none',
+                            }}>
                                 ${savingsAmountUI.toFixed(2)}
                             </span>
                         </div>

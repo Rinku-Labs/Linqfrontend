@@ -13,6 +13,7 @@ import { useWallet as useTronWallet } from '@tronweb3/tronwallet-adapter-react-h
 import { formatUnits } from 'viem';
 import ChainSelector from '../../components/ChainSelector';
 import { useChain } from '../../context/ChainContext';
+import { getSavingsConfig } from '../../utils/savingsConfig';
 import nairaLogo from '../../assets/naira.png';
 
 export default function InputAmount() {
@@ -268,6 +269,8 @@ export default function InputAmount() {
         const balance = getNumericBalance();
         if (balance <= 0) return;
 
+        const getFeeRate = (amt: number) => amt < 100 ? 0.01 : amt < 500 ? 0.0075 : amt < 999 ? 0.005 : 0.0035;
+
         let newAmount: number;
         switch (p) {
             case '25%':
@@ -279,9 +282,17 @@ export default function InputAmount() {
             case '75%':
                 newAmount = balance * 0.75;
                 break;
-            case 'MAX':
-                newAmount = balance;
+            case 'MAX': {
+                // Back-calculate the max sendable so that amount + fee + savings <= balance.
+                // Two-pass to correctly handle tier boundaries (e.g. amount < 100 vs >= 100).
+                const savingsCfg = getSavingsConfig(selectedChain);
+                const savingsRate = (savingsCfg.enabled && savingsCfg.savingsAddress && savingsCfg.percentage > 0)
+                    ? savingsCfg.percentage / 100
+                    : 0;
+                const est = balance / (1 + getFeeRate(balance) + savingsRate);
+                newAmount = balance / (1 + getFeeRate(est) + savingsRate);
                 break;
+            }
             default:
                 return;
         }
@@ -431,6 +442,16 @@ export default function InputAmount() {
                                 return;
                             }
 
+                            // Catch cases where amount + fee would exceed balance before reaching Confirm
+                            const getFeeRate = (amt: number) => amt < 100 ? 0.01 : amt < 500 ? 0.0075 : amt < 999 ? 0.005 : 0.0035;
+                            const estimatedFee = usdAmount * getFeeRate(usdAmount);
+                            if (usdAmount + estimatedFee > balance) {
+                                const est = balance / (1 + getFeeRate(balance));
+                                const safeMax = balance / (1 + getFeeRate(est));
+                                setError(`Amount too high after fees. Maximum you can send: $${safeMax.toFixed(2)}.`);
+                                return;
+                            }
+
                             // Fetch a fresh rate right before proceeding so the confirm page
                             // never receives a stale rate that the backend would reject.
                             let freshRate = exchangeRate;
@@ -453,7 +474,8 @@ export default function InputAmount() {
                                     amount: usdAmount,
                                     ngnAmount: ngnAmount,
                                     currency: currency,
-                                    rate: freshRate
+                                    rate: freshRate,
+                                    balanceAvailable: balance,
                                 }
                             });
                         }}
