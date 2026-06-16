@@ -1141,6 +1141,10 @@ export default function Confirm() {
                     </div>
                 </div>
 
+                <p style={{ fontSize: '11px', color: 'var(--text-muted)', textAlign: 'center', marginBottom: '20px', lineHeight: 1.5 }}>
+                    Fees are deducted from your wallet — the recipient receives the full NGN amount shown above.
+                </p>
+
                 {/* Description Input & Quick Picks */}
                 <div style={{ marginBottom: '24px' }}>
                     <p style={{ color: 'var(--text-muted)', fontSize: '13px', marginBottom: '12px', fontWeight: 500 }}>Note (Optional)</p>
