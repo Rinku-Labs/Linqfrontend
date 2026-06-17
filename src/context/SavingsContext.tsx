@@ -25,6 +25,7 @@ export function SavingsProvider({ children }: { children: React.ReactNode }) {
     const [history, setHistory] = useState<SavingsEntry[]>([]);
     const [total, setTotal] = useState<number>(0);
     const [, setIsLoadingHistory] = useState(false);
+    const lastFetchRef = React.useRef<number>(0);
 
     const updateConfig = useCallback((partial: Partial<SavingsConfig>) => {
         setConfig(prev => {
@@ -34,12 +35,17 @@ export function SavingsProvider({ children }: { children: React.ReactNode }) {
         });
     }, [selectedChain]);
 
-    const fetchHistory = useCallback(async () => {
+    const fetchHistory = useCallback(async (force = false) => {
         const token = localStorage.getItem('linqAuthToken');
         if (!token) return;
 
         const now = Date.now();
         const thirtyMins = 30 * 60 * 1000;
+        const twoMins = 2 * 60 * 1000;
+
+        // Skip if fetched within the last 2 minutes (unless forced)
+        if (!force && now - lastFetchRef.current < twoMins) return;
+
         let requestTimestamps: number[] = [];
 
         try {
@@ -60,6 +66,7 @@ export function SavingsProvider({ children }: { children: React.ReactNode }) {
         }
 
         // Record this new request
+        lastFetchRef.current = now;
         requestTimestamps.push(now);
         localStorage.setItem('savingsHistoryRateLimit', JSON.stringify(requestTimestamps));
 
@@ -125,11 +132,11 @@ export function SavingsProvider({ children }: { children: React.ReactNode }) {
         }
 
         // Also fire off a background refetch to sync precisely with the backend
-        setTimeout(() => fetchHistory(), 3000);
+        setTimeout(() => fetchHistory(true), 3000);
     }, [fetchHistory]);
 
     const refreshHistory = useCallback(() => {
-        fetchHistory();
+        fetchHistory(true);
     }, [fetchHistory]);
 
     return (
