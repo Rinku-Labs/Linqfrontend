@@ -5,7 +5,7 @@ import Header from '../../components/Layout/Header';
 import Button from '../../components/ui/Button';
 import { getOnrampStatus } from '../../api/onramp';
 import type { OnrampStatusResponse } from '../../api/onramp';
-import { Loader2, Check, X, Clock, RefreshCw, Download } from 'lucide-react';
+import { Loader2, Check, X, Clock, Download } from 'lucide-react';
 import { mapTransactionStatus } from '../../utils/statusMapping';
 import { formatDuration } from '../../utils/time';
 import { invalidateOrdersCache } from '../../utils/ordersCache';
@@ -24,7 +24,7 @@ export default function DepositStatus() {
     const [endTime, setEndTime] = useState<number | null>(null);
 
     // Mapped status for UI
-    const displayedStatus = statusData ? mapTransactionStatus(statusData.status) : 'processing';
+    const displayedStatus = statusData ? mapTransactionStatus(statusData.status) : 'pending';
 
     if (!orderId) {
         // If no order ID, return empty or redirect. 
@@ -109,11 +109,9 @@ export default function DepositStatus() {
                 );
             case 'failed':
                 return <FailedView data={statusData} />;
-            case 'processing':
-                return <ProcessingView />;
-            case 'initiated':
+            case 'pending':
             default:
-                return <PendingView status={statusData.status} />;
+                return <PendingView />;
         }
     };
 
@@ -178,7 +176,7 @@ function LoadingView({ message }: { message: string }) {
     );
 }
 
-function PendingView({ status }: { status: string }) {
+function PendingView() {
     return (
         <div style={{ textAlign: 'center', padding: '20px' }}>
             <div style={{
@@ -188,9 +186,9 @@ function PendingView({ status }: { status: string }) {
             }}>
                 <Clock className="animate-pulse" size={40} style={{ color: '#EAB308' }} />
             </div>
-            <h2 style={{ fontSize: '17px', fontWeight: 700, marginBottom: '8px', color: 'var(--text-main)' }}>Awaiting Payment</h2>
+            <h2 style={{ fontSize: '17px', fontWeight: 700, marginBottom: '8px', color: 'var(--text-main)' }}>Processing</h2>
             <p style={{ color: 'var(--text-secondary)', marginBottom: '24px' }}>
-                We are checking for your payment. This typically takes a few minutes.
+                We're processing your deposit. This typically takes a few minutes.
             </p>
             <div style={{
                 background: 'var(--surface-elevated)',
@@ -201,26 +199,8 @@ function PendingView({ status }: { status: string }) {
                 gap: '8px'
             }}>
                 <Loader2 className="animate-spin" size={16} color="var(--text-muted)" />
-                <span style={{ fontSize: '10px', color: 'var(--text-muted)' }}>Status: {status.replace('_', ' ')}</span>
+                <span style={{ fontSize: '10px', color: 'var(--text-muted)' }}>Checking for payment…</span>
             </div>
-        </div>
-    );
-}
-
-function ProcessingView() {
-    return (
-        <div style={{ textAlign: 'center', padding: '20px' }}>
-            <div style={{
-                width: '80px', height: '80px', borderRadius: '50%', background: 'rgba(59, 130, 246, 0.1)',
-                display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '24px', margin: '0 auto',
-                border: '4px solid rgba(59, 130, 246, 0.05)'
-            }}>
-                <RefreshCw className="animate-spin" size={40} style={{ color: '#3B82F6' }} />
-            </div>
-            <h2 style={{ fontSize: '17px', fontWeight: 700, marginBottom: '8px', color: 'var(--text-main)' }}>Processing</h2>
-            <p style={{ color: 'var(--text-secondary)' }}>
-                Payment received! Sending crypto to your wallet...
-            </p>
         </div>
     );
 }
@@ -283,7 +263,7 @@ function FailedView({ data }: { data: OnrampStatusResponse }) {
 
             <h1 style={{ fontSize: '17px', fontWeight: 700, marginBottom: '4px', color: 'var(--text-main)' }}>Deposit Failed</h1>
             <p style={{ color: 'var(--text-secondary)', fontSize: '10px', marginBottom: '32px' }}>
-                Order status: {data.status}
+                Something went wrong with your deposit. Please try again or contact support.
             </p>
 
             <div className="glass-card" style={{ borderRadius: '24px', padding: '24px', width: '100%', marginBottom: '24px' }}>

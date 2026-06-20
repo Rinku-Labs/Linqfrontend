@@ -1,15 +1,15 @@
 /**
- * Maps backend transaction statuses to frontend display statuses.
+ * Maps backend transaction statuses to simplified frontend states.
  * 
- * Logic:
- * - disbursed, completed, success, received_in_treasury -> 'completed'
- * - failed, expired, rejected -> 'failed'
- * - refunded -> 'refunded'
- * - pending, initiated, created -> 'processing'
- * - awaiting_payment -> 'initiated'
- * - Everything else -> 'processing'
+ * Used for flow control (deciding which UI view to show).
+ * The user-facing display label comes from formatStatus() in TransactionPopup.tsx.
+ *
+ * Only 3 states:
+ * - 'completed' — transaction finished successfully
+ * - 'pending'   — transaction is in progress (any intermediate state)
+ * - 'failed'    — transaction failed, was rejected, expired, or refunded
  */
-export const mapTransactionStatus = (status: string): 'initiated' | 'processing' | 'completed' | 'refunded' | 'failed' => {
+export const mapTransactionStatus = (status: string): 'completed' | 'pending' | 'failed' => {
     const s = status?.toLowerCase()?.trim() || '';
 
     // Success states
@@ -22,26 +22,18 @@ export const mapTransactionStatus = (status: string): 'initiated' | 'processing'
         return 'completed';
     }
 
-    // Failure states
-    if (['failed', 'expired', 'rejected', 'timeout: no deposit received', 'failed to send transaction', 'transaction failed', 'cancelled'].includes(s)) {
-        return 'failed';
-    }
-
-    // Refund states
-    if (s === 'refunded' || s === 'fiat refunded') {
-        return 'refunded';
-    }
-
-    // Initial states
-    if (s === 'awaiting_payment' || s === 'awaiting payment') {
-        return 'initiated';
-    }
-
     // Treasury worker statuses indicate successful processing
     if (s.includes('treasury worker')) {
         return 'completed';
     }
 
-    // "pending", "initiated", "created", "fiat received", and anything else defaults to processing
-    return 'processing';
+    // Failure states (includes refunds — at flow-control level, refund = terminal like failure)
+    if (['failed', 'expired', 'rejected', 'timeout: no deposit received', 'failed to send transaction', 'transaction failed', 'cancelled', 'refunded', 'fiat refunded', 'bill refunded'].includes(s)) {
+        return 'failed';
+    }
+
+    // Everything else (pending, initiated, created, awaiting_payment, fiat received,
+    // processing, in_order_queue, payment_processing, wallet watcher, etc.) is pending
+    return 'pending';
 };
+

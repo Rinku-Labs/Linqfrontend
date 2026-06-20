@@ -592,7 +592,7 @@ export default function Home() {
                                             <p style={{ fontSize: '10px', fontWeight: 500, marginBottom: '2px', color: 'var(--text-main)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '100%' }}>{trx.accountName || trx.bankName || 'Transfer'}</p>
                                             <div style={{ fontSize: '9px', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', overflow: 'hidden' }}>
                                                 <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{formatDate(trx.createdAt)}</span>
-                                                <span className={`status-badge ${formatStatus(trx.status) === 'Pending' || formatStatus(trx.status) === 'Processing' ? 'status-badge--pending' : ''}`} style={{
+                                                <span className={`status-badge ${formatStatus(trx.status) === 'Pending' ? 'status-badge--pending' : ''}`} style={{
                                                     color: getStatusStyle(trx.status).color,
                                                     background: getStatusStyle(trx.status).bg,
                                                     padding: '2px 6px',

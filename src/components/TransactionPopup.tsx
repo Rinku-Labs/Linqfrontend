@@ -55,100 +55,55 @@ export interface Order {
     billType?: string;
 }
 
-// Helper to format status - case-insensitive comparison
-export const formatStatus = (status: string) => {
-    const normalizedStatus = status?.toLowerCase()?.trim() || '';
+// Helper to format status for user display — only 4 clean labels
+export const formatStatus = (status: string): 'Completed' | 'Pending' | 'Failed' | 'Refunded' => {
+    const s = status?.toLowerCase()?.trim() || '';
 
-    // Handle specific long status messages
-    if (normalizedStatus.includes('wallet watcher')) {
-        return 'Pending';
+    // Completed states
+    if (['completed', 'disbursed', 'success', 'settled in treasury', 'settled_in_treasury',
+         'received in treasury', 'received_in_treasury', 'crypto confirmed'].includes(s)
+        || s.includes('treasury worker') || s.includes('treasury queue') || s.includes('in treasury')) {
+        return 'Completed';
     }
-    if (normalizedStatus.includes('timeout')) {
+
+    // Refunded states (distinct from failed — user's money is coming back)
+    if (['refunded', 'fiat refunded', 'bill refunded'].includes(s)) {
+        return 'Refunded';
+    }
+
+    // Failure states
+    if (['failed', 'expired', 'rejected', 'cancelled',
+         'timeout: no deposit received', 'failed to send transaction', 'transaction failed'].includes(s)
+        || s.includes('timeout')) {
         return 'Failed';
     }
-    if (normalizedStatus.includes('waiting for deposit')) {
-        return 'Pending';
-    }
-    if (normalizedStatus.includes('treasury worker') || normalizedStatus.includes('treasury queue') || normalizedStatus.includes('in treasury')) {
-        return 'Settled';
-    }
 
-    switch (normalizedStatus) {
-        case 'completed':
-            return 'Completed';
-        case 'settled in treasury':
-        case 'settled_in_treasury':
-        case 'received in treasury':
-        case 'received_in_treasury':
-            return 'Settled';
-        case 'disbursed':
-            return 'Disbursed';
-        case 'failed':
-            return 'Failed';
-        case 'refunded':
-        case 'bill refunded':
-            return 'Refunded';
-        case 'pending':
-        case 'initiated':
-        case 'waiting for deposit':
-            return 'Pending';
-        case 'in_order_queue':
-        case 'payment_processing':
-        case 'processing':
-        case 'paying bill':
-        case 'deposit confirmed':
-            return 'Processing';
-        default:
-            return status || 'Unknown';
-    }
+    // Everything else is pending (pending, initiated, processing, awaiting_payment,
+    // wallet watcher, paying bill, fiat received, deposit confirmed, etc.)
+    return 'Pending';
 };
 
-// Helper to get status color - case-insensitive comparison
+// Helper to get status color based on user-facing status
 export const getStatusColor = (status: string) => {
-    const normalizedStatus = status?.toLowerCase()?.trim() || '';
-    if (normalizedStatus.includes('treasury worker') || normalizedStatus.includes('treasury queue') || normalizedStatus.includes('in treasury')) {
-        return 'var(--success)';
-    }
-    switch (normalizedStatus) {
-        case 'completed':
-        case 'settled in treasury':
-        case 'settled_in_treasury':
-        case 'disbursed':
-        case 'received in treasury':
-        case 'received_in_treasury':
-            return 'var(--success)';
-        case 'failed':
-        case 'refunded':
-            return 'var(--error)';
-        default:
-            return 'var(--warning, #f59e0b)';
+    const formatted = formatStatus(status);
+    switch (formatted) {
+        case 'Completed': return 'var(--success)';
+        case 'Failed':    return 'var(--error)';
+        case 'Refunded':  return '#3b82f6';
+        case 'Pending':
+        default:          return 'var(--warning, #f59e0b)';
     }
 };
 
-// Helper to get status style - case-insensitive comparison
+// Helper to get status style (bg + color) based on user-facing status
 export const getStatusStyle = (status: string) => {
-    const normalizedStatus = status?.toLowerCase()?.trim() || '';
-    if (normalizedStatus.includes('treasury worker') || normalizedStatus.includes('treasury queue') || normalizedStatus.includes('in treasury')) {
-        return { bg: 'rgba(34, 197, 94, 0.15)', color: '#22c55e' };
-    }
-    switch (normalizedStatus) {
-        case 'completed':
-        case 'settled in treasury':
-        case 'settled_in_treasury':
-        case 'disbursed':
-        case 'received in treasury':
-        case 'received_in_treasury':
-            return { bg: 'rgba(34, 197, 94, 0.15)', color: '#22c55e' };
-        case 'failed':
-        case 'refunded':
-        case 'bill refunded':
-            return { bg: 'rgba(239, 68, 68, 0.15)', color: '#ef4444' };
-        case 'pending':
-        case 'initiated':
-        case 'processing':
-            return { bg: 'rgba(245, 158, 11, 0.15)', color: '#f59e0b' };
-        default:
-            return { bg: 'rgba(245, 158, 11, 0.15)', color: '#f59e0b' };
+    const formatted = formatStatus(status);
+    switch (formatted) {
+        case 'Completed': return { bg: 'rgba(34, 197, 94, 0.15)',  color: '#22c55e' };
+        case 'Failed':    return { bg: 'rgba(239, 68, 68, 0.15)',  color: '#ef4444' };
+        case 'Refunded':  return { bg: 'rgba(59, 130, 246, 0.15)', color: '#3b82f6' };
+        case 'Pending':
+        default:          return { bg: 'rgba(245, 158, 11, 0.15)', color: '#f59e0b' };
     }
 };
 

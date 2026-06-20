@@ -6,6 +6,7 @@ import TransactionPopup, { formatStatus, getStatusStyle } from '../../components
 import type { Order } from '../../components/TransactionPopup';
 import { formatDate } from '../../utils/dateFormatter';
 import { fetchOrders } from '../../utils/ordersCache';
+import { mapTransactionStatus } from '../../utils/statusMapping';
 import { TransactionListSkeleton } from '../../components/ui/SkeletonLoader';
 import EmptyState from '../../components/ui/EmptyState';
 import usePullToRefresh, { PullToRefreshIndicator } from '../../hooks/usePullToRefresh';
@@ -15,31 +16,8 @@ import StatsShareModal from '../../components/StatsShareModal';
 
 // Helper to normalize status for filtering
 const normalizeStatusForFilter = (status: string): string => {
-    const normalized = status?.toLowerCase()?.trim() || '';
-    switch (normalized) {
-        case 'completed':
-        case 'settled in treasury':
-        case 'settled_in_treasury':
-        case 'disbursed':
-        case 'received in treasury':
-        case 'received_in_treasury':
-            return 'completed';
-        case 'failed':
-        case 'refunded':
-        case 'bill refunded':
-            return 'failed';
-        case 'pending':
-        case 'initiated':
-        case 'in_order_queue':
-        case 'payment_processing':
-        case 'processing':
-        case 'waiting for deposit':
-        case 'paying bill':
-        case 'deposit confirmed':
-            return 'pending';
-        default:
-            return 'pending';
-    }
+    // Delegate to the shared mapping — returns 'completed' | 'pending' | 'failed'
+    return mapTransactionStatus(status);
 };
 
 const getOrderChain = (order: Order): string | null => {
@@ -324,7 +302,7 @@ export default function TransactionsList() {
                                 {dateOrders.map((order: Order, index: number) => {
                                     const statusStyle = getStatusStyle(order.status);
                                     const formattedStatus = formatStatus(order.status);
-                                    const isPending = formattedStatus === 'Pending' || formattedStatus === 'Processing';
+                                    const isPending = formattedStatus === 'Pending';
                                     return (
                                         <div
                                             key={order.id}
