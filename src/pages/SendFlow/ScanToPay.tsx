@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ScanLine, Loader2, Keyboard, CameraOff } from 'lucide-react';
-import { toast } from 'sonner';
+import { Loader2, Keyboard, CameraOff, CheckCircle } from 'lucide-react';
 import Header from '../../components/Layout/Header';
 import { preprocessForOcr } from '../../utils/imagePreprocess';
 import { parseScannedText } from '../../utils/scanParser';
@@ -9,15 +8,23 @@ import { findMatchingBanks } from '../../utils/bankSuggestion';
 import { scanImageForAccount } from '../../api/scan';
 
 type CameraStatus = 'starting' | 'ready' | 'denied' | 'error';
+type ScanState = 'idle' | 'scanning' | 'found';
+type TesseractWorker = Awaited<ReturnType<typeof import('tesseract.js')['createWorker']>>;
+
+// How the auto-scan loop is paced / cost-controlled.
+const FRAME_INTERVAL_MS = 600;      // breather between local reads
+const GEMINI_AFTER_MS = 3500;       // only escalate to the cloud after the free engine struggles
+const GEMINI_COOLDOWN_MS = 4500;    // at most ~one cloud call per this window
 
 export default function ScanToPay() {
     const navigate = useNavigate();
     const videoRef = useRef<HTMLVideoElement>(null);
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const streamRef = useRef<MediaStream | null>(null);
+    const foundRef = useRef(false);
 
     const [cameraStatus, setCameraStatus] = useState<CameraStatus>('starting');
-    const [isScanning, setIsScanning] = useState(false);
+    const [scanState, setScanState] = useState<ScanState>('idle');
 
     const stopCamera = useCallback(() => {
         if (streamRef.current) {
@@ -26,6 +33,7 @@ export default function ScanToPay() {
         }
     }, []);
 
+    // --- Camera lifecycle ---
     useEffect(() => {
         let cancelled = false;
 
@@ -66,84 +74,118 @@ export default function ScanToPay() {
         };
     }, [stopCamera]);
 
+    // --- Continuous auto-scan loop (no button) ---
+    useEffect(() => {
+        if (cameraStatus !== 'ready') return;
+
+        let active = true;
+        let worker: TesseractWorker | null = null;
+        let timer: ReturnType<typeof setTimeout> | null = null;
+        const startedAt = Date.now();
+        let lastGeminiAt = 0;
+
+        const succeed = (accountNumber: string, bankName: string | null, bankCode: string | null) => {
+            if (foundRef.current) return;
+            foundRef.current = true;
+            active = false;
+            setScanState('found');
+            setTimeout(() => {
+                stopCamera();
+                navigate('/send/details', {
+                    state: {
+                        scannedPrefill: {
+                            accountNumber,
+                            bankName: bankName || null,
+                            bankCode: bankCode || null,
+                        },
+                    },
+                });
+            }, 700);
+        };
+
+        const tick = async () => {
+            if (!active || foundRef.current) return;
+            const video = videoRef.current;
+            const canvas = canvasRef.current;
+
+            if (video && canvas && worker && video.videoWidth && video.videoHeight) {
+                try {
+                    canvas.width = video.videoWidth;
+                    canvas.height = video.videoHeight;
+                    const ctx = canvas.getContext('2d', { willReadFrequently: true });
+                    if (ctx) {
+                        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+                        // Keep the original colour frame for the cloud before binarizing.
+                        const originalBase64 = canvas.toDataURL('image/jpeg', 0.8).split(',')[1];
+
+                        // Tier 1 — free on-device read. Trust only a checksum-valid NUBAN.
+                        preprocessForOcr(canvas);
+                        const { data } = await worker.recognize(canvas);
+                        const text = data.text || '';
+                        const local = parseScannedText(text);
+                        if (local.accountNumber && findMatchingBanks(local.accountNumber).length > 0) {
+                            succeed(local.accountNumber, local.bankName, local.bankCode);
+                            return;
+                        }
+
+                        // Tier 2 — cloud fallback, but only when there's plausibly a sign in
+                        // view (so we never burn a paid call on a blank frame), after the
+                        // free engine has had a few seconds, and throttled by a cooldown.
+                        const digitCount = (text.match(/\d/g) || []).length;
+                        const hasSignal = !!local.accountNumber || !!local.bankName || digitCount >= 8;
+                        const now = Date.now();
+                        if (
+                            hasSignal &&
+                            now - startedAt > GEMINI_AFTER_MS &&
+                            now - lastGeminiAt > GEMINI_COOLDOWN_MS
+                        ) {
+                            lastGeminiAt = now;
+                            const cloud = await scanImageForAccount(originalBase64, 'image/jpeg');
+                            if (cloud?.accountNumber) {
+                                succeed(cloud.accountNumber, cloud.bankName, cloud.bankCode);
+                                return;
+                            }
+                        }
+                    }
+                } catch {
+                    // Ignore a bad frame and keep scanning.
+                }
+            }
+
+            if (active && !foundRef.current) {
+                timer = setTimeout(tick, FRAME_INTERVAL_MS);
+            }
+        };
+
+        (async () => {
+            try {
+                const { createWorker } = await import('tesseract.js');
+                worker = await createWorker('eng');
+                await worker.setParameters({
+                    tessedit_char_whitelist: '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ ',
+                });
+                if (!active) {
+                    await worker.terminate().catch(() => undefined);
+                    return;
+                }
+                setScanState('scanning');
+                tick();
+            } catch {
+                // OCR engine failed to load — user can still type it in.
+            }
+        })();
+
+        return () => {
+            active = false;
+            if (timer) clearTimeout(timer);
+            if (worker) worker.terminate().catch(() => undefined);
+        };
+    }, [cameraStatus, navigate, stopCamera]);
+
     const goToManualEntry = () => {
         stopCamera();
         navigate('/send/details');
-    };
-
-    const finishWith = (accountNumber: string, bankName: string | null, bankCode: string | null) => {
-        stopCamera();
-        navigate('/send/details', {
-            state: {
-                scannedPrefill: {
-                    accountNumber,
-                    bankName: bankName || null,
-                    bankCode: bankCode || null,
-                },
-            },
-        });
-    };
-
-    const handleCapture = async () => {
-        const video = videoRef.current;
-        const canvas = canvasRef.current;
-        if (!video || !canvas || cameraStatus !== 'ready' || isScanning) return;
-        if (!video.videoWidth || !video.videoHeight) return;
-
-        setIsScanning(true);
-        let worker: Awaited<ReturnType<typeof import('tesseract.js')['createWorker']>> | null = null;
-        try {
-            // Grab the current frame.
-            canvas.width = video.videoWidth;
-            canvas.height = video.videoHeight;
-            const ctx = canvas.getContext('2d', { willReadFrequently: true });
-            if (!ctx) throw new Error('canvas unavailable');
-            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-
-            // Keep the original colour frame for the cloud fallback BEFORE we
-            // binarize the canvas for Tesseract — Gemini reads the real photo better.
-            const originalBase64 = canvas.toDataURL('image/jpeg', 0.85).split(',')[1];
-
-            // Tier 1 — free, on-device OCR (Tesseract, lazy-loaded). Best for printed signs.
-            preprocessForOcr(canvas);
-            const { createWorker } = await import('tesseract.js');
-            worker = await createWorker('eng');
-            await worker.setParameters({
-                tessedit_char_whitelist: '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ ',
-            });
-            const { data } = await worker.recognize(canvas);
-            const local = parseScannedText(data.text || '');
-
-            // Trust the local read only when it produced a checksum-valid NUBAN
-            // (a real account number matches at least one bank). This avoids
-            // accepting OCR garbage and is what decides whether we spend a cloud call.
-            if (local.accountNumber && findMatchingBanks(local.accountNumber).length > 0) {
-                finishWith(local.accountNumber, local.bankName, local.bankCode);
-                return;
-            }
-
-            // Tier 2 — cloud fallback (Gemini) for messy/handwritten signs.
-            // Returns null silently when the backend has no GEMINI_API_KEY set.
-            const cloud = await scanImageForAccount(originalBase64, 'image/jpeg');
-            if (cloud?.accountNumber) {
-                finishWith(cloud.accountNumber, cloud.bankName, cloud.bankCode);
-                return;
-            }
-
-            // Last resort: a local number that didn't pass the checksum is still
-            // better than nothing — the verify + confirm screen will catch a bad read.
-            if (local.accountNumber) {
-                finishWith(local.accountNumber, local.bankName, local.bankCode);
-                return;
-            }
-
-            toast.error("Couldn't read an account number. Hold steady and try again, or type it in.");
-        } catch {
-            toast.error('Scan failed. Please try again or type the details in.');
-        } finally {
-            if (worker) await worker.terminate().catch(() => undefined);
-            setIsScanning(false);
-        }
     };
 
     return (
@@ -152,7 +194,7 @@ export default function ScanToPay() {
 
             <div style={{ padding: '0 4px', flex: 1, display: 'flex', flexDirection: 'column' }}>
                 <p style={{ fontSize: '11px', color: 'var(--text-secondary)', marginBottom: '16px', textAlign: 'center' }}>
-                    Point your camera at an account number written on a sign or screen.
+                    Hold the account number inside the box — it scans automatically.
                 </p>
 
                 {/* Camera viewport */}
@@ -172,16 +214,27 @@ export default function ScanToPay() {
                         style={{ width: '100%', height: '100%', objectFit: 'cover', display: cameraStatus === 'ready' ? 'block' : 'none' }}
                     />
 
-                    {/* Framing guide */}
-                    {cameraStatus === 'ready' && (
-                        <div style={{
-                            position: 'absolute',
-                            top: '50%', left: '50%', transform: 'translate(-50%, -50%)',
-                            width: '78%', height: '36%',
-                            border: '2px solid rgba(255,255,255,0.85)',
-                            borderRadius: '16px',
-                            boxShadow: '0 0 0 9999px rgba(0,0,0,0.35)',
-                        }} />
+                    {/* Framing guide + live "scanning" pill */}
+                    {cameraStatus === 'ready' && scanState !== 'found' && (
+                        <>
+                            <div style={{
+                                position: 'absolute',
+                                top: '50%', left: '50%', transform: 'translate(-50%, -50%)',
+                                width: '78%', height: '36%',
+                                border: '2px solid rgba(255,255,255,0.85)',
+                                borderRadius: '16px',
+                                boxShadow: '0 0 0 9999px rgba(0,0,0,0.35)',
+                            }} />
+                            <div style={{
+                                position: 'absolute', top: '16px', left: '50%', transform: 'translateX(-50%)',
+                                display: 'flex', alignItems: 'center', gap: '8px',
+                                background: 'rgba(0,0,0,0.55)', color: '#fff',
+                                padding: '8px 14px', borderRadius: '20px', fontSize: '11px',
+                            }}>
+                                <Loader2 className="animate-spin" size={14} />
+                                <span>Scanning…</span>
+                            </div>
+                        </>
                     )}
 
                     {/* Non-ready states */}
@@ -210,15 +263,15 @@ export default function ScanToPay() {
                         </div>
                     )}
 
-                    {/* Scanning overlay */}
-                    {isScanning && (
+                    {/* Success overlay */}
+                    {scanState === 'found' && (
                         <div style={{
                             position: 'absolute', inset: 0,
                             display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-                            gap: '12px', background: 'rgba(0,0,0,0.55)', color: '#fff',
+                            gap: '12px', background: 'rgba(0,0,0,0.6)', color: '#fff',
                         }}>
-                            <Loader2 className="animate-spin" size={28} />
-                            <span style={{ fontSize: '11px' }}>Reading…</span>
+                            <CheckCircle size={40} color="#22c55e" />
+                            <span style={{ fontSize: '12px' }}>Scanned successfully</span>
                         </div>
                     )}
                 </div>
@@ -227,27 +280,6 @@ export default function ScanToPay() {
                 <canvas ref={canvasRef} style={{ display: 'none' }} />
 
                 <div style={{ marginTop: 'auto', paddingTop: '24px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                    <button
-                        onClick={handleCapture}
-                        disabled={cameraStatus !== 'ready' || isScanning}
-                        style={{
-                            width: '100%',
-                            padding: '16px',
-                            borderRadius: '16px',
-                            border: 'none',
-                            background: cameraStatus === 'ready' && !isScanning ? 'var(--primary)' : 'var(--border-color)',
-                            color: '#fff',
-                            fontWeight: 600,
-                            fontSize: '14px',
-                            cursor: cameraStatus === 'ready' && !isScanning ? 'pointer' : 'not-allowed',
-                            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
-                            transition: 'background 0.2s',
-                        }}
-                    >
-                        {isScanning ? <Loader2 className="animate-spin" size={18} /> : <ScanLine size={18} />}
-                        {isScanning ? 'Scanning' : 'Capture & scan'}
-                    </button>
-
                     <button
                         onClick={goToManualEntry}
                         style={{
