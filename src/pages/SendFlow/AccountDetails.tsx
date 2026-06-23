@@ -103,8 +103,7 @@ export default function AccountDetails() {
     }, [loadBeneficiaries]);
 
     // Prefill from the scan-to-pay flow (runs once on mount). Setting the fields
-    // here lets the existing verify effect resolve and display the account name,
-    // and — if the bank wasn't detected — the NUBAN suggestion pills appear.
+    // here lets the existing verify effect resolve and display the account name.
     useEffect(() => {
         const prefill = (location.state as {
             scannedPrefill?: { accountNumber?: string; bankName?: string | null; bankCode?: string | null };
@@ -112,9 +111,38 @@ export default function AccountDetails() {
         if (!prefill?.accountNumber) return;
         setSendType('bank');
         setAccountNumber(prefill.accountNumber);
-        if (prefill.bankName && prefill.bankCode) {
-            setBankName(prefill.bankName);
-            setBankCode(prefill.bankCode);
+
+        // Resolve a bank to prefill, in priority order:
+        // 1. The bank the scan detected (OCR/Gemini), normalised to a real code.
+        // 2. Otherwise derive it from the account number via the NUBAN check-digit
+        //    algorithm — but only when it points to a single, unambiguous bank
+        //    (many account numbers match several banks; auto-picking one of those
+        //    could send to the wrong bank, so those fall through to the pills).
+        let resolvedName = '';
+        let resolvedCode = '';
+
+        if (prefill.bankName) {
+            const normalized = getNormalizedBank(prefill.bankName);
+            if (normalized) {
+                resolvedName = normalized.name;
+                resolvedCode = normalized.code;
+            } else if (prefill.bankCode) {
+                resolvedName = prefill.bankName;
+                resolvedCode = prefill.bankCode;
+            }
+        }
+
+        if (!resolvedCode) {
+            const matches = findMatchingBanks(prefill.accountNumber);
+            if (matches.length === 1) {
+                resolvedName = matches[0].bank.name;
+                resolvedCode = matches[0].bank.code;
+            }
+        }
+
+        if (resolvedName && resolvedCode) {
+            setBankName(resolvedName);
+            setBankCode(resolvedCode);
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
