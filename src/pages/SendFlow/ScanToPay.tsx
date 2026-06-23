@@ -2,7 +2,8 @@ import { useEffect, useRef, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Keyboard, CameraOff, CheckCircle } from 'lucide-react';
 import Header from '../../components/Layout/Header';
-import { scanImageForAccount } from '../../api/scan';
+import { scanFrame, initOCR } from '../../utils/localOCR';
+import { getNormalizedBank } from '../../utils/bankSuggestion';
 
 type CameraStatus = 'starting' | 'ready' | 'denied' | 'error';
 type ScanState = 'scanning' | 'found';
@@ -30,6 +31,10 @@ export default function ScanToPay() {
             streamRef.current.getTracks().forEach((track) => track.stop());
             streamRef.current = null;
         }
+    }, []);
+
+    useEffect(() => {
+        initOCR(); // Preload Tesseract worker as soon as component mounts
     }, []);
 
     useEffect(() => {
@@ -112,9 +117,9 @@ export default function ScanToPay() {
         }, 550);
     }, [navigate, stopCamera]);
 
-    // Keep reading frames in the background while the camera stays live; freeze
-    // ONLY when Gemini actually returns an account number. No false freeze, no
-    // "scan again" — it just keeps scanning until it gets it.
+    // Keep reading frames in the background while the camera stays live
+    const lastSeenAccountRef = useRef<string | null>(null);
+
     useEffect(() => {
         if (cameraStatus !== 'ready') return;
         let active = true;
@@ -124,11 +129,21 @@ export default function ScanToPay() {
             if (!active || foundRef.current) return;
             const image = capture();
             if (image) {
-                const result = await scanImageForAccount(image, 'image/jpeg');
+                const result = await scanFrame(image);
                 if (!active || foundRef.current) return;
-                if (result?.accountNumber) {
-                    succeed(result.accountNumber, result.bankName, result.bankCode);
-                    return;
+                
+                if (result.accountNumber && result.bankName) {
+                    // Double Confirmation Rule
+                    if (lastSeenAccountRef.current === result.accountNumber) {
+                        const normalized = getNormalizedBank(result.bankName);
+                        succeed(result.accountNumber, result.bankName, normalized?.code || '');
+                        return;
+                    } else {
+                        lastSeenAccountRef.current = result.accountNumber;
+                    }
+                } else {
+                    // Reset if we see nothing valid this frame
+                    lastSeenAccountRef.current = null;
                 }
             }
             if (active && !foundRef.current) timer = setTimeout(tick, POLL_GAP);
