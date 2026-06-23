@@ -44,7 +44,6 @@
     "react-router-dom": "^7.12.0",
     "recharts": "^3.7.0",
     "sonner": "^2.0.7",
-    "tesseract.js": "^5.1.1",
     "viem": "^2.45.1",
     "wagmi": "^3.4.2"
   },
