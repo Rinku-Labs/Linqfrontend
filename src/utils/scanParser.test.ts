@@ -42,6 +42,16 @@ describe('extractBank', () => {
     it('returns null for an unknown bank word', () => {
         expect(extractBank('SOME RANDOM SHOP')).toBeNull();
     });
+
+    it('detects banks beyond the curated fintechs (full bank list)', () => {
+        expect(extractBank('Pay to JAIZ BANK 1234567890')?.name.toLowerCase()).toContain('jaiz');
+        expect(extractBank('Send to GLOBUS')?.name.toLowerCase()).toContain('globus');
+        expect(extractBank('PARALLEX')?.name.toLowerCase()).toContain('parallex');
+    });
+
+    it('does not match generic sign words like "account number"', () => {
+        expect(extractBank('ACCOUNT NUMBER 1234567890')).toBeNull();
+    });
 });
 
 describe('parseScannedText', () => {

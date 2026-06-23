@@ -1,4 +1,5 @@
 import { getNormalizedBank } from './bankSuggestion';
+import banksData from '../../banks.json';
 
 /**
  * Parser for OCR text captured from a printed bank-account sign ("scan to pay").
@@ -115,20 +116,61 @@ const BANK_PATTERNS: { pattern: RegExp; name: string }[] = [
     { pattern: /\bTAJ\b/, name: 'TAJBank' },
 ];
 
+// Generic words shared by many bank names — ignored when matching name tokens
+// so they don't cause false positives.
+const GENERIC_BANK_WORDS = new Set([
+    // Generic bank-name words
+    'BANK', 'MFB', 'MICROFINANCE', 'MICRO', 'FINANCE', 'LIMITED', 'LTD', 'PLC',
+    'NIGERIA', 'NIG', 'COMPANY', 'MONEY', 'DIGITAL', 'SAVINGS', 'LOANS', 'TRUST',
+    'MERCHANT', 'PAYMENT', 'PAYMENTS', 'SERVICE', 'SERVICES', 'GROUP', 'HOLDINGS',
+    'INTERNATIONAL', 'GLOBAL', 'CREDIT', 'CAPITAL', 'INVESTMENT', 'EXPRESS', 'XPRESS',
+    'WALLET', 'FUND', 'FUNDS', 'ENTERPRISE', 'ENTERPRISES', 'VENTURES', 'RESOURCES',
+    // Words that commonly appear on the sign itself (not bank identity)
+    'ACCOUNT', 'ACCT', 'NUMBER', 'NUMBERS', 'NAME', 'TRANSFER', 'TRANSFERS',
+    'MOBILE', 'PHONE', 'ONLINE', 'AGENT', 'AGENCY', 'STORE', 'SHOP', 'CASH', 'POS',
+]);
+
+// Precomputed distinctive bank-name tokens -> bank, longest-first (most specific).
+// Lets us recognise any bank whose name appears on a sign, not just the curated
+// fintech aliases below.
+const BANK_TOKENS: { token: string; name: string; code: string }[] = (() => {
+    const out: { token: string; name: string; code: string }[] = [];
+    for (const bank of banksData.data as { name: string; code: string }[]) {
+        const tokens = bank.name
+            .toUpperCase()
+            .replace(/[^A-Z\s]/g, ' ')
+            .split(/\s+/)
+            .filter((t) => t.length >= 4 && !GENERIC_BANK_WORDS.has(t));
+        for (const token of tokens) out.push({ token, name: bank.name, code: bank.code });
+    }
+    out.sort((a, b) => b.token.length - a.token.length);
+    return out;
+})();
+
 /**
- * Best-effort bank detection from OCR text. Returns the resolved bank (matched
- * against banks.json so we get a usable code) or null when nothing matches —
- * callers should fall back to NUBAN-derived suggestions in that case.
+ * Best-effort bank detection from OCR text. Returns the resolved bank (with a
+ * usable code) or null when nothing matches — callers fall back to NUBAN-derived
+ * suggestions in that case.
  */
 export function extractBank(text: string): { name: string; code: string } | null {
     const upper = text.toUpperCase();
+
+    // 1. Curated aliases first — fintechs / abbreviations whose sign name differs
+    //    from the official bank list (OPAY, GTB, ALAT, MONIEPOINT, …).
     for (const { pattern, name } of BANK_PATTERNS) {
         if (pattern.test(upper)) {
             const resolved = getNormalizedBank(name);
             if (resolved) return { name: resolved.name, code: resolved.code };
-            // Matched a known fintech but couldn't resolve a code — let the
-            // NUBAN suggestion path handle it rather than returning a codeless bank.
-            return null;
+        }
+    }
+
+    // 2. Full bank list — match the most specific (longest) distinctive bank-name
+    //    token that appears as a whole word in the OCR text. This covers any bank
+    //    whose name is on the sign (UBA, Zenith, Providus, Jaiz, Fidelity, …).
+    const padded = ` ${upper.replace(/[^A-Z0-9]/g, ' ').replace(/\s+/g, ' ')} `;
+    for (const { token, name, code } of BANK_TOKENS) {
+        if (padded.includes(` ${token} `)) {
+            return { name, code };
         }
     }
     return null;

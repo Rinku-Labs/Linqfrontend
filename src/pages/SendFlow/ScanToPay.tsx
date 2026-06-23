@@ -86,6 +86,9 @@ export default function ScanToPay() {
         let lastGeminiAt = 0;
         let prevCandidate = '';
         let stableCount = 0;
+        // Remember the first bank read during this scan, so if a later frame locks
+        // the number on a frame that didn't catch the bank word, we still have it.
+        let bestBank: { name: string; code: string } | null = null;
 
         const succeed = (accountNumber: string, bankName: string | null, bankCode: string | null) => {
             if (foundRef.current) return;
@@ -127,6 +130,9 @@ export default function ScanToPay() {
                         const { data } = await worker.recognize(canvas);
                         const text = data.text || '';
                         const local = parseScannedText(text);
+                        if (!bestBank && local.bankName && local.bankCode) {
+                            bestBank = { name: local.bankName, code: local.bankCode };
+                        }
 
                         // Tier 1 — free on-device. Accept immediately on a checksum-valid
                         // NUBAN, or when the SAME number is read across consecutive frames
@@ -134,7 +140,7 @@ export default function ScanToPay() {
                         // printed signs lock on fast).
                         if (local.accountNumber) {
                             if (findMatchingBanks(local.accountNumber).length > 0) {
-                                succeed(local.accountNumber, local.bankName, local.bankCode);
+                                succeed(local.accountNumber, local.bankName || bestBank?.name || null, local.bankCode || bestBank?.code || null);
                                 return;
                             }
                             if (local.accountNumber === prevCandidate) {
@@ -144,7 +150,7 @@ export default function ScanToPay() {
                                 stableCount = 1;
                             }
                             if (stableCount >= STABLE_READS) {
-                                succeed(local.accountNumber, local.bankName, local.bankCode);
+                                succeed(local.accountNumber, local.bankName || bestBank?.name || null, local.bankCode || bestBank?.code || null);
                                 return;
                             }
                         }
@@ -164,7 +170,7 @@ export default function ScanToPay() {
                             lastGeminiAt = now;
                             const cloud = await scanImageForAccount(originalBase64, 'image/jpeg');
                             if (cloud?.accountNumber) {
-                                succeed(cloud.accountNumber, cloud.bankName, cloud.bankCode);
+                                succeed(cloud.accountNumber, cloud.bankName || bestBank?.name || null, cloud.bankCode || bestBank?.code || null);
                                 return;
                             }
                         }
