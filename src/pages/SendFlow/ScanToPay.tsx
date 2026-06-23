@@ -1,26 +1,26 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Loader2, Keyboard, CameraOff, CheckCircle, ScanLine } from 'lucide-react';
+import { Keyboard, CameraOff, CheckCircle, ScanLine, AlertCircle } from 'lucide-react';
 import Header from '../../components/Layout/Header';
 import { scanImageForAccount } from '../../api/scan';
 
 type CameraStatus = 'starting' | 'ready' | 'denied' | 'error';
-type ScanState = 'aiming' | 'reading' | 'found' | 'paused';
+type ScanState = 'aiming' | 'scanning' | 'found' | 'failed';
 
-const CROP_W = 0.86;            // fraction of the frame we send (matches guide box)
+const CROP_W = 0.86;          // fraction of frame sent (matches guide box)
 const CROP_H = 0.6;
-const MAX_OCR_WIDTH = 1100;     // cap image size to keep the call light
-const SETTLE_MS = 900;          // let autofocus settle before the first capture
-const RETRY_MS = 1100;          // gap between auto attempts
-const MAX_AUTO_ATTEMPTS = 4;    // then pause and wait for a tap (protects credits)
+const MAX_OCR_WIDTH = 900;    // smaller image = faster upload + faster/cheaper read
+const JPEG_QUALITY = 0.72;
+const SETTLE_MS = 500;        // brief settle so autofocus catches the sign
 
 export default function ScanToPay() {
     const navigate = useNavigate();
     const videoRef = useRef<HTMLVideoElement>(null);
-    const canvasRef = useRef<HTMLCanvasElement>(null);
+    const cropCanvasRef = useRef<HTMLCanvasElement>(null);   // hidden, builds the Gemini payload
+    const freezeCanvasRef = useRef<HTMLCanvasElement>(null); // visible, the frozen still
     const streamRef = useRef<MediaStream | null>(null);
     const foundRef = useRef(false);
-    const runRef = useRef(0); // bumps to cancel an in-flight scan cycle
+    const runRef = useRef(0);
 
     const [cameraStatus, setCameraStatus] = useState<CameraStatus>('starting');
     const [scanState, setScanState] = useState<ScanState>('aiming');
@@ -32,7 +32,6 @@ export default function ScanToPay() {
         }
     }, []);
 
-    // --- Camera lifecycle ---
     useEffect(() => {
         let cancelled = false;
         const startCamera = async () => {
@@ -42,11 +41,7 @@ export default function ScanToPay() {
             }
             try {
                 const stream = await navigator.mediaDevices.getUserMedia({
-                    video: {
-                        facingMode: { ideal: 'environment' },
-                        width: { ideal: 1280 },
-                        height: { ideal: 720 },
-                    },
+                    video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 720 } },
                     audio: false,
                 });
                 if (cancelled) {
@@ -67,15 +62,25 @@ export default function ScanToPay() {
         startCamera();
         return () => {
             cancelled = true;
-            runRef.current += 1; // cancel any running cycle
+            runRef.current += 1;
             stopCamera();
         };
     }, [stopCamera]);
 
-    // Grab the central guide-box region of the current frame as base64 JPEG.
+    // Draw the current frame onto the visible canvas — the "freeze".
+    const freezeFrame = useCallback(() => {
+        const video = videoRef.current;
+        const fc = freezeCanvasRef.current;
+        if (!video || !fc || !video.videoWidth) return;
+        fc.width = video.videoWidth;
+        fc.height = video.videoHeight;
+        fc.getContext('2d')?.drawImage(video, 0, 0, fc.width, fc.height);
+    }, []);
+
+    // Crop the central region to base64 JPEG for the Gemini call.
     const captureBase64 = useCallback((): string | null => {
         const video = videoRef.current;
-        const canvas = canvasRef.current;
+        const canvas = cropCanvasRef.current;
         if (!video || !canvas || !video.videoWidth || !video.videoHeight) return null;
         const vw = video.videoWidth;
         const vh = video.videoHeight;
@@ -91,7 +96,7 @@ export default function ScanToPay() {
         const ctx = canvas.getContext('2d');
         if (!ctx) return null;
         ctx.drawImage(video, sx, sy, cw, ch, 0, 0, dw, dh);
-        return canvas.toDataURL('image/jpeg', 0.85).split(',')[1] || null;
+        return canvas.toDataURL('image/jpeg', JPEG_QUALITY).split(',')[1] || null;
     }, []);
 
     const succeed = useCallback((accountNumber: string, bankName: string, bankCode: string) => {
@@ -104,54 +109,41 @@ export default function ScanToPay() {
             navigate('/send/details', {
                 state: { scannedPrefill: { accountNumber, bankName: bankName || null, bankCode: bankCode || null } },
             });
-        }, 600);
+        }, 550);
     }, [navigate, stopCamera]);
 
-    // One Gemini-backed scan cycle: capture one frame, send once, retry a few
-    // times automatically, then pause so we don't keep spending on a bad aim.
-    const runScanCycle = useCallback(async () => {
+    // One clean shot: freeze the frame, animate while reading, then resolve.
+    const doScan = useCallback(async () => {
         const myRun = runRef.current;
-        let attempts = 0;
+        const image = captureBase64();
+        freezeFrame();
+        if (!image) {
+            setScanState('failed');
+            return;
+        }
+        setScanState('scanning');
+        const result = await scanImageForAccount(image, 'image/jpeg');
+        if (myRun !== runRef.current || foundRef.current) return;
+        if (result?.accountNumber) {
+            succeed(result.accountNumber, result.bankName, result.bankCode);
+        } else {
+            setScanState('failed');
+        }
+    }, [captureBase64, freezeFrame, succeed]);
 
-        const attempt = async () => {
-            if (myRun !== runRef.current || foundRef.current) return;
-            const image = captureBase64();
-            if (!image) {
-                if (myRun === runRef.current) setTimeout(attempt, 400);
-                return;
-            }
-            setScanState('reading');
-            const result = await scanImageForAccount(image, 'image/jpeg');
-            if (myRun !== runRef.current || foundRef.current) return;
-
-            if (result?.accountNumber) {
-                succeed(result.accountNumber, result.bankName, result.bankCode);
-                return;
-            }
-            attempts += 1;
-            if (attempts >= MAX_AUTO_ATTEMPTS) {
-                setScanState('paused');
-                return;
-            }
-            setScanState('aiming');
-            setTimeout(attempt, RETRY_MS);
-        };
-
-        setTimeout(attempt, SETTLE_MS);
-    }, [captureBase64, succeed]);
-
-    // Start scanning once the camera is live.
+    // Auto-fire one scan when the camera goes live.
     useEffect(() => {
         if (cameraStatus !== 'ready' || foundRef.current) return;
         runRef.current += 1;
-        runScanCycle();
-    }, [cameraStatus, runScanCycle]);
+        const id = setTimeout(() => doScan(), SETTLE_MS);
+        return () => clearTimeout(id);
+    }, [cameraStatus, doScan]);
 
     const scanAgain = () => {
         if (foundRef.current) return;
         runRef.current += 1;
         setScanState('aiming');
-        runScanCycle();
+        setTimeout(() => doScan(), SETTLE_MS);
     };
 
     const goToManualEntry = () => {
@@ -160,10 +152,11 @@ export default function ScanToPay() {
         navigate('/send/details');
     };
 
-    const busy = scanState === 'reading' || scanState === 'aiming';
+    const frozen = scanState === 'scanning' || scanState === 'found';
 
     return (
         <div className="page-enter" style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
+            <style>{`@keyframes linq-scanline {0%{top:3%}50%{top:94%}100%{top:3%}}`}</style>
             <Header title="Scan to pay" showBack />
 
             <div style={{ padding: '0 4px', flex: 1, display: 'flex', flexDirection: 'column' }}>
@@ -175,45 +168,66 @@ export default function ScanToPay() {
                     position: 'relative', width: '100%', aspectRatio: '3 / 4',
                     borderRadius: '24px', overflow: 'hidden', background: '#000', boxShadow: 'var(--card-shadow)',
                 }}>
+                    {/* Live camera */}
                     <video
                         ref={videoRef}
                         playsInline
                         muted
-                        style={{ width: '100%', height: '100%', objectFit: 'cover', display: cameraStatus === 'ready' ? 'block' : 'none' }}
+                        style={{
+                            width: '100%', height: '100%', objectFit: 'cover',
+                            display: cameraStatus === 'ready' ? 'block' : 'none',
+                        }}
                     />
 
+                    {/* Frozen still (shown while reading / on success) */}
+                    <canvas
+                        ref={freezeCanvasRef}
+                        style={{
+                            position: 'absolute', inset: 0, width: '100%', height: '100%',
+                            objectFit: 'cover', display: frozen ? 'block' : 'none',
+                        }}
+                    />
+
+                    {/* Framing box + sweeping scan-line */}
                     {cameraStatus === 'ready' && scanState !== 'found' && (
-                        <>
-                            <div style={{
-                                position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)',
-                                width: `${CROP_W * 100}%`, height: `${CROP_H * 100}%`,
-                                border: '2px solid rgba(255,255,255,0.85)', borderRadius: '16px',
-                                boxShadow: '0 0 0 9999px rgba(0,0,0,0.35)',
-                            }} />
-                            <div style={{
-                                position: 'absolute', top: '16px', left: '50%', transform: 'translateX(-50%)',
-                                display: 'flex', alignItems: 'center', gap: '8px',
-                                background: 'rgba(0,0,0,0.55)', color: '#fff',
-                                padding: '8px 14px', borderRadius: '20px', fontSize: '11px',
-                            }}>
-                                {busy && <Loader2 className="animate-spin" size={14} />}
-                                <span>{scanState === 'reading' ? 'Reading…' : scanState === 'paused' ? 'Tap “Scan again”' : 'Scanning…'}</span>
-                            </div>
-                        </>
+                        <div style={{
+                            position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)',
+                            width: `${CROP_W * 100}%`, height: `${CROP_H * 100}%`,
+                            border: `2px solid ${scanState === 'failed' ? 'rgba(239,68,68,0.85)' : 'rgba(255,255,255,0.85)'}`,
+                            borderRadius: '16px',
+                            boxShadow: '0 0 0 9999px rgba(0,0,0,0.35)',
+                            overflow: 'hidden',
+                        }}>
+                            {scanState === 'scanning' && (
+                                <div style={{
+                                    position: 'absolute', left: 0, right: 0, height: '3px',
+                                    background: 'linear-gradient(to right, transparent, #22c55e, transparent)',
+                                    boxShadow: '0 0 12px 2px rgba(34,197,94,0.7)',
+                                    animation: 'linq-scanline 1.4s ease-in-out infinite',
+                                }} />
+                            )}
+                        </div>
                     )}
 
+                    {/* Status pill */}
+                    {cameraStatus === 'ready' && (scanState === 'scanning' || scanState === 'aiming') && (
+                        <div style={{
+                            position: 'absolute', top: '16px', left: '50%', transform: 'translateX(-50%)',
+                            background: 'rgba(0,0,0,0.55)', color: '#fff',
+                            padding: '8px 14px', borderRadius: '20px', fontSize: '11px',
+                        }}>
+                            Reading…
+                        </div>
+                    )}
+
+                    {/* Non-ready camera states */}
                     {cameraStatus !== 'ready' && (
                         <div style={{
                             position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column',
                             alignItems: 'center', justifyContent: 'center', gap: '12px',
                             color: 'rgba(255,255,255,0.85)', padding: '24px', textAlign: 'center',
                         }}>
-                            {cameraStatus === 'starting' && (
-                                <>
-                                    <Loader2 className="animate-spin" size={28} />
-                                    <span style={{ fontSize: '11px' }}>Starting camera…</span>
-                                </>
-                            )}
+                            {cameraStatus === 'starting' && <span style={{ fontSize: '11px' }}>Starting camera…</span>}
                             {(cameraStatus === 'denied' || cameraStatus === 'error') && (
                                 <>
                                     <CameraOff size={28} />
@@ -227,11 +241,25 @@ export default function ScanToPay() {
                         </div>
                     )}
 
+                    {/* Failed overlay */}
+                    {scanState === 'failed' && cameraStatus === 'ready' && (
+                        <div style={{
+                            position: 'absolute', bottom: '16px', left: '50%', transform: 'translateX(-50%)',
+                            display: 'flex', alignItems: 'center', gap: '8px',
+                            background: 'rgba(0,0,0,0.6)', color: '#fff',
+                            padding: '8px 14px', borderRadius: '20px', fontSize: '11px',
+                        }}>
+                            <AlertCircle size={14} />
+                            <span>Couldn’t read it — line it up and scan again</span>
+                        </div>
+                    )}
+
+                    {/* Success overlay */}
                     {scanState === 'found' && (
                         <div style={{
                             position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column',
                             alignItems: 'center', justifyContent: 'center', gap: '12px',
-                            background: 'rgba(0,0,0,0.6)', color: '#fff',
+                            background: 'rgba(0,0,0,0.45)', color: '#fff',
                         }}>
                             <CheckCircle size={40} color="#22c55e" />
                             <span style={{ fontSize: '12px' }}>Scanned successfully</span>
@@ -239,10 +267,10 @@ export default function ScanToPay() {
                     )}
                 </div>
 
-                <canvas ref={canvasRef} style={{ display: 'none' }} />
+                <canvas ref={cropCanvasRef} style={{ display: 'none' }} />
 
                 <div style={{ marginTop: 'auto', paddingTop: '24px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                    {cameraStatus === 'ready' && scanState === 'paused' && (
+                    {cameraStatus === 'ready' && scanState === 'failed' && (
                         <button
                             onClick={scanAgain}
                             style={{
