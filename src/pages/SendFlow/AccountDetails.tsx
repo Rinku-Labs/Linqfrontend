@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { CheckCircle, User, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import Header from '../../components/Layout/Header';
@@ -28,6 +28,7 @@ const DELETE_THRESHOLD = 80; // px swipe to trigger delete
 
 export default function AccountDetails() {
     const navigate = useNavigate();
+    const location = useLocation();
     const [activeTab, setActiveTab] = useState<'recents' | 'saved'>('saved');
     const [sendType, setSendType] = useState<'bank' | 'username'>('bank');
     const [saveBeneficiary, setSaveBeneficiary] = useState(false);
@@ -100,6 +101,23 @@ export default function AccountDetails() {
     useEffect(() => {
         loadBeneficiaries();
     }, [loadBeneficiaries]);
+
+    // Prefill from the scan-to-pay flow (runs once on mount). Setting the fields
+    // here lets the existing verify effect resolve and display the account name,
+    // and — if the bank wasn't detected — the NUBAN suggestion pills appear.
+    useEffect(() => {
+        const prefill = (location.state as {
+            scannedPrefill?: { accountNumber?: string; bankName?: string | null; bankCode?: string | null };
+        } | null)?.scannedPrefill;
+        if (!prefill?.accountNumber) return;
+        setSendType('bank');
+        setAccountNumber(prefill.accountNumber);
+        if (prefill.bankName && prefill.bankCode) {
+            setBankName(prefill.bankName);
+            setBankCode(prefill.bankCode);
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
 
     // Extract unique recent recipients from orders
     const extractRecentsFromOrders = useCallback((orders: Order[]): Beneficiary[] => {
