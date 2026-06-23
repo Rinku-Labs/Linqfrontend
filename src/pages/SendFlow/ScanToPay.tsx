@@ -13,8 +13,9 @@ type TesseractWorker = Awaited<ReturnType<typeof import('tesseract.js')['createW
 
 // How the auto-scan loop is paced / cost-controlled.
 const FRAME_INTERVAL_MS = 600;      // breather between local reads
-const GEMINI_AFTER_MS = 3500;       // only escalate to the cloud after the free engine struggles
-const GEMINI_COOLDOWN_MS = 4500;    // at most ~one cloud call per this window
+const GEMINI_AFTER_MS = 1500;       // give the free engine a pass or two before any cloud call
+const GEMINI_COOLDOWN_MS = 4000;    // at most ~one cloud call per this window
+const STABLE_READS = 2;             // same number across N frames -> trust it (no cloud needed)
 
 export default function ScanToPay() {
     const navigate = useNavigate();
@@ -83,6 +84,8 @@ export default function ScanToPay() {
         let timer: ReturnType<typeof setTimeout> | null = null;
         const startedAt = Date.now();
         let lastGeminiAt = 0;
+        let prevCandidate = '';
+        let stableCount = 0;
 
         const succeed = (accountNumber: string, bankName: string | null, bankCode: string | null) => {
             if (foundRef.current) return;
@@ -124,16 +127,34 @@ export default function ScanToPay() {
                         const { data } = await worker.recognize(canvas);
                         const text = data.text || '';
                         const local = parseScannedText(text);
-                        if (local.accountNumber && findMatchingBanks(local.accountNumber).length > 0) {
-                            succeed(local.accountNumber, local.bankName, local.bankCode);
-                            return;
+
+                        // Tier 1 — free on-device. Accept immediately on a checksum-valid
+                        // NUBAN, or when the SAME number is read across consecutive frames
+                        // (a stable read we can trust without the cloud — this is what makes
+                        // printed signs lock on fast).
+                        if (local.accountNumber) {
+                            if (findMatchingBanks(local.accountNumber).length > 0) {
+                                succeed(local.accountNumber, local.bankName, local.bankCode);
+                                return;
+                            }
+                            if (local.accountNumber === prevCandidate) {
+                                stableCount += 1;
+                            } else {
+                                prevCandidate = local.accountNumber;
+                                stableCount = 1;
+                            }
+                            if (stableCount >= STABLE_READS) {
+                                succeed(local.accountNumber, local.bankName, local.bankCode);
+                                return;
+                            }
                         }
 
-                        // Tier 2 — cloud fallback, but only when there's plausibly a sign in
-                        // view (so we never burn a paid call on a blank frame), after the
-                        // free engine has had a few seconds, and throttled by a cooldown.
+                        // Tier 2 — accurate cloud read (Gemini). Triggered as soon as a sign is
+                        // detected in frame — a bank keyword, an account-shaped number, or a
+                        // cluster of digits — rather than waiting for the free engine to give up.
+                        // Throttled by a cooldown so it stays cheap; no-ops with no API key.
                         const digitCount = (text.match(/\d/g) || []).length;
-                        const hasSignal = !!local.accountNumber || !!local.bankName || digitCount >= 8;
+                        const hasSignal = !!local.bankName || !!local.accountNumber || digitCount >= 8;
                         const now = Date.now();
                         if (
                             hasSignal &&
@@ -194,7 +215,7 @@ export default function ScanToPay() {
 
             <div style={{ padding: '0 4px', flex: 1, display: 'flex', flexDirection: 'column' }}>
                 <p style={{ fontSize: '11px', color: 'var(--text-secondary)', marginBottom: '16px', textAlign: 'center' }}>
-                    Hold the account number inside the box — it scans automatically.
+                    Point at the account number — it scans automatically.
                 </p>
 
                 {/* Camera viewport */}
