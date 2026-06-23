@@ -5,6 +5,8 @@ import { toast } from 'sonner';
 import Header from '../../components/Layout/Header';
 import { preprocessForOcr } from '../../utils/imagePreprocess';
 import { parseScannedText } from '../../utils/scanParser';
+import { findMatchingBanks } from '../../utils/bankSuggestion';
+import { scanImageForAccount } from '../../api/scan';
 
 type CameraStatus = 'starting' | 'ready' | 'denied' | 'error';
 
@@ -69,6 +71,19 @@ export default function ScanToPay() {
         navigate('/send/details');
     };
 
+    const finishWith = (accountNumber: string, bankName: string | null, bankCode: string | null) => {
+        stopCamera();
+        navigate('/send/details', {
+            state: {
+                scannedPrefill: {
+                    accountNumber,
+                    bankName: bankName || null,
+                    bankCode: bankCode || null,
+                },
+            },
+        });
+    };
+
     const handleCapture = async () => {
         const video = videoRef.current;
         const canvas = canvasRef.current;
@@ -85,8 +100,11 @@ export default function ScanToPay() {
             if (!ctx) throw new Error('canvas unavailable');
             ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
-            // Clean it up, then OCR. Tesseract is lazy-loaded so it never bloats
-            // the initial bundle.
+            // Keep the original colour frame for the cloud fallback BEFORE we
+            // binarize the canvas for Tesseract — Gemini reads the real photo better.
+            const originalBase64 = canvas.toDataURL('image/jpeg', 0.85).split(',')[1];
+
+            // Tier 1 — free, on-device OCR (Tesseract, lazy-loaded). Best for printed signs.
             preprocessForOcr(canvas);
             const { createWorker } = await import('tesseract.js');
             worker = await createWorker('eng');
@@ -94,23 +112,32 @@ export default function ScanToPay() {
                 tessedit_char_whitelist: '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ ',
             });
             const { data } = await worker.recognize(canvas);
+            const local = parseScannedText(data.text || '');
 
-            const parsed = parseScannedText(data.text || '');
-            if (!parsed.accountNumber) {
-                toast.error("Couldn't read an account number. Hold steady and try again, or type it in.");
+            // Trust the local read only when it produced a checksum-valid NUBAN
+            // (a real account number matches at least one bank). This avoids
+            // accepting OCR garbage and is what decides whether we spend a cloud call.
+            if (local.accountNumber && findMatchingBanks(local.accountNumber).length > 0) {
+                finishWith(local.accountNumber, local.bankName, local.bankCode);
                 return;
             }
 
-            stopCamera();
-            navigate('/send/details', {
-                state: {
-                    scannedPrefill: {
-                        accountNumber: parsed.accountNumber,
-                        bankName: parsed.bankName,
-                        bankCode: parsed.bankCode,
-                    },
-                },
-            });
+            // Tier 2 — cloud fallback (Gemini) for messy/handwritten signs.
+            // Returns null silently when the backend has no GEMINI_API_KEY set.
+            const cloud = await scanImageForAccount(originalBase64, 'image/jpeg');
+            if (cloud?.accountNumber) {
+                finishWith(cloud.accountNumber, cloud.bankName, cloud.bankCode);
+                return;
+            }
+
+            // Last resort: a local number that didn't pass the checksum is still
+            // better than nothing — the verify + confirm screen will catch a bad read.
+            if (local.accountNumber) {
+                finishWith(local.accountNumber, local.bankName, local.bankCode);
+                return;
+            }
+
+            toast.error("Couldn't read an account number. Hold steady and try again, or type it in.");
         } catch {
             toast.error('Scan failed. Please try again or type the details in.');
         } finally {
