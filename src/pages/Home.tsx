@@ -1,4 +1,4 @@
-import { ArrowUpRight, ArrowDownLeft, RefreshCw, Smartphone, Zap, Eye, EyeOff, Wallet, Inbox, Copy } from 'lucide-react';
+import { ArrowUpRight, ArrowDownLeft, RefreshCw, Smartphone, Zap, Eye, EyeOff, Wallet, Inbox, Copy, ScanLine } from 'lucide-react';
 import ProductTour from '../components/ProductTour';
 import { getTransactionIcon } from '../utils/transactionIcons';
 import clickToEarnImg from '../assets/click-to-earn.png';
@@ -366,7 +366,26 @@ export default function Home() {
                     </div>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-
+                    <button
+                        onClick={() => navigate('/send/scan')}
+                        aria-label="Scan to pay"
+                        title="Scan to pay"
+                        style={{
+                            background: 'var(--surface)',
+                            border: '1px solid var(--border-color)',
+                            borderRadius: '50%',
+                            width: '40px',
+                            height: '40px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            cursor: 'pointer',
+                            transition: 'all 0.3s ease',
+                            boxShadow: 'var(--card-shadow)',
+                        }}
+                    >
+                        <ScanLine size={20} color="var(--text-main)" />
+                    </button>
                     <ChainSelector />
                     <ThemeToggle />
                 </div>
