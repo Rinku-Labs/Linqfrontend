@@ -167,8 +167,12 @@ export default function ScanToPay() {
             try {
                 const { createWorker } = await import('tesseract.js');
                 worker = await createWorker('eng');
+                // Allow mixed case + a little punctuation so bank words like
+                // "Moniepoint" read naturally. (An uppercase-only whitelist fights
+                // mixed-case names.) The parser uppercases/extracts what it needs.
                 await worker.setParameters({
-                    tessedit_char_whitelist: '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ ',
+                    tessedit_char_whitelist:
+                        '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz &.-',
                 });
                 if (!active) {
                     await worker.terminate().catch(() => undefined);
