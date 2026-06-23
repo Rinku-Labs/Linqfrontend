@@ -1,20 +1,18 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Loader2, Keyboard, CameraOff, CheckCircle } from 'lucide-react';
+import { Loader2, Keyboard, CameraOff, CheckCircle, ScanLine } from 'lucide-react';
 import Header from '../../components/Layout/Header';
-import { preprocessForOcr } from '../../utils/imagePreprocess';
-import { parseScannedText } from '../../utils/scanParser';
-import { findMatchingBanks } from '../../utils/bankSuggestion';
+import { scanImageForAccount } from '../../api/scan';
 
 type CameraStatus = 'starting' | 'ready' | 'denied' | 'error';
-type ScanState = 'idle' | 'scanning' | 'found';
-type TesseractWorker = Awaited<ReturnType<typeof import('tesseract.js')['createWorker']>>;
+type ScanState = 'aiming' | 'reading' | 'found' | 'paused';
 
-const FRAME_INTERVAL_MS = 300;   // small breather between reads
-const STABLE_READS = 2;          // same number across N frames -> trust it
-const CROP_W = 0.84;             // fraction of the frame we OCR (matches the guide box)
-const CROP_H = 0.54;
-const MAX_OCR_WIDTH = 1000;      // cap OCR input size for speed on high-res cameras
+const CROP_W = 0.86;            // fraction of the frame we send (matches guide box)
+const CROP_H = 0.6;
+const MAX_OCR_WIDTH = 1100;     // cap image size to keep the call light
+const SETTLE_MS = 900;          // let autofocus settle before the first capture
+const RETRY_MS = 1100;          // gap between auto attempts
+const MAX_AUTO_ATTEMPTS = 4;    // then pause and wait for a tap (protects credits)
 
 export default function ScanToPay() {
     const navigate = useNavigate();
@@ -22,9 +20,10 @@ export default function ScanToPay() {
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const streamRef = useRef<MediaStream | null>(null);
     const foundRef = useRef(false);
+    const runRef = useRef(0); // bumps to cancel an in-flight scan cycle
 
     const [cameraStatus, setCameraStatus] = useState<CameraStatus>('starting');
-    const [scanState, setScanState] = useState<ScanState>('idle');
+    const [scanState, setScanState] = useState<ScanState>('aiming');
 
     const stopCamera = useCallback(() => {
         if (streamRef.current) {
@@ -36,7 +35,6 @@ export default function ScanToPay() {
     // --- Camera lifecycle ---
     useEffect(() => {
         let cancelled = false;
-
         const startCamera = async () => {
             if (!navigator.mediaDevices?.getUserMedia) {
                 setCameraStatus('error');
@@ -66,136 +64,103 @@ export default function ScanToPay() {
                 setCameraStatus(name === 'NotAllowedError' ? 'denied' : 'error');
             }
         };
-
         startCamera();
         return () => {
             cancelled = true;
+            runRef.current += 1; // cancel any running cycle
             stopCamera();
         };
     }, [stopCamera]);
 
-    // --- Continuous on-device auto-scan (no button, no cloud) ---
+    // Grab the central guide-box region of the current frame as base64 JPEG.
+    const captureBase64 = useCallback((): string | null => {
+        const video = videoRef.current;
+        const canvas = canvasRef.current;
+        if (!video || !canvas || !video.videoWidth || !video.videoHeight) return null;
+        const vw = video.videoWidth;
+        const vh = video.videoHeight;
+        const cw = Math.max(1, Math.round(vw * CROP_W));
+        const ch = Math.max(1, Math.round(vh * CROP_H));
+        const sx = Math.round((vw - cw) / 2);
+        const sy = Math.round((vh - ch) / 2);
+        const scale = Math.min(1, MAX_OCR_WIDTH / cw);
+        const dw = Math.max(1, Math.round(cw * scale));
+        const dh = Math.max(1, Math.round(ch * scale));
+        canvas.width = dw;
+        canvas.height = dh;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return null;
+        ctx.drawImage(video, sx, sy, cw, ch, 0, 0, dw, dh);
+        return canvas.toDataURL('image/jpeg', 0.85).split(',')[1] || null;
+    }, []);
+
+    const succeed = useCallback((accountNumber: string, bankName: string, bankCode: string) => {
+        if (foundRef.current) return;
+        foundRef.current = true;
+        runRef.current += 1;
+        setScanState('found');
+        setTimeout(() => {
+            stopCamera();
+            navigate('/send/details', {
+                state: { scannedPrefill: { accountNumber, bankName: bankName || null, bankCode: bankCode || null } },
+            });
+        }, 600);
+    }, [navigate, stopCamera]);
+
+    // One Gemini-backed scan cycle: capture one frame, send once, retry a few
+    // times automatically, then pause so we don't keep spending on a bad aim.
+    const runScanCycle = useCallback(async () => {
+        const myRun = runRef.current;
+        let attempts = 0;
+
+        const attempt = async () => {
+            if (myRun !== runRef.current || foundRef.current) return;
+            const image = captureBase64();
+            if (!image) {
+                if (myRun === runRef.current) setTimeout(attempt, 400);
+                return;
+            }
+            setScanState('reading');
+            const result = await scanImageForAccount(image, 'image/jpeg');
+            if (myRun !== runRef.current || foundRef.current) return;
+
+            if (result?.accountNumber) {
+                succeed(result.accountNumber, result.bankName, result.bankCode);
+                return;
+            }
+            attempts += 1;
+            if (attempts >= MAX_AUTO_ATTEMPTS) {
+                setScanState('paused');
+                return;
+            }
+            setScanState('aiming');
+            setTimeout(attempt, RETRY_MS);
+        };
+
+        setTimeout(attempt, SETTLE_MS);
+    }, [captureBase64, succeed]);
+
+    // Start scanning once the camera is live.
     useEffect(() => {
-        if (cameraStatus !== 'ready') return;
+        if (cameraStatus !== 'ready' || foundRef.current) return;
+        runRef.current += 1;
+        runScanCycle();
+    }, [cameraStatus, runScanCycle]);
 
-        let active = true;
-        let worker: TesseractWorker | null = null;
-        let timer: ReturnType<typeof setTimeout> | null = null;
-        let prevCandidate = '';
-        let stableCount = 0;
-        let bestBank: { name: string; code: string } | null = null;
-
-        const succeed = (accountNumber: string, bankName: string | null, bankCode: string | null) => {
-            if (foundRef.current) return;
-            foundRef.current = true;
-            active = false;
-            setScanState('found');
-            setTimeout(() => {
-                stopCamera();
-                navigate('/send/details', {
-                    state: { scannedPrefill: { accountNumber, bankName: bankName || null, bankCode: bankCode || null } },
-                });
-            }, 600);
-        };
-
-        const tick = async () => {
-            if (!active || foundRef.current) return;
-            const video = videoRef.current;
-            const canvas = canvasRef.current;
-
-            if (video && canvas && worker && video.videoWidth && video.videoHeight) {
-                try {
-                    // Crop to the central guide box and cap the OCR size — far less
-                    // for Tesseract to read = faster, and cleaner = bank word read too.
-                    const vw = video.videoWidth;
-                    const vh = video.videoHeight;
-                    const cw = Math.max(1, Math.round(vw * CROP_W));
-                    const ch = Math.max(1, Math.round(vh * CROP_H));
-                    const sx = Math.round((vw - cw) / 2);
-                    const sy = Math.round((vh - ch) / 2);
-                    const scale = Math.min(1, MAX_OCR_WIDTH / cw);
-                    const dw = Math.max(1, Math.round(cw * scale));
-                    const dh = Math.max(1, Math.round(ch * scale));
-
-                    canvas.width = dw;
-                    canvas.height = dh;
-                    const ctx = canvas.getContext('2d', { willReadFrequently: true });
-                    if (ctx) {
-                        ctx.drawImage(video, sx, sy, cw, ch, 0, 0, dw, dh);
-                        preprocessForOcr(canvas);
-                        const { data } = await worker.recognize(canvas);
-                        const text = data.text || '';
-                        const local = parseScannedText(text);
-
-                        if (!bestBank && local.bankName && local.bankCode) {
-                            bestBank = { name: local.bankName, code: local.bankCode };
-                        }
-
-                        if (local.accountNumber) {
-                            const bankName = local.bankName || bestBank?.name || null;
-                            const bankCode = local.bankCode || bestBank?.code || null;
-
-                            // Trust a checksum-valid NUBAN immediately, or the same number
-                            // read across consecutive frames.
-                            if (findMatchingBanks(local.accountNumber).length > 0) {
-                                succeed(local.accountNumber, bankName, bankCode);
-                                return;
-                            }
-                            if (local.accountNumber === prevCandidate) {
-                                stableCount += 1;
-                            } else {
-                                prevCandidate = local.accountNumber;
-                                stableCount = 1;
-                            }
-                            if (stableCount >= STABLE_READS) {
-                                succeed(local.accountNumber, bankName, bankCode);
-                                return;
-                            }
-                        }
-                    }
-                } catch {
-                    // Ignore a bad frame and keep scanning.
-                }
-            }
-
-            if (active && !foundRef.current) {
-                timer = setTimeout(tick, FRAME_INTERVAL_MS);
-            }
-        };
-
-        (async () => {
-            try {
-                const { createWorker } = await import('tesseract.js');
-                worker = await createWorker('eng');
-                // Allow mixed case + a little punctuation so bank words like
-                // "Moniepoint" read naturally. (An uppercase-only whitelist fights
-                // mixed-case names.) The parser uppercases/extracts what it needs.
-                await worker.setParameters({
-                    tessedit_char_whitelist:
-                        '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz &.-',
-                });
-                if (!active) {
-                    await worker.terminate().catch(() => undefined);
-                    return;
-                }
-                setScanState('scanning');
-                tick();
-            } catch {
-                // OCR engine failed to load — user can still type it in.
-            }
-        })();
-
-        return () => {
-            active = false;
-            if (timer) clearTimeout(timer);
-            if (worker) worker.terminate().catch(() => undefined);
-        };
-    }, [cameraStatus, navigate, stopCamera]);
+    const scanAgain = () => {
+        if (foundRef.current) return;
+        runRef.current += 1;
+        setScanState('aiming');
+        runScanCycle();
+    };
 
     const goToManualEntry = () => {
+        runRef.current += 1;
         stopCamera();
         navigate('/send/details');
     };
+
+    const busy = scanState === 'reading' || scanState === 'aiming';
 
     return (
         <div className="page-enter" style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
@@ -206,15 +171,9 @@ export default function ScanToPay() {
                     Fit the account number and bank name inside the box — it scans automatically.
                 </p>
 
-                {/* Camera viewport */}
                 <div style={{
-                    position: 'relative',
-                    width: '100%',
-                    aspectRatio: '3 / 4',
-                    borderRadius: '24px',
-                    overflow: 'hidden',
-                    background: '#000',
-                    boxShadow: 'var(--card-shadow)',
+                    position: 'relative', width: '100%', aspectRatio: '3 / 4',
+                    borderRadius: '24px', overflow: 'hidden', background: '#000', boxShadow: 'var(--card-shadow)',
                 }}>
                     <video
                         ref={videoRef}
@@ -223,15 +182,12 @@ export default function ScanToPay() {
                         style={{ width: '100%', height: '100%', objectFit: 'cover', display: cameraStatus === 'ready' ? 'block' : 'none' }}
                     />
 
-                    {/* Framing guide (matches the OCR crop) + live "scanning" pill */}
                     {cameraStatus === 'ready' && scanState !== 'found' && (
                         <>
                             <div style={{
-                                position: 'absolute',
-                                top: '50%', left: '50%', transform: 'translate(-50%, -50%)',
+                                position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)',
                                 width: `${CROP_W * 100}%`, height: `${CROP_H * 100}%`,
-                                border: '2px solid rgba(255,255,255,0.85)',
-                                borderRadius: '16px',
+                                border: '2px solid rgba(255,255,255,0.85)', borderRadius: '16px',
                                 boxShadow: '0 0 0 9999px rgba(0,0,0,0.35)',
                             }} />
                             <div style={{
@@ -240,18 +196,17 @@ export default function ScanToPay() {
                                 background: 'rgba(0,0,0,0.55)', color: '#fff',
                                 padding: '8px 14px', borderRadius: '20px', fontSize: '11px',
                             }}>
-                                <Loader2 className="animate-spin" size={14} />
-                                <span>Scanning…</span>
+                                {busy && <Loader2 className="animate-spin" size={14} />}
+                                <span>{scanState === 'reading' ? 'Reading…' : scanState === 'paused' ? 'Tap “Scan again”' : 'Scanning…'}</span>
                             </div>
                         </>
                     )}
 
-                    {/* Non-ready states */}
                     {cameraStatus !== 'ready' && (
                         <div style={{
-                            position: 'absolute', inset: 0,
-                            display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-                            gap: '12px', color: 'rgba(255,255,255,0.85)', padding: '24px', textAlign: 'center',
+                            position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column',
+                            alignItems: 'center', justifyContent: 'center', gap: '12px',
+                            color: 'rgba(255,255,255,0.85)', padding: '24px', textAlign: 'center',
                         }}>
                             {cameraStatus === 'starting' && (
                                 <>
@@ -272,12 +227,11 @@ export default function ScanToPay() {
                         </div>
                     )}
 
-                    {/* Success overlay */}
                     {scanState === 'found' && (
                         <div style={{
-                            position: 'absolute', inset: 0,
-                            display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-                            gap: '12px', background: 'rgba(0,0,0,0.6)', color: '#fff',
+                            position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column',
+                            alignItems: 'center', justifyContent: 'center', gap: '12px',
+                            background: 'rgba(0,0,0,0.6)', color: '#fff',
                         }}>
                             <CheckCircle size={40} color="#22c55e" />
                             <span style={{ fontSize: '12px' }}>Scanned successfully</span>
@@ -285,22 +239,29 @@ export default function ScanToPay() {
                     )}
                 </div>
 
-                {/* Hidden working canvas */}
                 <canvas ref={canvasRef} style={{ display: 'none' }} />
 
                 <div style={{ marginTop: 'auto', paddingTop: '24px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                    {cameraStatus === 'ready' && scanState === 'paused' && (
+                        <button
+                            onClick={scanAgain}
+                            style={{
+                                width: '100%', padding: '16px', borderRadius: '16px', border: 'none',
+                                background: 'var(--primary)', color: '#fff', fontWeight: 600, fontSize: '14px',
+                                cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
+                            }}
+                        >
+                            <ScanLine size={18} />
+                            Scan again
+                        </button>
+                    )}
+
                     <button
                         onClick={goToManualEntry}
                         style={{
-                            width: '100%',
-                            padding: '14px',
-                            borderRadius: '16px',
-                            border: '1px solid var(--border-color)',
-                            background: 'var(--surface)',
-                            color: 'var(--text-main)',
-                            fontWeight: 500,
-                            fontSize: '13px',
-                            cursor: 'pointer',
+                            width: '100%', padding: '14px', borderRadius: '16px',
+                            border: '1px solid var(--border-color)', background: 'var(--surface)',
+                            color: 'var(--text-main)', fontWeight: 500, fontSize: '13px', cursor: 'pointer',
                             display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
                         }}
                     >
