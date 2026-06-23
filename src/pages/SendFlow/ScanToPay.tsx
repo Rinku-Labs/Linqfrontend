@@ -5,17 +5,16 @@ import Header from '../../components/Layout/Header';
 import { preprocessForOcr } from '../../utils/imagePreprocess';
 import { parseScannedText } from '../../utils/scanParser';
 import { findMatchingBanks } from '../../utils/bankSuggestion';
-import { scanImageForAccount } from '../../api/scan';
 
 type CameraStatus = 'starting' | 'ready' | 'denied' | 'error';
 type ScanState = 'idle' | 'scanning' | 'found';
 type TesseractWorker = Awaited<ReturnType<typeof import('tesseract.js')['createWorker']>>;
 
-// How the auto-scan loop is paced / cost-controlled.
-const FRAME_INTERVAL_MS = 600;      // breather between local reads
-const GEMINI_AFTER_MS = 1500;       // give the free engine a pass or two before any cloud call
-const GEMINI_COOLDOWN_MS = 4000;    // at most ~one cloud call per this window
-const STABLE_READS = 2;             // same number across N frames -> trust it (no cloud needed)
+const FRAME_INTERVAL_MS = 300;   // small breather between reads
+const STABLE_READS = 2;          // same number across N frames -> trust it
+const CROP_W = 0.84;             // fraction of the frame we OCR (matches the guide box)
+const CROP_H = 0.54;
+const MAX_OCR_WIDTH = 1000;      // cap OCR input size for speed on high-res cameras
 
 export default function ScanToPay() {
     const navigate = useNavigate();
@@ -75,19 +74,15 @@ export default function ScanToPay() {
         };
     }, [stopCamera]);
 
-    // --- Continuous auto-scan loop (no button) ---
+    // --- Continuous on-device auto-scan (no button, no cloud) ---
     useEffect(() => {
         if (cameraStatus !== 'ready') return;
 
         let active = true;
         let worker: TesseractWorker | null = null;
         let timer: ReturnType<typeof setTimeout> | null = null;
-        const startedAt = Date.now();
-        let lastGeminiAt = 0;
         let prevCandidate = '';
         let stableCount = 0;
-        // Remember the first bank read during this scan, so if a later frame locks
-        // the number on a frame that didn't catch the bank word, we still have it.
         let bestBank: { name: string; code: string } | null = null;
 
         const succeed = (accountNumber: string, bankName: string | null, bankCode: string | null) => {
@@ -98,15 +93,9 @@ export default function ScanToPay() {
             setTimeout(() => {
                 stopCamera();
                 navigate('/send/details', {
-                    state: {
-                        scannedPrefill: {
-                            accountNumber,
-                            bankName: bankName || null,
-                            bankCode: bankCode || null,
-                        },
-                    },
+                    state: { scannedPrefill: { accountNumber, bankName: bankName || null, bankCode: bankCode || null } },
                 });
-            }, 700);
+            }, 600);
         };
 
         const tick = async () => {
@@ -116,31 +105,40 @@ export default function ScanToPay() {
 
             if (video && canvas && worker && video.videoWidth && video.videoHeight) {
                 try {
-                    canvas.width = video.videoWidth;
-                    canvas.height = video.videoHeight;
+                    // Crop to the central guide box and cap the OCR size — far less
+                    // for Tesseract to read = faster, and cleaner = bank word read too.
+                    const vw = video.videoWidth;
+                    const vh = video.videoHeight;
+                    const cw = Math.max(1, Math.round(vw * CROP_W));
+                    const ch = Math.max(1, Math.round(vh * CROP_H));
+                    const sx = Math.round((vw - cw) / 2);
+                    const sy = Math.round((vh - ch) / 2);
+                    const scale = Math.min(1, MAX_OCR_WIDTH / cw);
+                    const dw = Math.max(1, Math.round(cw * scale));
+                    const dh = Math.max(1, Math.round(ch * scale));
+
+                    canvas.width = dw;
+                    canvas.height = dh;
                     const ctx = canvas.getContext('2d', { willReadFrequently: true });
                     if (ctx) {
-                        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-
-                        // Keep the original colour frame for the cloud before binarizing.
-                        const originalBase64 = canvas.toDataURL('image/jpeg', 0.8).split(',')[1];
-
-                        // Tier 1 — free on-device read. Trust only a checksum-valid NUBAN.
+                        ctx.drawImage(video, sx, sy, cw, ch, 0, 0, dw, dh);
                         preprocessForOcr(canvas);
                         const { data } = await worker.recognize(canvas);
                         const text = data.text || '';
                         const local = parseScannedText(text);
+
                         if (!bestBank && local.bankName && local.bankCode) {
                             bestBank = { name: local.bankName, code: local.bankCode };
                         }
 
-                        // Tier 1 — free on-device. Accept immediately on a checksum-valid
-                        // NUBAN, or when the SAME number is read across consecutive frames
-                        // (a stable read we can trust without the cloud — this is what makes
-                        // printed signs lock on fast).
                         if (local.accountNumber) {
+                            const bankName = local.bankName || bestBank?.name || null;
+                            const bankCode = local.bankCode || bestBank?.code || null;
+
+                            // Trust a checksum-valid NUBAN immediately, or the same number
+                            // read across consecutive frames.
                             if (findMatchingBanks(local.accountNumber).length > 0) {
-                                succeed(local.accountNumber, local.bankName || bestBank?.name || null, local.bankCode || bestBank?.code || null);
+                                succeed(local.accountNumber, bankName, bankCode);
                                 return;
                             }
                             if (local.accountNumber === prevCandidate) {
@@ -150,27 +148,7 @@ export default function ScanToPay() {
                                 stableCount = 1;
                             }
                             if (stableCount >= STABLE_READS) {
-                                succeed(local.accountNumber, local.bankName || bestBank?.name || null, local.bankCode || bestBank?.code || null);
-                                return;
-                            }
-                        }
-
-                        // Tier 2 — accurate cloud read (Gemini). Triggered as soon as a sign is
-                        // detected in frame — a bank keyword, an account-shaped number, or a
-                        // cluster of digits — rather than waiting for the free engine to give up.
-                        // Throttled by a cooldown so it stays cheap; no-ops with no API key.
-                        const digitCount = (text.match(/\d/g) || []).length;
-                        const hasSignal = !!local.bankName || !!local.accountNumber || digitCount >= 8;
-                        const now = Date.now();
-                        if (
-                            hasSignal &&
-                            now - startedAt > GEMINI_AFTER_MS &&
-                            now - lastGeminiAt > GEMINI_COOLDOWN_MS
-                        ) {
-                            lastGeminiAt = now;
-                            const cloud = await scanImageForAccount(originalBase64, 'image/jpeg');
-                            if (cloud?.accountNumber) {
-                                succeed(cloud.accountNumber, cloud.bankName || bestBank?.name || null, cloud.bankCode || bestBank?.code || null);
+                                succeed(local.accountNumber, bankName, bankCode);
                                 return;
                             }
                         }
@@ -221,7 +199,7 @@ export default function ScanToPay() {
 
             <div style={{ padding: '0 4px', flex: 1, display: 'flex', flexDirection: 'column' }}>
                 <p style={{ fontSize: '11px', color: 'var(--text-secondary)', marginBottom: '16px', textAlign: 'center' }}>
-                    Point at the account number — it scans automatically.
+                    Fit the account number and bank name inside the box — it scans automatically.
                 </p>
 
                 {/* Camera viewport */}
@@ -241,13 +219,13 @@ export default function ScanToPay() {
                         style={{ width: '100%', height: '100%', objectFit: 'cover', display: cameraStatus === 'ready' ? 'block' : 'none' }}
                     />
 
-                    {/* Framing guide + live "scanning" pill */}
+                    {/* Framing guide (matches the OCR crop) + live "scanning" pill */}
                     {cameraStatus === 'ready' && scanState !== 'found' && (
                         <>
                             <div style={{
                                 position: 'absolute',
                                 top: '50%', left: '50%', transform: 'translate(-50%, -50%)',
-                                width: '78%', height: '36%',
+                                width: `${CROP_W * 100}%`, height: `${CROP_H * 100}%`,
                                 border: '2px solid rgba(255,255,255,0.85)',
                                 borderRadius: '16px',
                                 boxShadow: '0 0 0 9999px rgba(0,0,0,0.35)',
