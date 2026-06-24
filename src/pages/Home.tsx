@@ -323,18 +323,18 @@ export default function Home() {
         <div className="page-enter" style={{ paddingBottom: '20px' }} {...pullHandlers}>
             <PullToRefreshIndicator pullDistance={pullDistance} isRefreshing={isRefreshing} />
             {/* Header */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px', gap: '12px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flex: 1, minWidth: 0 }}>
                     <div style={{
-                        width: '40px', height: '40px', borderRadius: '12px',
+                        width: '40px', height: '40px', borderRadius: '12px', flexShrink: 0,
                         display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden',
                     }}>
                         <img src={logo} alt="Logo" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                     </div>
-                    <div>
+                    <div style={{ minWidth: 0 }}>
                         <p style={{ fontSize: '9px', color: 'var(--text-secondary)' }}>Welcome back,</p>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                            <p style={{ fontWeight: 600, color: 'var(--text-main)', maxWidth: '150px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', minWidth: 0 }}>
+                            <p style={{ fontWeight: 600, color: 'var(--text-main)', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                                 @{username?.toLowerCase()}
                             </p>
                             <button
@@ -356,7 +356,8 @@ export default function Home() {
                                     display: 'flex',
                                     alignItems: 'center',
                                     color: 'var(--text-secondary)',
-                                    fontSize: '10px' // For the checkmark
+                                    fontSize: '10px', // For the checkmark
+                                    flexShrink: 0,
                                 }}
                                 title="Copy username"
                             >
@@ -365,7 +366,7 @@ export default function Home() {
                         </div>
                     </div>
                 </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexShrink: 0 }}>
                     <button
                         onClick={() => navigate('/send/scan')}
                         aria-label="Scan to pay"
