@@ -4,6 +4,7 @@ import { Loader2, Keyboard, CameraOff, CheckCircle, ScanLine } from 'lucide-reac
 import Header from '../../components/Layout/Header';
 import { scanImageForAccount } from '../../api/scan';
 import { parseScannedText } from '../../utils/scanParser';
+import { findMatchingBanks } from '../../utils/bankSuggestion';
 import { preloadOnDeviceOcr, recognizeOnDevice, type OcrPixels } from '../../utils/onDeviceOcr';
 
 type CameraStatus = 'starting' | 'ready' | 'denied' | 'error';
@@ -118,10 +119,11 @@ export default function ScanToPay() {
     }, [navigate, stopCamera]);
 
     // Hybrid scan cycle. Each attempt captures one frame and tries the free,
-    // private on-device engine (PaddleOCR) first. If that can't read a valid
-    // 10-digit NUBAN — typically messy handwriting — we fall back to one cloud
-    // (Gemini) call from the second attempt onward. After a few tries we pause
-    // so we don't keep spending or burning CPU on a bad aim.
+    // private on-device engine (PaddleOCR) first. We only trust its number if it
+    // passes the NUBAN checksum — so a misread (typically handwriting) is never
+    // prefilled; instead we fall straight to the cloud (Gemini) reader, which is
+    // far better at handwriting. Printed signs resolve instantly on-device. After
+    // a few tries we pause so we don't keep spending or burning CPU on a bad aim.
     const runScanCycle = useCallback(async () => {
         const myRun = runRef.current;
         let attempts = 0;
@@ -137,23 +139,24 @@ export default function ScanToPay() {
             setScanState('reading');
 
             // 1) On-device first (free, unlimited, image never leaves the phone).
+            //    Accept only a checksum-valid NUBAN — this blocks misread digits
+            //    from being trusted, which is the main risk on handwriting.
             const text = await recognizeOnDevice(frame.pixels);
             if (cancelled()) return;
             const local = text ? parseScannedText(text) : null;
-            if (local?.accountNumber) {
+            if (local?.accountNumber && findMatchingBanks(local.accountNumber).length > 0) {
                 succeed(local.accountNumber, local.bankName ?? '', local.bankCode ?? '');
                 return;
             }
 
-            // 2) Cloud fallback for the hard cases, from the 2nd attempt onward
-            //    (the first attempt stays fully on-device for printed signs).
-            if (attempts >= 1) {
-                const result = await scanImageForAccount(frame.base64, 'image/jpeg');
-                if (cancelled()) return;
-                if (result?.accountNumber) {
-                    succeed(result.accountNumber, result.bankName, result.bankCode);
-                    return;
-                }
+            // 2) Cloud fallback (Gemini) — engages immediately whenever on-device
+            //    can't produce a valid number (handwriting / misreads), not just
+            //    from the 2nd attempt, so the hard cases resolve on the first try.
+            const result = await scanImageForAccount(frame.base64, 'image/jpeg');
+            if (cancelled()) return;
+            if (result?.accountNumber) {
+                succeed(result.accountNumber, result.bankName, result.bankCode);
+                return;
             }
 
             attempts += 1;
