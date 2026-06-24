@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { Loader2, Keyboard, CameraOff, CheckCircle, ScanLine } from 'lucide-react';
 import Header from '../../components/Layout/Header';
 import { scanImageForAccount } from '../../api/scan';
+import { parseScannedText } from '../../utils/scanParser';
+import { preloadOnDeviceOcr, recognizeOnDevice, type OcrPixels } from '../../utils/onDeviceOcr';
 
 type CameraStatus = 'starting' | 'ready' | 'denied' | 'error';
 type ScanState = 'aiming' | 'reading' | 'found' | 'paused';
@@ -72,8 +74,10 @@ export default function ScanToPay() {
         };
     }, [stopCamera]);
 
-    // Grab the central guide-box region of the current frame as base64 JPEG.
-    const captureBase64 = useCallback((): string | null => {
+    // Grab the central guide-box region of the current frame once, returning
+    // both the RGBA pixels (for on-device PaddleOCR) and a base64 JPEG (for the
+    // cloud fallback) so we never capture the same moment twice.
+    const captureFrame = useCallback((): { pixels: OcrPixels; base64: string } | null => {
         const video = videoRef.current;
         const canvas = canvasRef.current;
         if (!video || !canvas || !video.videoWidth || !video.videoHeight) return null;
@@ -91,7 +95,13 @@ export default function ScanToPay() {
         const ctx = canvas.getContext('2d');
         if (!ctx) return null;
         ctx.drawImage(video, sx, sy, cw, ch, 0, 0, dw, dh);
-        return canvas.toDataURL('image/jpeg', 0.85).split(',')[1] || null;
+        const imageData = ctx.getImageData(0, 0, dw, dh);
+        const base64 = canvas.toDataURL('image/jpeg', 0.85).split(',')[1] || '';
+        if (!base64) return null;
+        return {
+            pixels: { width: dw, height: dh, data: new Uint8Array(imageData.data.buffer) },
+            base64,
+        };
     }, []);
 
     const succeed = useCallback((accountNumber: string, bankName: string, bankCode: string) => {
@@ -107,27 +117,45 @@ export default function ScanToPay() {
         }, 600);
     }, [navigate, stopCamera]);
 
-    // One Gemini-backed scan cycle: capture one frame, send once, retry a few
-    // times automatically, then pause so we don't keep spending on a bad aim.
+    // Hybrid scan cycle. Each attempt captures one frame and tries the free,
+    // private on-device engine (PaddleOCR) first. If that can't read a valid
+    // 10-digit NUBAN — typically messy handwriting — we fall back to one cloud
+    // (Gemini) call from the second attempt onward. After a few tries we pause
+    // so we don't keep spending or burning CPU on a bad aim.
     const runScanCycle = useCallback(async () => {
         const myRun = runRef.current;
         let attempts = 0;
+        const cancelled = () => myRun !== runRef.current || foundRef.current;
 
         const attempt = async () => {
-            if (myRun !== runRef.current || foundRef.current) return;
-            const image = captureBase64();
-            if (!image) {
+            if (cancelled()) return;
+            const frame = captureFrame();
+            if (!frame) {
                 if (myRun === runRef.current) setTimeout(attempt, 400);
                 return;
             }
             setScanState('reading');
-            const result = await scanImageForAccount(image, 'image/jpeg');
-            if (myRun !== runRef.current || foundRef.current) return;
 
-            if (result?.accountNumber) {
-                succeed(result.accountNumber, result.bankName, result.bankCode);
+            // 1) On-device first (free, unlimited, image never leaves the phone).
+            const text = await recognizeOnDevice(frame.pixels);
+            if (cancelled()) return;
+            const local = text ? parseScannedText(text) : null;
+            if (local?.accountNumber) {
+                succeed(local.accountNumber, local.bankName ?? '', local.bankCode ?? '');
                 return;
             }
+
+            // 2) Cloud fallback for the hard cases, from the 2nd attempt onward
+            //    (the first attempt stays fully on-device for printed signs).
+            if (attempts >= 1) {
+                const result = await scanImageForAccount(frame.base64, 'image/jpeg');
+                if (cancelled()) return;
+                if (result?.accountNumber) {
+                    succeed(result.accountNumber, result.bankName, result.bankCode);
+                    return;
+                }
+            }
+
             attempts += 1;
             if (attempts >= MAX_AUTO_ATTEMPTS) {
                 setScanState('paused');
@@ -138,7 +166,14 @@ export default function ScanToPay() {
         };
 
         setTimeout(attempt, SETTLE_MS);
-    }, [captureBase64, succeed]);
+    }, [captureFrame, succeed]);
+
+    // Warm up the on-device engine as the screen mounts, so the one-time model
+    // download + wasm init happens while the user is still aiming — not at the
+    // moment of capture. Fails soft: if it can't load we just use the cloud.
+    useEffect(() => {
+        void preloadOnDeviceOcr();
+    }, []);
 
     // Start scanning once the camera is live.
     useEffect(() => {

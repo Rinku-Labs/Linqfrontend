@@ -4,6 +4,9 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
+    "setup:ocr": "node scripts/setup-ocr-assets.mjs",
+    "predev": "node scripts/setup-ocr-assets.mjs",
+    "prebuild": "node scripts/setup-ocr-assets.mjs",
     "dev": "vite",
     "build": "vite build",
     "lint": "eslint .",
@@ -37,6 +40,8 @@
     "html2canvas": "^1.4.1",
     "jwt-decode": "^4.0.0",
     "lucide-react": "^0.562.0",
+    "onnxruntime-web": "^1.27.0",
+    "paddleocr": "^1.1.1",
     "process": "^0.11.10",
     "qrcode": "^1.5.4",
     "react": "^19.2.0",
