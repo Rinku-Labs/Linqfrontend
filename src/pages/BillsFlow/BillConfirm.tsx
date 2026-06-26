@@ -27,6 +27,7 @@ type BillState = {
     billerCode: string;
     billerType: string;
     itemName: string;
+    meterType?: string;
     coin: {
         sui: boolean;
         base: boolean;
@@ -95,6 +96,7 @@ export default function BillConfirm() {
                 billerCode: billData.billerCode,
                 billerType: billData.billerType,
                 itemName: billData.itemName,
+                meterType: billData.meterType,
                 coin: billData.coin,
                 userWalletAddress,
             });

@@ -23,6 +23,7 @@ import { useWebSocket } from '../../hooks/useWebSocket';
 import { playSuccessSound } from '../../utils/audio';
 import { invalidateOrdersCache } from '../../utils/ordersCache';
 import { getOrderStatus } from '../../api/order';
+import { getBillStatus } from '../../api/bills';
 import { useAuth } from '../../context/AuthContext';
 import { sanitizeErrorMessage } from '../../utils/sanitize';
 import { addBillBeneficiary, type AddBillBeneficiaryPayload } from '../../api/user';
@@ -63,6 +64,8 @@ export default function BillPayment() {
 
     const [status, setStatus] = useState<BillPaymentStatus>('idle');
     const [message, setMessage] = useState('Initializing payment...');
+    const [vendInfo, setVendInfo] = useState<{ token?: string; units?: string } | null>(null);
+    const [copied, setCopied] = useState(false);
     const hasInitiatedRef = useRef(false);
 
     // Prevent double-charge on page refresh:
@@ -476,6 +479,23 @@ export default function BillPayment() {
         }
     }, [status]);
 
+    // For completed prepaid electricity, fetch the recharge token/units so the
+    // user can load their meter. The token is only returned by /bills/status.
+    useEffect(() => {
+        if (status !== 'completed' || !orderId) return;
+        const billType = String(billData?.billType || '').toUpperCase();
+        if (billType !== 'ELECTRICITY' && billType !== 'UTILITYBILLS') return;
+        if (vendInfo?.token) return;
+
+        getBillStatus(orderId)
+            .then((order) => {
+                if (order?.vendToken) {
+                    setVendInfo({ token: order.vendToken, units: order.vendUnits });
+                }
+            })
+            .catch(() => { /* token is best-effort; receipt still has it */ });
+    }, [status, orderId, billData, vendInfo]);
+
     // ============================================================
     // Render
     // ============================================================
@@ -535,6 +555,39 @@ export default function BillPayment() {
                                 <span style={{ fontWeight: 600, fontSize: '9px', color: 'var(--text-main)' }}>{orderId?.slice(0, 18)}...</span>
                             </div>
                         </div>
+
+                        {/* Prepaid electricity recharge token — the value the customer needs to load their meter */}
+                        {vendInfo?.token && (
+                            <div className="glass-card" style={{ borderRadius: '24px', padding: '20px', width: '100%', marginBottom: '24px', border: '1px solid var(--primary)' }}>
+                                <p style={{ color: 'var(--text-muted)', fontSize: '10px', marginBottom: '8px', textAlign: 'left' }}>
+                                    Recharge Token — enter this on your meter
+                                </p>
+                                <div
+                                    onClick={() => {
+                                        if (vendInfo.token) {
+                                            navigator.clipboard?.writeText(vendInfo.token).then(() => {
+                                                setCopied(true);
+                                                setTimeout(() => setCopied(false), 2000);
+                                            }).catch(() => { /* clipboard unavailable */ });
+                                        }
+                                    }}
+                                    style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px' }}
+                                >
+                                    <span style={{ fontWeight: 700, fontSize: '16px', letterSpacing: '1px', color: 'var(--text-main)', wordBreak: 'break-all', textAlign: 'left' }}>
+                                        {vendInfo.token}
+                                    </span>
+                                    <span style={{ fontSize: '10px', color: 'var(--primary)', whiteSpace: 'nowrap' }}>
+                                        {copied ? 'Copied!' : 'Tap to copy'}
+                                    </span>
+                                </div>
+                                {vendInfo.units && (
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '12px' }}>
+                                        <span style={{ color: 'var(--text-muted)', fontSize: '10px' }}>Units</span>
+                                        <span style={{ fontWeight: 600, fontSize: '12px', color: 'var(--text-main)' }}>{vendInfo.units}</span>
+                                    </div>
+                                )}
+                            </div>
+                        )}
 
                         <div style={{ display: 'flex', gap: '16px' }}>
                             <Button

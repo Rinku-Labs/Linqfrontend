@@ -298,7 +298,8 @@ export default function Topup() {
             const resp = await validateMeter(
                 electricityPlanType.item_code,
                 electricityPlanType.biller_code,
-                meterNumber
+                meterNumber,
+                'ELECTRICITY'
             );
 
             if (resp && resp.data && resp.data.name) {
@@ -326,7 +327,8 @@ export default function Topup() {
             const resp = await validateMeter(
                 tvBouquet.item_code,
                 tvBouquet.biller_code,
-                smartcardNumber
+                smartcardNumber,
+                'CABLETV'
             );
 
             if (resp && resp.data && resp.data.name) {
@@ -458,6 +460,11 @@ export default function Topup() {
 
         const usdcAmount = numAmount / exchangeRate;
 
+        // Derive prepaid/postpaid from the selected meter type so the backend
+        // can vend correctly (prepaid returns a recharge token, postpaid does not).
+        const planLabel = `${electricityPlanType.name || ''} ${electricityPlanType.short_name || ''}`.toLowerCase();
+        const meterType = planLabel.includes('postpaid') ? 'postpaid' : 'prepaid';
+
         navigate('/bills/confirm', {
             state: {
                 billType: 'ELECTRICITY',
@@ -470,6 +477,7 @@ export default function Topup() {
                 itemCode: electricityPlanType.item_code,
                 billerCode: electricityPlanType.biller_code,
                 billerType: electricityPlanType.name || electricityPlanType.short_name,
+                meterType,
                 itemName: `${electricityPlanType.name || electricityPlanType.biller_name} (₦${numAmount.toLocaleString()})`,
                 coin: buildCoin(),
                 verifiedName: verifiedName,
