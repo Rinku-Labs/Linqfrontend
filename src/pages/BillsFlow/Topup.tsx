@@ -175,6 +175,10 @@ export default function Topup() {
         return value.length >= rule.min && value.length <= rule.max;
     };
 
+    // Showmax has no decoder/smartcard and Nomba's lookup doesn't support it, so
+    // it skips the verify step and collects an account/phone identifier instead.
+    const isShowmax = (tvProvider || '').toUpperCase() === 'SHOWMAX';
+
     // Get bouquets/packages for selected TV provider
     const tvBouquets = tvBillers.filter(b => {
         if (!tvProvider) return false;
@@ -487,7 +491,7 @@ export default function Topup() {
                 itemCode: electricityPlanType.item_code,
                 billerCode: electricityPlanType.biller_code,
                 billerType: electricityPlanType.name || electricityPlanType.short_name,
-                meterType: meterType.toLowerCase(),
+                meterType: meterType.toUpperCase(), // Nomba expects PREPAID / POSTPAID
                 itemName: `${electricityPlanType.name || electricityPlanType.biller_name} — ${meterType} (₦${numAmount.toLocaleString()})`,
                 coin: buildCoin(),
                 verifiedName: verifiedName,
@@ -507,7 +511,13 @@ export default function Topup() {
             setError('Please select a bouquet/package');
             return;
         }
-        if (!tvVerifiedName) {
+        // Showmax has no smartcard to verify; require a valid account/phone instead.
+        if (isShowmax) {
+            if (!isSmartcardValid(tvProvider, smartcardNumber)) {
+                setError('Please enter your Showmax account / phone number');
+                return;
+            }
+        } else if (!tvVerifiedName) {
             setError('Please verify your smartcard number first');
             return;
         }
@@ -520,7 +530,7 @@ export default function Topup() {
                 billType: 'CABLETV',
                 network: tvProvider,
                 customerId: smartcardNumber,
-                customerLabel: 'Smartcard/IUC Number',
+                customerLabel: isShowmax ? 'Showmax Account' : 'Smartcard/IUC Number',
                 amountNgn,
                 amountUsdc: usdcAmount,
                 rate: exchangeRate,
@@ -1258,6 +1268,7 @@ export default function Topup() {
                                                 inputMode="numeric"
                                                 maxLength={getSmartcardRule(tvProvider).max}
                                                 placeholder={(() => {
+                                                    if (isShowmax) return 'Showmax account / phone number';
                                                     const rule = getSmartcardRule(tvProvider);
                                                     const range = rule.min === rule.max ? `${rule.min}` : `${rule.min}-${rule.max}`;
                                                     return `Smartcard/IUC Number (${range} digits)`;
@@ -1347,8 +1358,8 @@ export default function Topup() {
                                     </div>
                                 )}
 
-                                {/* Verified name or Verify Button */}
-                                {tvVerifiedName ? (
+                                {/* Verified name or Verify Button (Showmax has no smartcard to verify) */}
+                                {isShowmax ? null : tvVerifiedName ? (
                                     <div style={{ padding: '8px 12px', background: 'var(--primary-bg)', borderRadius: '8px', marginBottom: '12px' }}>
                                         <p style={{ fontSize: '13px', color: 'var(--primary)', fontWeight: 600 }}>
                                             Verified: {tvVerifiedName}
@@ -1368,7 +1379,7 @@ export default function Topup() {
                                 ) : null}
 
                                 {/* Amount display (fixed from bouquet) */}
-                                {tvBouquet && tvVerifiedName && (
+                                {tvBouquet && (isShowmax || tvVerifiedName) && (
                                     <div style={{
                                         background: 'var(--input-bg)',
                                         borderRadius: '14px',
@@ -1626,7 +1637,9 @@ export default function Topup() {
                         disabled={
                             (activeTab === 'data' && !selectedPlan) ||
                             (activeTab === 'electricity' && !verifiedName) ||
-                            (activeTab === 'tv' && !tvVerifiedName)
+                            (activeTab === 'tv' && (isShowmax
+                                ? (!tvBouquet || !isSmartcardValid(tvProvider, smartcardNumber))
+                                : !tvVerifiedName))
                         }
                     >
                         Confirm Amount
