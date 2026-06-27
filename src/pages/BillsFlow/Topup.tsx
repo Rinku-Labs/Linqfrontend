@@ -166,7 +166,7 @@ export default function Topup() {
         DSTV: { min: 10, max: 11 },
         GOTV: { min: 10, max: 10 },
         STARTIMES: { min: 11, max: 11 },
-        SHOWMAX: { min: 6, max: 20 },
+        SHOWMAX: { min: 11, max: 11 }, // identified by an 11-digit phone number, not a smartcard
     };
     const getSmartcardRule = (provider: string | null) =>
         (provider && SMARTCARD_RULES[provider.toUpperCase()]) || { min: 10, max: 11 };
@@ -175,8 +175,10 @@ export default function Topup() {
         return value.length >= rule.min && value.length <= rule.max;
     };
 
-    // Showmax has no decoder/smartcard and Nomba's lookup doesn't support it, so
-    // it skips the verify step and collects an account/phone identifier instead.
+    // Showmax has no decoder/smartcard: it is identified by the subscriber's
+    // phone number, there is no customer lookup, and a successful purchase
+    // returns a voucher to redeem in the Showmax app. So it skips verification
+    // and collects a phone number instead.
     const isShowmax = (tvProvider || '').toUpperCase() === 'SHOWMAX';
 
     // Get bouquets/packages for selected TV provider
@@ -511,10 +513,10 @@ export default function Topup() {
             setError('Please select a bouquet/package');
             return;
         }
-        // Showmax has no smartcard to verify; require a valid account/phone instead.
+        // Showmax has no smartcard to verify; require a valid phone number instead.
         if (isShowmax) {
-            if (!isSmartcardValid(tvProvider, smartcardNumber)) {
-                setError('Please enter your Showmax account / phone number');
+            if (smartcardNumber.length !== 11) {
+                setError('Please enter a valid 11-digit phone number');
                 return;
             }
         } else if (!tvVerifiedName) {
@@ -530,7 +532,7 @@ export default function Topup() {
                 billType: 'CABLETV',
                 network: tvProvider,
                 customerId: smartcardNumber,
-                customerLabel: isShowmax ? 'Showmax Account' : 'Smartcard/IUC Number',
+                customerLabel: isShowmax ? 'Phone Number' : 'Smartcard/IUC Number',
                 amountNgn,
                 amountUsdc: usdcAmount,
                 rate: exchangeRate,
@@ -1268,7 +1270,7 @@ export default function Topup() {
                                                 inputMode="numeric"
                                                 maxLength={getSmartcardRule(tvProvider).max}
                                                 placeholder={(() => {
-                                                    if (isShowmax) return 'Showmax account / phone number';
+                                                    if (isShowmax) return 'Phone number (e.g. 08011111111)';
                                                     const rule = getSmartcardRule(tvProvider);
                                                     const range = rule.min === rule.max ? `${rule.min}` : `${rule.min}-${rule.max}`;
                                                     return `Smartcard/IUC Number (${range} digits)`;
