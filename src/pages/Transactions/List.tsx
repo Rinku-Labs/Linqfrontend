@@ -32,18 +32,6 @@ const getOrderChain = (order: Order): string | null => {
     return null;
 };
 
-const getOrderChain = (order: Order): string | null => {
-    if (!order.coin) return null;
-    if (order.coin.sui) return 'sui';
-    if (order.coin.solana) return 'solana';
-    if (order.coin.base) return 'base';
-    if (order.coin.bsc) return 'bsc';
-    if (order.coin.aptos) return 'aptos';
-    if (order.coin.tron) return 'tron';
-    if (order.coin.ethereum) return 'ethereum';
-    return null;
-};
-
 // Helper to group transactions by date
 const groupByDate = (orders: Order[]) => {
     const groups: { [key: string]: Order[] } = {};
