@@ -149,6 +149,9 @@ export default function Topup() {
         const providers = new Map<string, string>();
         tvBillers.forEach(b => {
             const name = (b.biller_name || b.name || '').toUpperCase();
+            // Showmax is temporarily hidden until its voucher response is wired
+            // up for display (paying without surfacing the voucher is a dead end).
+            if (name.includes('SHOWMAX')) return;
             if (name.includes('DSTV')) providers.set('DSTV', 'DSTV');
             else if (name.includes('GOTV')) providers.set('GOTV', 'GOTV');
             else if (name.includes('STARTIMES')) providers.set('STARTIMES', 'STARTIMES');
