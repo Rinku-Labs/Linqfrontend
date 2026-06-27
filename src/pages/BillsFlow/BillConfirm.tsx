@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, Zap, Tv, Smartphone, Wifi } from 'lucide-react';
 import Button from '../../components/ui/Button';
 import InlineError from '../../components/ui/InlineError';
 import ChainSelector from '../../components/ChainSelector';
@@ -121,6 +121,20 @@ export default function BillConfirm() {
 
     const isDataPlan = billData.billType === 'MOBILEDATA';
 
+    // Provider icon by bill type — matches the rest of the app's iconography
+    // instead of an emoji, so bills look consistent with transfers/deposits.
+    const billTypeUpper = (billData.billType || '').toUpperCase();
+    const ProviderIcon =
+        billTypeUpper === 'ELECTRICITY' || billTypeUpper === 'UTILITYBILLS' ? Zap
+        : billTypeUpper === 'CABLETV' || billTypeUpper === 'CABLEBILLS' ? Tv
+        : billTypeUpper === 'MOBILEDATA' ? Wifi
+        : Smartphone;
+
+    // "Network" reads wrong for a disco/cable provider — label it "Provider".
+    const networkLabel =
+        billTypeUpper === 'ELECTRICITY' || billTypeUpper === 'UTILITYBILLS'
+        || billTypeUpper === 'CABLETV' || billTypeUpper === 'CABLEBILLS'
+            ? 'Provider' : 'Network';
 
     return (
         <div className="page-enter" style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
@@ -254,7 +268,7 @@ export default function BillConfirm() {
                             alignItems: 'center',
                             padding: '10px 0',
                         }}>
-                            <span style={{ fontSize: '10px', color: 'var(--text-secondary)' }}>Network:</span>
+                            <span style={{ fontSize: '10px', color: 'var(--text-secondary)' }}>{networkLabel}:</span>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                                 {NETWORK_LOGOS[billData.network] ? (
                                     <img
@@ -263,7 +277,13 @@ export default function BillConfirm() {
                                         style={{ width: '24px', height: '24px', borderRadius: '50%', objectFit: 'contain' }}
                                     />
                                 ) : (
-                                    <span style={{ fontSize: '13px' }}>📱</span>
+                                    <span style={{
+                                        width: '24px', height: '24px', borderRadius: '50%',
+                                        background: 'var(--primary-bg)', display: 'flex',
+                                        alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+                                    }}>
+                                        <ProviderIcon size={14} color="var(--primary)" />
+                                    </span>
                                 )}
                                 <span style={{ fontSize: '10px', fontWeight: 600, color: 'var(--text-main)' }}>{billData.network}</span>
                             </div>
