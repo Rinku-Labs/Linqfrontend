@@ -143,7 +143,10 @@ export default function Predict() {
     // has World Cup fixtures for, sorted. The page opens on today.
     const days = (() => {
         const set = new Set<string>([yesterday, today]);
-        fixtures.forEach((f) => set.add(dayKey(f.startTime)));
+        fixtures.forEach((f) => {
+            const k = dayKey(f.startTime);
+            if (k >= yesterday) set.add(k); // never surface fixture dates older than yesterday
+        });
         return [...set].sort();
     })();
     const dayFixtures = fixtures.filter((f) => dayKey(f.startTime) === activeDay);
@@ -263,6 +266,10 @@ function MatchCard({
         badge = <span style={darkPill('rgba(255,255,255,0.18)', '#fff')}>FULL-TIME</span>;
     } else if (stopped) {
         badge = <span style={darkPill('rgba(255,255,255,0.18)', '#fff')}>{stopped}</span>;
+    } else if (kickedOff) {
+        // Kickoff time has passed but the live feed hasn't sent a score event yet —
+        // show LIVE instead of a stale "kicking off…" countdown that never advances.
+        badge = <span style={darkPill('#ef4444', '#fff')}>● LIVE</span>;
     }
 
     return (
@@ -294,7 +301,7 @@ function MatchCard({
                     </div>
                 </div>
 
-                {!showScore && !stopped && (
+                {!showScore && !stopped && !kickedOff && (
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 14, fontSize: 11, color: 'rgba(255,255,255,0.85)' }}>
                         <span style={{ fontWeight: 700 }}>{koTime(fixture.startTime)} WAT</span>
                         <span><Countdown target={toMs(fixture.startTime)} /></span>
