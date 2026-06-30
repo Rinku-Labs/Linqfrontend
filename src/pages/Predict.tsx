@@ -16,12 +16,13 @@ const LIVE = new Set(['H1', 'HT', 'H2', 'ET1', 'HTET', 'ET2', 'PE', 'WET', 'WPE'
 const FINISHED = new Set(['F', 'FET', 'FPE']);
 const STOPPED: Record<string, string> = { A: 'ABANDONED', C: 'CANCELLED', P: 'POSTPONED', I: 'INTERRUPTED' };
 
-// Premium dark match-card background (approximates the mockup's stadium glow).
+// Dark match-card background tuned to the mockup: warm gold glow on the home
+// (left) side, cool blue glow on the away (right) side, over a near-black base.
 const DARK_CARD = `
-  radial-gradient(circle at 22% 28%, rgba(214,164,52,0.28), transparent 42%),
-  radial-gradient(circle at 82% 72%, rgba(46,156,178,0.22), transparent 46%),
-  radial-gradient(circle at 50% 50%, rgba(255,255,255,0.05), transparent 60%),
-  linear-gradient(150deg, #15101f 0%, #0a0911 100%)`;
+  radial-gradient(circle at 16% 52%, rgba(216,158,46,0.34), transparent 40%),
+  radial-gradient(circle at 86% 52%, rgba(38,118,200,0.32), transparent 42%),
+  radial-gradient(circle at 50% 130%, rgba(124,58,237,0.18), transparent 52%),
+  linear-gradient(180deg, #0b0913 0%, #161024 100%)`;
 
 const PURPLE = '#7c3aed';
 const PURPLE_GRAD = 'linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)';
@@ -383,47 +384,51 @@ function PredictModal({
         }
     }
 
-    // Full-screen modal: dark match panel flush at the top, white sheet below —
-    // matching the designer's "PREDICT THE SCORE" mockup.
+    // Bottom-sheet modal matching the designer's "PREDICT THE SCORE" mockup: a
+    // white sheet with the dark match panel inside it, then the steppers + submit.
     return (
-        <div style={{ position: 'fixed', inset: 0, zIndex: 200, display: 'flex', flexDirection: 'column', background: 'var(--surface)' }}>
-            {/* Dark match panel */}
-            <div style={{ background: DARK_CARD, padding: 'calc(env(safe-area-inset-top, 0px) + 28px) 20px 22px' }}>
-                <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 10 }}>
-                    <span style={{ ...darkPill(PURPLE, '#fff'), fontSize: 12, padding: '6px 18px' }}>{stageBadge(fixture.competition)}</span>
-                </div>
-                <div style={{ textAlign: 'center', fontSize: 12, color: 'rgba(255,255,255,0.85)', marginBottom: 16 }}>
-                    {koTime(fixture.startTime)} WAT • <Countdown target={toMs(fixture.startTime)} />
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-around', gap: 8 }}>
-                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
-                        <CircleFlag url={fixture.homeFlag} name={fixture.homeTeam} size={64} />
-                        <span style={teamName}>{fixture.homeTeam.toUpperCase()}</span>
-                    </div>
-                    <span style={{ fontSize: 18, fontWeight: 800, color: '#fff' }}>VS</span>
-                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
-                        <CircleFlag url={fixture.awayFlag} name={fixture.awayTeam} size={64} />
-                        <span style={teamName}>{fixture.awayTeam.toUpperCase()}</span>
-                    </div>
-                </div>
-            </div>
-
-            {/* White sheet */}
-            <div style={{ flex: 1, padding: '20px 24px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 28 }}>
+        <div
+            onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
+            style={{ position: 'fixed', inset: 0, zIndex: 200, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }}
+        >
+            <div style={{ background: 'var(--surface)', borderRadius: '24px 24px 0 0', width: '100%', maxWidth: 480, padding: '20px 20px calc(env(safe-area-inset-bottom, 0px) + 24px)' }}>
+                {/* Header */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
                     <span style={{ fontSize: 15, fontWeight: 800, letterSpacing: 0.5, color: 'var(--text-main)' }}>PREDICT THE SCORE</span>
                     <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer' }}>
                         <X size={22} color="var(--text-main)" />
                     </button>
                 </div>
 
+                {/* Dark match panel */}
+                <div style={{ background: DARK_CARD, borderRadius: 18, padding: '16px 16px 18px', marginBottom: 22 }}>
+                    <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 8 }}>
+                        <span style={{ ...darkPill(PURPLE, '#fff'), fontSize: 12, padding: '6px 18px' }}>{stageBadge(fixture.competition)}</span>
+                    </div>
+                    <div style={{ textAlign: 'center', fontSize: 12, color: 'rgba(255,255,255,0.85)', marginBottom: 14 }}>
+                        {koTime(fixture.startTime)} WAT • <Countdown target={toMs(fixture.startTime)} />
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-around', gap: 8 }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
+                            <CircleFlag url={fixture.homeFlag} name={fixture.homeTeam} size={60} />
+                            <span style={teamName}>{fixture.homeTeam.toUpperCase()}</span>
+                        </div>
+                        <span style={{ fontSize: 18, fontWeight: 800, color: '#fff' }}>VS</span>
+                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
+                            <CircleFlag url={fixture.awayFlag} name={fixture.awayTeam} size={60} />
+                            <span style={teamName}>{fixture.awayTeam.toUpperCase()}</span>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Steppers */}
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 22 }}>
                     <Stepper value={home} onChange={(d) => setHome(clamp(home + d))} />
                     <span style={{ fontSize: 32, fontWeight: 900, color: 'var(--text-main)' }}>:</span>
                     <Stepper value={away} onChange={(d) => setAway(clamp(away + d))} />
                 </div>
 
-                <button onClick={submit} disabled={submitting} style={{ ...btn(false), marginTop: 40 }}>
+                <button onClick={submit} disabled={submitting} style={{ ...btn(false), marginTop: 24 }}>
                     {submitting ? 'Submitting…' : 'Submit Prediction'}
                 </button>
             </div>
