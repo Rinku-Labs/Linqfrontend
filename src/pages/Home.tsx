@@ -1,8 +1,8 @@
-import { ArrowUpRight, ArrowDownLeft, RefreshCw, Smartphone, Zap, Eye, EyeOff, Wallet, Inbox, Copy } from 'lucide-react';
+import { ArrowUpRight, ArrowDownLeft, RefreshCw, Smartphone, Zap, Eye, EyeOff, Wallet, Inbox, Copy, ScanLine } from 'lucide-react';
 import ProductTour from '../components/ProductTour';
 import { getTransactionIcon } from '../utils/transactionIcons';
-import clickToEarnImg from '../assets/click-to-earn.png';
 import logo from '../assets/logo.png';
+import predictAndWinCard from '../assets/predict-and-win-card.jpg';
 import nairaLogo from '../assets/naira.png';
 import balanceCardBg from '../assets/balance-card-bg.png';
 import Button from '../components/ui/Button';
@@ -323,18 +323,18 @@ export default function Home() {
         <div className="page-enter" style={{ paddingBottom: '20px' }} {...pullHandlers}>
             <PullToRefreshIndicator pullDistance={pullDistance} isRefreshing={isRefreshing} />
             {/* Header */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px', gap: '12px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flex: 1, minWidth: 0 }}>
                     <div style={{
-                        width: '40px', height: '40px', borderRadius: '12px',
+                        width: '40px', height: '40px', borderRadius: '12px', flexShrink: 0,
                         display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden',
                     }}>
                         <img src={logo} alt="Logo" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                     </div>
-                    <div>
+                    <div style={{ minWidth: 0 }}>
                         <p style={{ fontSize: '9px', color: 'var(--text-secondary)' }}>Welcome back,</p>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                            <p style={{ fontWeight: 600, color: 'var(--text-main)', maxWidth: '150px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', minWidth: 0 }}>
+                            <p style={{ fontWeight: 600, color: 'var(--text-main)', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                                 @{username?.toLowerCase()}
                             </p>
                             <button
@@ -356,7 +356,8 @@ export default function Home() {
                                     display: 'flex',
                                     alignItems: 'center',
                                     color: 'var(--text-secondary)',
-                                    fontSize: '10px' // For the checkmark
+                                    fontSize: '10px', // For the checkmark
+                                    flexShrink: 0,
                                 }}
                                 title="Copy username"
                             >
@@ -365,7 +366,27 @@ export default function Home() {
                         </div>
                     </div>
                 </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexShrink: 0 }}>
+                    <button
+                        onClick={() => navigate('/send/scan')}
+                        aria-label="Scan to pay"
+                        title="Scan to pay"
+                        style={{
+                            background: 'var(--surface)',
+                            border: '1px solid var(--border-color)',
+                            borderRadius: '50%',
+                            width: '40px',
+                            height: '40px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            cursor: 'pointer',
+                            transition: 'all 0.3s ease',
+                            boxShadow: 'var(--card-shadow)',
+                        }}
+                    >
+                        <ScanLine size={20} color="var(--text-main)" />
+                    </button>
                     <ChainSelector />
                     <ThemeToggle />
                 </div>
@@ -496,10 +517,10 @@ export default function Home() {
                 </div>
             )}
 
-            {/* Earn Rewards Banner */}
+            {/* Predict & Win — World Cup 2026 (the designer's exact card asset) */}
             <div
-                id="tour-rewards"
-                onClick={() => navigate('/rewards')}
+                id="tour-predict"
+                onClick={() => navigate('/predict')}
                 className="card-interactive"
                 style={{
                     marginBottom: '24px',
@@ -507,13 +528,15 @@ export default function Home() {
                     boxShadow: 'var(--card-shadow)',
                     borderRadius: '20px',
                     overflow: 'hidden',
-                    display: 'flex'
+                    display: 'flex',
+                    background: '#ede4ff', // lavender so the card edges never show white
+                    lineHeight: 0,
                 }}
             >
-                <img 
-                    src={clickToEarnImg} 
-                    alt="Earn Rewards" 
-                    style={{ width: '100%', height: 'auto', display: 'block' }} 
+                <img
+                    src={predictAndWinCard}
+                    alt="Predict and win"
+                    style={{ width: '100%', height: 'auto', display: 'block' }}
                 />
             </div>
 
@@ -592,7 +615,7 @@ export default function Home() {
                                             <p style={{ fontSize: '10px', fontWeight: 500, marginBottom: '2px', color: 'var(--text-main)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '100%' }}>{trx.accountName || trx.bankName || 'Transfer'}</p>
                                             <div style={{ fontSize: '9px', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', overflow: 'hidden' }}>
                                                 <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{formatDate(trx.createdAt)}</span>
-                                                <span className={`status-badge ${formatStatus(trx.status) === 'Pending' || formatStatus(trx.status) === 'Processing' ? 'status-badge--pending' : ''}`} style={{
+                                                <span className={`status-badge ${formatStatus(trx.status) === 'Pending' ? 'status-badge--pending' : ''}`} style={{
                                                     color: getStatusStyle(trx.status).color,
                                                     background: getStatusStyle(trx.status).bg,
                                                     padding: '2px 6px',

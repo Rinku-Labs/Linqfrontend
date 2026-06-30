@@ -37,6 +37,7 @@ export interface CreateBillPaymentRequest {
     billerCode: string;
     billerType: string;
     itemName: string;
+    meterType?: string; // electricity only: "prepaid" or "postpaid"
     coin: {
         sui: boolean;
         base: boolean;
@@ -67,6 +68,10 @@ export interface BillPaymentOrder {
     description: string;
     flwRef: string;
     created: string;
+    customerName?: string;
+    meterType?: string;
+    vendToken?: string; // electricity prepaid recharge token from Nomba
+    vendUnits?: string; // electricity units purchased
 }
 
 // ============================================================
@@ -103,7 +108,18 @@ export const getUserBillOrders = async (): Promise<{ data: BillPaymentOrder[] }>
     return response.data;
 };
 
-export const validateMeter = async (itemCode: string, billerCode: string, customer: string): Promise<any> => {
-    const response = await client.get(`/bills/validate?item_code=${itemCode}&biller_code=${billerCode}&customer=${customer}`);
+export const validateMeter = async (
+    itemCode: string,
+    billerCode: string,
+    customer: string,
+    category?: string,
+): Promise<any> => {
+    const params = new URLSearchParams({
+        item_code: itemCode,
+        biller_code: billerCode,
+        customer,
+    });
+    if (category) params.append('category', category);
+    const response = await client.get(`/bills/validate?${params.toString()}`);
     return response.data;
 };

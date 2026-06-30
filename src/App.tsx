@@ -3,6 +3,7 @@ import MainLayout from './layouts/MainLayout';
 import Home from './pages/Home';
 import Onboarding from './pages/Onboarding';
 import AccountDetails from './pages/SendFlow/AccountDetails';
+import ScanToPay from './pages/SendFlow/ScanToPay';
 import InputAmount from './pages/SendFlow/InputAmount';
 import Confirm from './pages/SendFlow/Confirm';
 import Payment from './pages/SendFlow/Payment';
@@ -26,6 +27,8 @@ import Swap from './pages/Swap';
 import Savings from './pages/Savings';
 import Rewards from './pages/Rewards';
 import Leaderboard from './pages/Leaderboard';
+import Predict from './pages/Predict';
+import PredictHistory from './pages/PredictHistory';
 import ScrollToTop from './components/ScrollToTop';
 import ErrorBoundary from './components/ErrorBoundary';
 import SEO from './components/SEO';
@@ -59,6 +62,7 @@ function App() {
           <Route path="/" element={<><SEO title="Home" /><Home /></>} />
 
           {/* Send Flow */}
+          <Route path="/send/scan" element={<><SEO title="Scan to Pay" /><ScanToPay /></>} />
           <Route path="/send/details" element={<><SEO title="Send Money - Recipient Details" /><AccountDetails /></>} />
           <Route path="/send/amount" element={<><SEO title="Send Money - Select Amount" /><InputAmount /></>} />
           <Route path="/send/confirm" element={<><SEO title="Confirm Transfer" /><Confirm /></>} />
@@ -95,6 +99,10 @@ function App() {
           {/* Rewards & Leaderboard */}
           <Route path="/rewards" element={<><SEO title="Earn Rewards" /><Rewards /></>} />
           <Route path="/leaderboard" element={<><SEO title="Leaderboard" /><Leaderboard /></>} />
+
+          {/* Predict & Win (World Cup 2026) */}
+          <Route path="/predict" element={<><SEO title="Predict & Win" /><Predict /></>} />
+          <Route path="/predict/history" element={<><SEO title="Prediction History" /><PredictHistory /></>} />
 
           {/* Deposit Flow */}
           <Route path="/deposit" element={<><SEO title="Deposit Funds" /><DepositAmount /></>} />

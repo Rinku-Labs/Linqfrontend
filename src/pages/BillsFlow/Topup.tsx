@@ -88,6 +88,7 @@ export default function Topup() {
     const [electricityBillers, setElectricityBillers] = useState<BillCategory[]>([]);
     const [electricityCompany, setElectricityCompany] = useState<string | null>(null);
     const [electricityPlanType, setElectricityPlanType] = useState<BillCategory | null>(null);
+    const [meterType, setMeterType] = useState<string | null>(null);
     const [showElectricityDropdown, setShowElectricityDropdown] = useState(false);
     const [showPlanDropdown, setShowPlanDropdown] = useState(false);
     const [meterNumber, setMeterNumber] = useState('');
@@ -143,16 +144,14 @@ export default function Topup() {
         return Array.from(unique).sort();
     };
 
-    const companyPlans = electricityBillers.filter(b => {
-        if (!electricityCompany) return false;
-        return getCleanedCompanyName(b) === electricityCompany;
-    });
-
     // Get unique TV providers (DSTV, GOTV, Startimes)
     const getTvProviders = () => {
         const providers = new Map<string, string>();
         tvBillers.forEach(b => {
             const name = (b.biller_name || b.name || '').toUpperCase();
+            // Showmax is temporarily hidden until its voucher response is wired
+            // up for display (paying without surfacing the voucher is a dead end).
+            if (name.includes('SHOWMAX')) return;
             if (name.includes('DSTV')) providers.set('DSTV', 'DSTV');
             else if (name.includes('GOTV')) providers.set('GOTV', 'GOTV');
             else if (name.includes('STARTIMES')) providers.set('STARTIMES', 'STARTIMES');
@@ -163,6 +162,27 @@ export default function Topup() {
         });
         return Array.from(providers.values()).sort();
     };
+
+    // Smartcard/IUC length rules per provider. DStv IUC numbers are 10-11 digits,
+    // GOtv is 10, StarTimes is 11. Showmax is account/voucher based (be permissive).
+    const SMARTCARD_RULES: Record<string, { min: number; max: number }> = {
+        DSTV: { min: 10, max: 11 },
+        GOTV: { min: 10, max: 10 },
+        STARTIMES: { min: 11, max: 11 },
+        SHOWMAX: { min: 11, max: 11 }, // identified by an 11-digit phone number, not a smartcard
+    };
+    const getSmartcardRule = (provider: string | null) =>
+        (provider && SMARTCARD_RULES[provider.toUpperCase()]) || { min: 10, max: 11 };
+    const isSmartcardValid = (provider: string | null, value: string) => {
+        const rule = getSmartcardRule(provider);
+        return value.length >= rule.min && value.length <= rule.max;
+    };
+
+    // Showmax has no decoder/smartcard: it is identified by the subscriber's
+    // phone number, there is no customer lookup, and a successful purchase
+    // returns a voucher to redeem in the Showmax app. So it skips verification
+    // and collects a phone number instead.
+    const isShowmax = (tvProvider || '').toUpperCase() === 'SHOWMAX';
 
     // Get bouquets/packages for selected TV provider
     const tvBouquets = tvBillers.filter(b => {
@@ -298,7 +318,8 @@ export default function Topup() {
             const resp = await validateMeter(
                 electricityPlanType.item_code,
                 electricityPlanType.biller_code,
-                meterNumber
+                meterNumber,
+                'ELECTRICITY'
             );
 
             if (resp && resp.data && resp.data.name) {
@@ -317,7 +338,7 @@ export default function Topup() {
 
     // Smartcard Verification (TV)
     const handleVerifySmartcard = useCallback(async () => {
-        if (!smartcardNumber || smartcardNumber.length < 10 || !tvBouquet) return;
+        if (!smartcardNumber || !tvBouquet || !isSmartcardValid(tvProvider, smartcardNumber)) return;
 
         setIsTvVerifying(true);
         setError(null);
@@ -326,7 +347,8 @@ export default function Topup() {
             const resp = await validateMeter(
                 tvBouquet.item_code,
                 tvBouquet.biller_code,
-                smartcardNumber
+                smartcardNumber,
+                'CABLETV'
             );
 
             if (resp && resp.data && resp.data.name) {
@@ -341,7 +363,7 @@ export default function Topup() {
         } finally {
             setIsTvVerifying(false);
         }
-    }, [smartcardNumber, tvBouquet]);
+    }, [smartcardNumber, tvBouquet, tvProvider]);
 
     // Build coin object
     const buildCoin = () => ({
@@ -444,6 +466,10 @@ export default function Topup() {
             return;
         }
         if (!electricityPlanType) {
+            setError('Please select an Electricity provider');
+            return;
+        }
+        if (!meterType) {
             setError('Please select a meter type (Prepaid/Postpaid)');
             return;
         }
@@ -470,7 +496,8 @@ export default function Topup() {
                 itemCode: electricityPlanType.item_code,
                 billerCode: electricityPlanType.biller_code,
                 billerType: electricityPlanType.name || electricityPlanType.short_name,
-                itemName: `${electricityPlanType.name || electricityPlanType.biller_name} (₦${numAmount.toLocaleString()})`,
+                meterType: meterType.toUpperCase(), // Nomba expects PREPAID / POSTPAID
+                itemName: `${electricityPlanType.name || electricityPlanType.biller_name} — ${meterType} (₦${numAmount.toLocaleString()})`,
                 coin: buildCoin(),
                 verifiedName: verifiedName,
             }
@@ -489,7 +516,13 @@ export default function Topup() {
             setError('Please select a bouquet/package');
             return;
         }
-        if (!tvVerifiedName) {
+        // Showmax has no smartcard to verify; require a valid phone number instead.
+        if (isShowmax) {
+            if (smartcardNumber.length !== 11) {
+                setError('Please enter a valid 11-digit phone number');
+                return;
+            }
+        } else if (!tvVerifiedName) {
             setError('Please verify your smartcard number first');
             return;
         }
@@ -502,7 +535,7 @@ export default function Topup() {
                 billType: 'CABLETV',
                 network: tvProvider,
                 customerId: smartcardNumber,
-                customerLabel: 'Smartcard/IUC Number',
+                customerLabel: isShowmax ? 'Phone Number' : 'Smartcard/IUC Number',
                 amountNgn,
                 amountUsdc: usdcAmount,
                 rate: exchangeRate,
@@ -933,7 +966,12 @@ export default function Topup() {
                                             key={comp}
                                             onClick={() => {
                                                 setElectricityCompany(comp);
-                                                setElectricityPlanType(null);
+                                                // Nomba returns one disco entry per company; bind it as the
+                                                // biller so verify/vend have the disco's code. Meter type
+                                                // (prepaid/postpaid) is chosen separately below.
+                                                const disco = electricityBillers.find(b => getCleanedCompanyName(b) === comp) || null;
+                                                setElectricityPlanType(disco);
+                                                setMeterType(null);
                                                 setShowElectricityDropdown(false);
                                                 setVerifiedName(null);
                                             }}
@@ -964,7 +1002,7 @@ export default function Topup() {
                                     }}
                                 >
                                     <span style={{ flex: 1, textAlign: 'left' }}>
-                                        {electricityPlanType ? (electricityPlanType.name || electricityPlanType.short_name) : <span style={{ color: 'var(--primary)' }}>Select meter type</span>}
+                                        {meterType || <span style={{ color: 'var(--primary)' }}>Select meter type</span>}
                                     </span>
                                     <ChevronDown size={18} color="var(--primary)" />
                                 </button>
@@ -974,37 +1012,24 @@ export default function Topup() {
                                         background: 'var(--surface)', borderRadius: '14px', border: '1px solid var(--border-color)',
                                         boxShadow: '0 8px 32px rgba(0,0,0,0.12)', marginTop: '4px', zIndex: 10,
                                     }}>
-                                        {companyPlans.length > 0 ? (
-                                            companyPlans.map(plan => {
-                                                const planName = (plan.name || plan.short_name || '').toLowerCase();
-                                                const isPrepaid = planName.includes('prepaid');
-                                                const isPostpaid = planName.includes('postpaid');
-                                                const displayType = isPrepaid ? 'Prepaid' : isPostpaid ? 'Postpaid' : (plan.name || plan.short_name);
-
-                                                return (
-                                                    <button
-                                                        key={plan.item_code}
-                                                        onClick={() => {
-                                                            setElectricityPlanType(plan);
-                                                            setShowPlanDropdown(false);
-                                                            setVerifiedName(null);
-                                                        }}
-                                                        style={{
-                                                            width: '100%', display: 'block', textAlign: 'left',
-                                                            padding: '12px 16px', border: 'none',
-                                                            background: electricityPlanType?.item_code === plan.item_code ? 'var(--primary-bg)' : 'transparent',
-                                                            cursor: 'pointer', color: 'var(--text-main)', fontSize: '11px',
-                                                        }}
-                                                    >
-                                                        <span style={{ fontWeight: 500 }}>{displayType}</span>
-                                                    </button>
-                                                );
-                                            })
-                                        ) : (
-                                            <div style={{ padding: '12px 16px', color: 'var(--text-muted)', fontSize: '9px' }}>
-                                                No plans found for this provider
-                                            </div>
-                                        )}
+                                        {['Prepaid', 'Postpaid'].map(mt => (
+                                            <button
+                                                key={mt}
+                                                onClick={() => {
+                                                    setMeterType(mt);
+                                                    setShowPlanDropdown(false);
+                                                    setVerifiedName(null);
+                                                }}
+                                                style={{
+                                                    width: '100%', display: 'block', textAlign: 'left',
+                                                    padding: '12px 16px', border: 'none',
+                                                    background: meterType === mt ? 'var(--primary-bg)' : 'transparent',
+                                                    cursor: 'pointer', color: 'var(--text-main)', fontSize: '11px',
+                                                }}
+                                            >
+                                                <span style={{ fontWeight: 500 }}>{mt}</span>
+                                            </button>
+                                        ))}
                                     </div>
                                 )}
                             </div>
@@ -1047,7 +1072,7 @@ export default function Topup() {
                                     Verified: {verifiedName}
                                 </p>
                             </div>
-                        ) : electricityPlanType && meterNumber.length >= 7 ? (
+                        ) : electricityPlanType && meterType && meterNumber.length >= 7 ? (
                             <div style={{ marginBottom: '12px' }}>
                                 <Button
                                     variant="secondary"
@@ -1246,10 +1271,17 @@ export default function Topup() {
                                             <input
                                                 type="text"
                                                 inputMode="numeric"
-                                                placeholder="Smartcard/IUC Number (10+ digits)"
+                                                maxLength={getSmartcardRule(tvProvider).max}
+                                                placeholder={(() => {
+                                                    if (isShowmax) return 'Phone number (e.g. 08011111111)';
+                                                    const rule = getSmartcardRule(tvProvider);
+                                                    const range = rule.min === rule.max ? `${rule.min}` : `${rule.min}-${rule.max}`;
+                                                    return `Smartcard/IUC Number (${range} digits)`;
+                                                })()}
                                                 value={smartcardNumber}
                                                 onChange={(e) => {
-                                                    setSmartcardNumber(e.target.value.replace(/\D/g, ''));
+                                                    const rule = getSmartcardRule(tvProvider);
+                                                    setSmartcardNumber(e.target.value.replace(/\D/g, '').slice(0, rule.max));
                                                     setTvVerifiedName(null);
                                                 }}
                                                 style={{
@@ -1265,7 +1297,7 @@ export default function Topup() {
                                 )}
 
                                 {/* Bouquet / Package Dropdown */}
-                                {tvProvider && smartcardNumber.length >= 10 && (
+                                {tvProvider && isSmartcardValid(tvProvider, smartcardNumber) && (
                                     <div style={{ position: 'relative', marginBottom: '12px' }}>
                                         <button
                                             onClick={() => { setShowTvBouquetDropdown(!showTvBouquetDropdown); setShowTvProviderDropdown(false); }}
@@ -1303,9 +1335,9 @@ export default function Topup() {
                                                     <button
                                                         key={b.item_code || idx}
                                                         onClick={() => {
+                                                            // Do NOT clear the smartcard number here — selecting a
+                                                            // bouquet must keep what the user already entered.
                                                             setTvBouquet(b);
-                                                            setSmartcardNumber('');
-                                                            setTvVerifiedName(null);
                                                             setShowTvBouquetDropdown(false);
                                                         }}
                                                         style={{
@@ -1331,14 +1363,14 @@ export default function Topup() {
                                     </div>
                                 )}
 
-                                {/* Verified name or Verify Button */}
-                                {tvVerifiedName ? (
+                                {/* Verified name or Verify Button (Showmax has no smartcard to verify) */}
+                                {isShowmax ? null : tvVerifiedName ? (
                                     <div style={{ padding: '8px 12px', background: 'var(--primary-bg)', borderRadius: '8px', marginBottom: '12px' }}>
                                         <p style={{ fontSize: '13px', color: 'var(--primary)', fontWeight: 600 }}>
                                             Verified: {tvVerifiedName}
                                         </p>
                                     </div>
-                                ) : tvBouquet && smartcardNumber.length >= 10 ? (
+                                ) : tvBouquet && isSmartcardValid(tvProvider, smartcardNumber) ? (
                                     <div style={{ marginBottom: '12px' }}>
                                         <Button
                                             variant="secondary"
@@ -1352,7 +1384,7 @@ export default function Topup() {
                                 ) : null}
 
                                 {/* Amount display (fixed from bouquet) */}
-                                {tvBouquet && tvVerifiedName && (
+                                {tvBouquet && (isShowmax || tvVerifiedName) && (
                                     <div style={{
                                         background: 'var(--input-bg)',
                                         borderRadius: '14px',
@@ -1610,7 +1642,9 @@ export default function Topup() {
                         disabled={
                             (activeTab === 'data' && !selectedPlan) ||
                             (activeTab === 'electricity' && !verifiedName) ||
-                            (activeTab === 'tv' && !tvVerifiedName)
+                            (activeTab === 'tv' && (isShowmax
+                                ? (!tvBouquet || !isSmartcardValid(tvProvider, smartcardNumber))
+                                : !tvVerifiedName))
                         }
                     >
                         Confirm Amount

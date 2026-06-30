@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { CheckCircle, User, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import Header from '../../components/Layout/Header';
@@ -28,6 +28,7 @@ const DELETE_THRESHOLD = 80; // px swipe to trigger delete
 
 export default function AccountDetails() {
     const navigate = useNavigate();
+    const location = useLocation();
     const [activeTab, setActiveTab] = useState<'recents' | 'saved'>('saved');
     const [sendType, setSendType] = useState<'bank' | 'username'>('bank');
     const [saveBeneficiary, setSaveBeneficiary] = useState(false);
@@ -100,6 +101,51 @@ export default function AccountDetails() {
     useEffect(() => {
         loadBeneficiaries();
     }, [loadBeneficiaries]);
+
+    // Prefill from the scan-to-pay flow (runs once on mount). Setting the fields
+    // here lets the existing verify effect resolve and display the account name.
+    useEffect(() => {
+        const prefill = (location.state as {
+            scannedPrefill?: { accountNumber?: string; bankName?: string | null; bankCode?: string | null };
+        } | null)?.scannedPrefill;
+        if (!prefill?.accountNumber) return;
+        setSendType('bank');
+        setAccountNumber(prefill.accountNumber);
+
+        // Resolve a bank to prefill, in priority order:
+        // 1. The bank the scan detected (OCR/Gemini), normalised to a real code.
+        // 2. Otherwise derive it from the account number via the NUBAN check-digit
+        //    algorithm — but only when it points to a single, unambiguous bank
+        //    (many account numbers match several banks; auto-picking one of those
+        //    could send to the wrong bank, so those fall through to the pills).
+        let resolvedName = '';
+        let resolvedCode = '';
+
+        if (prefill.bankName) {
+            const normalized = getNormalizedBank(prefill.bankName);
+            if (normalized) {
+                resolvedName = normalized.name;
+                resolvedCode = normalized.code;
+            } else if (prefill.bankCode) {
+                resolvedName = prefill.bankName;
+                resolvedCode = prefill.bankCode;
+            }
+        }
+
+        if (!resolvedCode) {
+            const matches = findMatchingBanks(prefill.accountNumber);
+            if (matches.length === 1) {
+                resolvedName = matches[0].bank.name;
+                resolvedCode = matches[0].bank.code;
+            }
+        }
+
+        if (resolvedName && resolvedCode) {
+            setBankName(resolvedName);
+            setBankCode(resolvedCode);
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
 
     // Extract unique recent recipients from orders
     const extractRecentsFromOrders = useCallback((orders: Order[]): Beneficiary[] => {

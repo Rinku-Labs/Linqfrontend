@@ -6,6 +6,7 @@ import Button from '../../components/ui/Button';
 import { Loader2, XCircle } from 'lucide-react';
 
 import { mapTransactionStatus } from '../../utils/statusMapping';
+import { formatStatus } from '../../components/TransactionPopup';
 import { invalidateOrdersCache } from '../../utils/ordersCache';
 import { getOrderStatus } from '../../api/order';
 import { playSuccessSound } from '../../utils/audio';
@@ -77,14 +78,12 @@ export default function Payment() {
             if (!endTime) setEndTime(Date.now());
             invalidateOrdersCache();
             stopWs();
-        } else if (mappedStatus === 'failed' && status !== 'failed') {
-            setStatus('failed');
-            setMessage('Transaction failed. You will be refunded.');
-            hasInitiatedRef.current = false;
-            stopWs();
-        } else if (mappedStatus === 'refunded' && status !== 'refunded') {
-            setStatus('refunded');
-            setMessage('Transaction was refunded.');
+        } else if (mappedStatus === 'failed' && !['failed', 'refunded'].includes(status)) {
+            // Distinguish refund from failure using display label
+            const isRefund = formatStatus(statusStr) === 'Refunded';
+            setStatus(isRefund ? 'refunded' : 'failed');
+            setMessage(isRefund ? 'Transaction was refunded.' : 'Transaction failed. You will be refunded.');
+            if (!isRefund) hasInitiatedRef.current = false;
             stopWs();
         } else if (!['completed', 'failed', 'refunded'].includes(status)) {
             if (status !== 'processing') setStatus('processing');
@@ -105,11 +104,9 @@ export default function Payment() {
                 invalidateOrdersCache();
                 stopWs();
             } else if (mapped === 'failed') {
-                setStatus('failed');
-                setMessage('Transaction failed. You will be refunded.');
-            } else if (mapped === 'refunded') {
-                setStatus('refunded');
-                setMessage('Transaction was refunded.');
+                const isRefund = formatStatus(data.status) === 'Refunded';
+                setStatus(isRefund ? 'refunded' : 'failed');
+                setMessage(isRefund ? 'Transaction was refunded.' : 'Transaction failed. You will be refunded.');
             }
         }).catch(() => { /* WS will cover it */ });
     }, [orderId]);
@@ -131,13 +128,10 @@ export default function Payment() {
                     invalidateOrdersCache();
                     stopWs();
                     clearInterval(interval);
-                } else if (mapped === 'failed' && status !== 'failed') {
-                    setStatus('failed');
-                    setMessage('Transaction failed. You will be refunded.');
-                    clearInterval(interval);
-                } else if (mapped === 'refunded' && status !== 'refunded') {
-                    setStatus('refunded');
-                    setMessage('Transaction was refunded.');
+                } else if (mapped === 'failed' && !['failed', 'refunded'].includes(status)) {
+                    const isRefund = formatStatus(data.status) === 'Refunded';
+                    setStatus(isRefund ? 'refunded' : 'failed');
+                    setMessage(isRefund ? 'Transaction was refunded.' : 'Transaction failed. You will be refunded.');
                     clearInterval(interval);
                 }
             }).catch(() => {});

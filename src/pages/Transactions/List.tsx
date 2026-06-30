@@ -6,6 +6,7 @@ import TransactionPopup, { formatStatus, getStatusStyle } from '../../components
 import type { Order } from '../../components/TransactionPopup';
 import { formatDate } from '../../utils/dateFormatter';
 import { fetchOrders } from '../../utils/ordersCache';
+import { mapTransactionStatus } from '../../utils/statusMapping';
 import { TransactionListSkeleton } from '../../components/ui/SkeletonLoader';
 import EmptyState from '../../components/ui/EmptyState';
 import usePullToRefresh, { PullToRefreshIndicator } from '../../hooks/usePullToRefresh';
@@ -15,31 +16,8 @@ import StatsShareModal from '../../components/StatsShareModal';
 
 // Helper to normalize status for filtering
 const normalizeStatusForFilter = (status: string): string => {
-    const normalized = status?.toLowerCase()?.trim() || '';
-    switch (normalized) {
-        case 'completed':
-        case 'settled in treasury':
-        case 'settled_in_treasury':
-        case 'disbursed':
-        case 'received in treasury':
-        case 'received_in_treasury':
-            return 'completed';
-        case 'failed':
-        case 'refunded':
-        case 'bill refunded':
-            return 'failed';
-        case 'pending':
-        case 'initiated':
-        case 'in_order_queue':
-        case 'payment_processing':
-        case 'processing':
-        case 'waiting for deposit':
-        case 'paying bill':
-        case 'deposit confirmed':
-            return 'pending';
-        default:
-            return 'pending';
-    }
+    // Delegate to the shared mapping — returns 'completed' | 'pending' | 'failed'
+    return mapTransactionStatus(status);
 };
 
 const getOrderChain = (order: Order): string | null => {
@@ -300,6 +278,33 @@ export default function TransactionsList() {
                 ))}
             </div>
 
+            {/* Chain Filter Pills */}
+            {availableChains.length > 1 && (
+                <div style={{ display: 'flex', gap: '8px', marginBottom: '24px', overflowX: 'auto', paddingBottom: '4px', scrollbarWidth: 'none' }}>
+                    {[{ label: 'All Chains', value: 'all' }, ...availableChains.map(c => ({ label: c.toUpperCase(), value: c }))].map(({ label, value }) => (
+                        <button
+                            key={value}
+                            onClick={() => setChainFilter(value)}
+                            style={{
+                                padding: '8px 16px',
+                                borderRadius: '20px',
+                                fontSize: '9px',
+                                fontWeight: 500,
+                                cursor: 'pointer',
+                                transition: 'all 0.2s ease',
+                                background: chainFilter === value ? 'var(--primary)' : 'var(--surface)',
+                                color: chainFilter === value ? 'white' : 'var(--text-secondary)',
+                                border: chainFilter === value ? 'none' : '1px solid var(--border-color)',
+                                whiteSpace: 'nowrap',
+                                flexShrink: 0,
+                            }}
+                        >
+                            {label}
+                        </button>
+                    ))}
+                </div>
+            )}
+
             {/* Content */}
             {isLoading ? (
                 <TransactionListSkeleton count={6} />
@@ -324,7 +329,7 @@ export default function TransactionsList() {
                                 {dateOrders.map((order: Order, index: number) => {
                                     const statusStyle = getStatusStyle(order.status);
                                     const formattedStatus = formatStatus(order.status);
-                                    const isPending = formattedStatus === 'Pending' || formattedStatus === 'Processing';
+                                    const isPending = formattedStatus === 'Pending';
                                     return (
                                         <div
                                             key={order.id}
