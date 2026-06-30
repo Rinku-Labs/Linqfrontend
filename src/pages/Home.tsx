@@ -529,6 +529,8 @@ export default function Home() {
                     borderRadius: '20px',
                     overflow: 'hidden',
                     display: 'flex',
+                    background: '#ede4ff', // lavender so the card edges never show white
+                    lineHeight: 0,
                 }}
             >
                 <img

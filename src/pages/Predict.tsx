@@ -389,9 +389,10 @@ function PredictModal({
     return (
         <div
             onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
+            className="animate-fadeIn"
             style={{ position: 'fixed', inset: 0, zIndex: 200, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }}
         >
-            <div style={{ background: 'var(--surface)', borderRadius: '24px 24px 0 0', width: '100%', maxWidth: 480, padding: '20px 20px calc(env(safe-area-inset-bottom, 0px) + 24px)' }}>
+            <div className="animate-slideUp" style={{ background: 'var(--surface)', borderRadius: '24px 24px 0 0', width: '100%', maxWidth: 480, padding: '20px 20px calc(env(safe-area-inset-bottom, 0px) + 24px)' }}>
                 {/* Header */}
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
                     <span style={{ fontSize: 15, fontWeight: 800, letterSpacing: 0.5, color: 'var(--text-main)' }}>PREDICT THE SCORE</span>
@@ -421,11 +422,11 @@ function PredictModal({
                     </div>
                 </div>
 
-                {/* Steppers */}
+                {/* Steppers — tap the chevrons, or drag/scroll up & down to scrub */}
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 22 }}>
-                    <Stepper value={home} onChange={(d) => setHome(clamp(home + d))} />
+                    <Stepper value={home} onSet={(v) => setHome(clamp(v))} />
                     <span style={{ fontSize: 32, fontWeight: 900, color: 'var(--text-main)' }}>:</span>
-                    <Stepper value={away} onChange={(d) => setAway(clamp(away + d))} />
+                    <Stepper value={away} onSet={(v) => setAway(clamp(v))} />
                 </div>
 
                 <button onClick={submit} disabled={submitting} style={{ ...btn(false), marginTop: 24 }}>
@@ -436,12 +437,42 @@ function PredictModal({
     );
 }
 
-function Stepper({ value, onChange }: { value: number; onChange: (d: number) => void }) {
+// Stepper supports three inputs: the chevron buttons, the mouse wheel, and a
+// finger/pointer drag (drag up to increase, down to decrease) for touch devices.
+function Stepper({ value, onSet }: { value: number; onSet: (v: number) => void }) {
+    const drag = useRef<{ y: number; v: number } | null>(null);
+
+    const onPointerDown = (e: React.PointerEvent) => {
+        if ((e.target as HTMLElement).closest('button')) return; // let the chevrons click
+        drag.current = { y: e.clientY, v: value };
+        (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+    };
+    const onPointerMove = (e: React.PointerEvent) => {
+        if (!drag.current) return;
+        const steps = Math.round((drag.current.y - e.clientY) / 16); // 16px ≈ 1 goal
+        onSet(drag.current.v + steps);
+    };
+    const endDrag = (e: React.PointerEvent) => {
+        drag.current = null;
+        try { (e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId); } catch { /* noop */ }
+    };
+
     return (
-        <div style={{ border: `2px solid ${PURPLE}`, borderRadius: 18, padding: '14px 0', width: 120, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, background: 'var(--surface)' }}>
-            <button onClick={() => onChange(1)} style={stepBtn()}><ChevronUp size={26} color={PURPLE} /></button>
-            <span style={{ fontSize: 46, fontWeight: 900, color: 'var(--text-main)', lineHeight: 1.0 }}>{value}</span>
-            <button onClick={() => onChange(-1)} style={stepBtn()}><ChevronDown size={26} color={PURPLE} /></button>
+        <div
+            onPointerDown={onPointerDown}
+            onPointerMove={onPointerMove}
+            onPointerUp={endDrag}
+            onPointerCancel={endDrag}
+            onWheel={(e) => onSet(value + (e.deltaY < 0 ? 1 : -1))}
+            style={{
+                border: `2px solid ${PURPLE}`, borderRadius: 18, padding: '12px 0', width: 120,
+                display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, background: 'var(--surface)',
+                touchAction: 'none', userSelect: 'none', cursor: 'ns-resize',
+            }}
+        >
+            <button onClick={() => onSet(value + 1)} style={stepBtn()} aria-label="increase score"><ChevronUp size={26} color={PURPLE} /></button>
+            <span key={value} className="animate-digit" style={{ fontSize: 46, fontWeight: 900, color: 'var(--text-main)', lineHeight: 1.0 }}>{value}</span>
+            <button onClick={() => onSet(value - 1)} style={stepBtn()} aria-label="decrease score"><ChevronDown size={26} color={PURPLE} /></button>
         </div>
     );
 }
