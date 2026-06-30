@@ -278,6 +278,33 @@ export default function TransactionsList() {
                 ))}
             </div>
 
+            {/* Chain Filter Pills */}
+            {availableChains.length > 1 && (
+                <div style={{ display: 'flex', gap: '8px', marginBottom: '24px', overflowX: 'auto', paddingBottom: '4px', scrollbarWidth: 'none' }}>
+                    {[{ label: 'All Chains', value: 'all' }, ...availableChains.map(c => ({ label: c.toUpperCase(), value: c }))].map(({ label, value }) => (
+                        <button
+                            key={value}
+                            onClick={() => setChainFilter(value)}
+                            style={{
+                                padding: '8px 16px',
+                                borderRadius: '20px',
+                                fontSize: '9px',
+                                fontWeight: 500,
+                                cursor: 'pointer',
+                                transition: 'all 0.2s ease',
+                                background: chainFilter === value ? 'var(--primary)' : 'var(--surface)',
+                                color: chainFilter === value ? 'white' : 'var(--text-secondary)',
+                                border: chainFilter === value ? 'none' : '1px solid var(--border-color)',
+                                whiteSpace: 'nowrap',
+                                flexShrink: 0,
+                            }}
+                        >
+                            {label}
+                        </button>
+                    ))}
+                </div>
+            )}
+
             {/* Content */}
             {isLoading ? (
                 <TransactionListSkeleton count={6} />

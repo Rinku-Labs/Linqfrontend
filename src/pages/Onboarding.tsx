@@ -4,12 +4,13 @@ import { Info, CheckCircle } from 'lucide-react';
 import logo from '../assets/logo.png';
 import Button from '../components/ui/Button';
 import Input from '../components/ui/Input';
+import BankSelector from '../components/ui/BankSelector';
 import TermsModal from '../components/TermsModal';
+import banksData from '../../banks.json';
 import { useAuth } from '../context/AuthContext';
 import client from '../api/client';
 import { verifyBankAccount } from '../api/bank';
 import { updateBankDetails } from '../api/user';
-import banksData from '../../banks.json';
 
 import { getGoogleLoginUrl, parseGoogleToken, computeGoogleAddress, derivePasswordFromSub } from '../utils/zkLogin';
 
@@ -998,21 +999,10 @@ export default function Onboarding() {
                         />
 
                         <div style={{ marginBottom: '16px' }}>
-                            <label style={{ fontSize: '11px', color: 'var(--text-secondary)', display: 'block', marginBottom: '6px' }}>Bank</label>
-                            <select
-                                value={bankLinkSelectedBank}
-                                onChange={(e) => { setBankLinkSelectedBank(e.target.value); setBankLinkValidatedName(''); }}
-                                style={{
-                                    width: '100%', padding: '12px 16px', borderRadius: '12px',
-                                    border: '1.5px solid var(--border-color)', background: 'var(--surface)',
-                                    color: 'var(--text-main)', fontSize: '12px', outline: 'none',
-                                }}
-                            >
-                                <option value="">Select your bank</option>
-                                {bankList.map(b => (
-                                    <option key={b.code} value={b.name}>{b.name}</option>
-                                ))}
-                            </select>
+                            <BankSelector
+                                selectedBank={bankLinkSelectedBank}
+                                onSelect={(name) => { setBankLinkSelectedBank(name); setBankLinkValidatedName(''); }}
+                            />
                         </div>
 
                         <Input

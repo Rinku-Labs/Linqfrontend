@@ -1,8 +1,8 @@
 import { ArrowUpRight, ArrowDownLeft, RefreshCw, Smartphone, Zap, Eye, EyeOff, Wallet, Inbox, Copy, ScanLine } from 'lucide-react';
 import ProductTour from '../components/ProductTour';
 import { getTransactionIcon } from '../utils/transactionIcons';
-import clickToEarnImg from '../assets/click-to-earn.png';
 import logo from '../assets/logo.png';
+import predictAndWinCard from '../assets/predict-and-win-card.jpg';
 import nairaLogo from '../assets/naira.png';
 import balanceCardBg from '../assets/balance-card-bg.png';
 import Button from '../components/ui/Button';
@@ -517,10 +517,10 @@ export default function Home() {
                 </div>
             )}
 
-            {/* Earn Rewards Banner */}
+            {/* Predict & Win — World Cup 2026 (the designer's exact card asset) */}
             <div
-                id="tour-rewards"
-                onClick={() => navigate('/rewards')}
+                id="tour-predict"
+                onClick={() => navigate('/predict')}
                 className="card-interactive"
                 style={{
                     marginBottom: '24px',
@@ -528,13 +528,15 @@ export default function Home() {
                     boxShadow: 'var(--card-shadow)',
                     borderRadius: '20px',
                     overflow: 'hidden',
-                    display: 'flex'
+                    display: 'flex',
+                    background: '#ede4ff', // lavender so the card edges never show white
+                    lineHeight: 0,
                 }}
             >
-                <img 
-                    src={clickToEarnImg} 
-                    alt="Earn Rewards" 
-                    style={{ width: '100%', height: 'auto', display: 'block' }} 
+                <img
+                    src={predictAndWinCard}
+                    alt="Predict and win"
+                    style={{ width: '100%', height: 'auto', display: 'block' }}
                 />
             </div>
 
