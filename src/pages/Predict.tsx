@@ -43,6 +43,15 @@ const koTime = (t: number) =>
     new Date(toMs(t)).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' }).toUpperCase();
 const abbr = (name: string) => name.replace(/[^A-Za-z]/g, '').slice(0, 3).toUpperCase();
 
+// labelForDay shows Today/Yesterday for those two days, else DD/MM (like the
+// designer's "27/06" tabs).
+function labelForDay(d: string, today: string, yesterday: string): string {
+    if (d === today) return 'Today';
+    if (d === yesterday) return 'Yesterday';
+    const [, m, day] = d.split('-');
+    return `${day}/${m}`;
+}
+
 // stageBadge derives the round label shown on the card. TxLINE puts the stage
 // after ">" in Competition when present; otherwise show the competition name.
 function stageBadge(competition: string): string {
@@ -128,9 +137,13 @@ export default function Predict() {
         return () => clearInterval(refresh);
     }, [loadFixtures, loadHistory]);
 
-    // Only yesterday + today are ever shown. Both tabs are always present (default
-    // today); a day with no matches just shows the empty state.
-    const days = [yesterday, today];
+    // Tabs: yesterday + today are always present, plus every day the API actually
+    // has World Cup fixtures for, sorted. The page opens on today.
+    const days = (() => {
+        const set = new Set<string>([yesterday, today]);
+        fixtures.forEach((f) => set.add(dayKey(f.startTime)));
+        return [...set].sort();
+    })();
     const dayFixtures = fixtures.filter((f) => dayKey(f.startTime) === activeDay);
 
     return (
@@ -181,8 +194,8 @@ export default function Predict() {
                 </div>
             </div>
 
-            {/* Date tabs — yesterday + today only */}
-            <div style={{ display: 'flex', gap: 10, marginBottom: 16 }}>
+            {/* Date tabs — yesterday + today + available fixture dates */}
+            <div style={{ display: 'flex', gap: 10, overflowX: 'auto', paddingBottom: 8, marginBottom: 16 }}>
                 {days.map((d) => {
                     const active = d === activeDay;
                     return (
@@ -190,14 +203,14 @@ export default function Predict() {
                             key={d}
                             onClick={() => setActiveDay(d)}
                             style={{
-                                padding: '9px 18px', borderRadius: 22, border: 'none', cursor: 'pointer',
+                                flexShrink: 0, padding: '9px 18px', borderRadius: 22, border: 'none', cursor: 'pointer',
                                 fontSize: 13, fontWeight: 700,
                                 background: active ? PURPLE_GRAD : 'var(--surface)',
                                 color: active ? '#fff' : 'var(--text-secondary)',
                                 boxShadow: active ? '0 4px 12px rgba(124,58,237,0.35)' : 'var(--card-shadow)',
                             }}
                         >
-                            {d === today ? 'Today' : 'Yesterday'}
+                            {labelForDay(d, today, yesterday)}
                         </button>
                     );
                 })}
@@ -212,7 +225,7 @@ export default function Predict() {
                 </div>
             ) : !dayFixtures.length ? (
                 <p style={{ color: 'var(--text-secondary)', textAlign: 'center', marginTop: 40, fontSize: 14 }}>
-                    No World Cup matches {activeDay === today ? 'today' : 'yesterday'}.
+                    No World Cup matches on {labelForDay(activeDay, today, yesterday)}.
                 </p>
             ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
