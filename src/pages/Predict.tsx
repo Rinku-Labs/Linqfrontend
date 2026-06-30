@@ -11,6 +11,7 @@ import {
     type LiveScore,
 } from '../api/predict';
 import { usePredictScores } from '../hooks/usePredictScores';
+import heroImg from '../assets/predict-hero.jpg';
 
 const LIVE = new Set(['H1', 'HT', 'H2', 'ET1', 'HTET', 'ET2', 'PE', 'WET', 'WPE']);
 const FINISHED = new Set(['F', 'FET', 'FPE']);
@@ -170,29 +171,9 @@ export default function Predict() {
                 </button>
             </div>
 
-            {/* Hero — flex layout so the trophy never overlaps the text on mobile */}
-            <div
-                style={{
-                    position: 'relative', overflow: 'hidden', borderRadius: 22, marginBottom: 18,
-                    padding: '22px 20px', color: '#fff', display: 'flex', alignItems: 'center', gap: 10,
-                    background: 'linear-gradient(135deg, #2b1055 0%, #6d28d9 52%, #b3122e 100%)',
-                }}
-            >
-                <div aria-hidden style={{
-                    position: 'absolute', inset: 0, opacity: 0.16,
-                    background: 'repeating-linear-gradient(102deg, #ef4444 0 16px, #f59e0b 16px 32px, #eab308 32px 48px, #22c55e 48px 64px, #06b6d4 64px 80px, #6366f1 80px 96px, #a855f7 96px 112px)',
-                }} />
-                <div style={{ position: 'relative', zIndex: 1, flex: 1, minWidth: 0 }}>
-                    <h1 style={{ fontSize: 28, fontWeight: 900, lineHeight: 1.0, letterSpacing: 0.5, margin: 0, fontStyle: 'italic' }}>
-                        PREDICT<br />AND WIN
-                    </h1>
-                    <p style={{ fontSize: 12, opacity: 0.92, margin: '10px 0 0', lineHeight: 1.4 }}>
-                        Call the exact full-time score before kickoff. Predictions lock at kickoff.
-                    </p>
-                </div>
-                <div aria-hidden style={{ position: 'relative', zIndex: 1, fontSize: 68, lineHeight: 1, flexShrink: 0, filter: 'drop-shadow(0 6px 12px rgba(0,0,0,0.4))' }}>
-                    🏆
-                </div>
+            {/* Hero — the designer's artwork */}
+            <div style={{ borderRadius: 22, overflow: 'hidden', marginBottom: 18, lineHeight: 0, boxShadow: 'var(--card-shadow)' }}>
+                <img src={heroImg} alt="Predict and Win" style={{ width: '100%', height: 'auto', display: 'block' }} />
             </div>
 
             {/* Date tabs — yesterday + today + available fixture dates */}
