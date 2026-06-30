@@ -169,11 +169,11 @@ export default function Predict() {
                 </button>
             </div>
 
-            {/* Hero */}
+            {/* Hero — flex layout so the trophy never overlaps the text on mobile */}
             <div
                 style={{
                     position: 'relative', overflow: 'hidden', borderRadius: 22, marginBottom: 18,
-                    minHeight: 130, padding: '24px 22px', color: '#fff',
+                    padding: '22px 20px', color: '#fff', display: 'flex', alignItems: 'center', gap: 10,
                     background: 'linear-gradient(135deg, #2b1055 0%, #6d28d9 52%, #b3122e 100%)',
                 }}
             >
@@ -181,16 +181,16 @@ export default function Predict() {
                     position: 'absolute', inset: 0, opacity: 0.16,
                     background: 'repeating-linear-gradient(102deg, #ef4444 0 16px, #f59e0b 16px 32px, #eab308 32px 48px, #22c55e 48px 64px, #06b6d4 64px 80px, #6366f1 80px 96px, #a855f7 96px 112px)',
                 }} />
-                <div aria-hidden style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', fontSize: 86, lineHeight: 1, opacity: 0.9, filter: 'drop-shadow(0 6px 12px rgba(0,0,0,0.4))' }}>
-                    🏆
-                </div>
-                <div style={{ position: 'relative', zIndex: 1, maxWidth: '72%' }}>
-                    <h1 style={{ fontSize: 30, fontWeight: 900, lineHeight: 1.0, letterSpacing: 0.5, margin: 0, fontStyle: 'italic' }}>
+                <div style={{ position: 'relative', zIndex: 1, flex: 1, minWidth: 0 }}>
+                    <h1 style={{ fontSize: 28, fontWeight: 900, lineHeight: 1.0, letterSpacing: 0.5, margin: 0, fontStyle: 'italic' }}>
                         PREDICT<br />AND WIN
                     </h1>
                     <p style={{ fontSize: 12, opacity: 0.92, margin: '10px 0 0', lineHeight: 1.4 }}>
                         Call the exact full-time score before kickoff. Predictions lock at kickoff.
                     </p>
+                </div>
+                <div aria-hidden style={{ position: 'relative', zIndex: 1, fontSize: 68, lineHeight: 1, flexShrink: 0, filter: 'drop-shadow(0 6px 12px rgba(0,0,0,0.4))' }}>
+                    🏆
                 </div>
             </div>
 
@@ -291,22 +291,22 @@ function MatchCard({
                     {badge}
                 </div>
 
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
-                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, flex: 1 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, flexBasis: 0, flexGrow: 1, minWidth: 0 }}>
                         <CircleFlag url={fixture.homeFlag} name={fixture.homeTeam} />
                         <span style={teamName}>{fixture.homeTeam.toUpperCase()}</span>
                     </div>
-                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', minWidth: 78 }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: 86, flexShrink: 0 }}>
                         {showScore ? (
                             <>
-                                <span style={{ fontSize: 30, fontWeight: 900, color: '#fff' }}>{score!.homeGoals} - {score!.awayGoals}</span>
-                                {pens && <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.75)' }}>{pens}</span>}
+                                <span style={{ fontSize: 28, fontWeight: 900, color: '#fff', whiteSpace: 'nowrap' }}>{score!.homeGoals} - {score!.awayGoals}</span>
+                                {pens && <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.75)', whiteSpace: 'nowrap' }}>{pens}</span>}
                             </>
                         ) : (
                             <span style={{ fontSize: 18, fontWeight: 800, color: 'rgba(255,255,255,0.9)' }}>VS</span>
                         )}
                     </div>
-                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, flex: 1 }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, flexBasis: 0, flexGrow: 1, minWidth: 0 }}>
                         <CircleFlag url={fixture.awayFlag} name={fixture.awayTeam} />
                         <span style={teamName}>{fixture.awayTeam.toUpperCase()}</span>
                     </div>
@@ -441,7 +441,7 @@ function Stepper({ value, onChange }: { value: number; onChange: (d: number) => 
     );
 }
 
-const teamName: React.CSSProperties = { fontSize: 12, fontWeight: 700, color: '#fff', textAlign: 'center', textShadow: '0 1px 3px rgba(0,0,0,0.5)' };
+const teamName: React.CSSProperties = { fontSize: 12, fontWeight: 700, color: '#fff', textAlign: 'center', textShadow: '0 1px 3px rgba(0,0,0,0.5)', maxWidth: '100%', wordBreak: 'break-word', lineHeight: 1.2, minHeight: 28, display: 'flex', alignItems: 'center', justifyContent: 'center' };
 const darkPill = (bg: string, color: string): React.CSSProperties => ({ fontSize: 11, fontWeight: 800, padding: '4px 12px', borderRadius: 20, background: bg, color, letterSpacing: 0.3 });
 const stepBtn = (): React.CSSProperties => ({ background: 'none', border: 'none', cursor: 'pointer', padding: 2, display: 'flex' });
 function btn(disabled: boolean): React.CSSProperties {

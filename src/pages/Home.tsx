@@ -516,7 +516,7 @@ export default function Home() {
                 </div>
             )}
 
-            {/* Predict & Win — World Cup 2026 */}
+            {/* Predict & Win — World Cup 2026 (matches the designer's lavender card) */}
             <div
                 id="tour-predict"
                 onClick={() => navigate('/predict')}
@@ -532,26 +532,22 @@ export default function Home() {
                     alignItems: 'center',
                     gap: '12px',
                     padding: '18px 20px',
-                    background: 'linear-gradient(135deg, #7c3aed 0%, #a855f7 100%)',
+                    minHeight: '92px',
+                    background: 'linear-gradient(135deg, #ece3fb 0%, #ddd0f7 100%)',
                 }}
             >
                 <div style={{ flex: 1, minWidth: 0, zIndex: 1 }}>
-                    <div style={{ fontSize: '17px', fontWeight: 800, color: '#fff', letterSpacing: 0.3 }}>
+                    <div style={{ fontSize: '17px', fontWeight: 800, color: '#2a2342' }}>
                         Predict and win
                     </div>
-                    <div style={{ fontSize: '12px', color: 'rgba(255,255,255,0.85)', marginTop: '4px', lineHeight: 1.4 }}>
+                    <div style={{ fontSize: '12px', color: '#6b647e', marginTop: '4px', lineHeight: 1.4 }}>
                         Predict the score of world cup matches and win prizes
                     </div>
                 </div>
-                {/* Trophy motif (emoji keeps it dependency-free; swap for a PNG asset when design ships one) */}
-                <div
-                    aria-hidden
-                    style={{
-                        fontSize: '46px', lineHeight: 1, flexShrink: 0, zIndex: 1,
-                        filter: 'drop-shadow(0 4px 8px rgba(0,0,0,0.25))',
-                    }}
-                >
-                    🏆
+                {/* Coins motif — placeholder until the exact card artwork PNG is supplied
+                    (then this whole card becomes a single <img>, like the other banners). */}
+                <div aria-hidden style={{ fontSize: '40px', lineHeight: 1, flexShrink: 0, zIndex: 1 }}>
+                    💰
                 </div>
             </div>
 
