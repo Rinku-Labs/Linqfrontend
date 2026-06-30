@@ -283,6 +283,15 @@ select {
   animation: pulse 2s ease-in-out infinite;
 }
 
+/* Horizontal scroll without the ugly scrollbar (still swipe/drag scrollable). */
+.hide-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.hide-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
 /* ========== STAGGERED ANIMATION DELAYS ========== */
 
 .stagger-1 {
