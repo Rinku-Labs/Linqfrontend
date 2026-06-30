@@ -33,10 +33,23 @@ export function usePredictScores(): Record<number, LiveScore> {
 
         let es: EventSource | null = null;
         let retry: ReturnType<typeof setTimeout> | undefined;
+        let watchdog: ReturnType<typeof setInterval> | undefined;
+        let lastSeen = Date.now();
+
+        const reconnect = () => {
+            if (watchdog) clearInterval(watchdog);
+            es?.close();
+            if (!cancelled) retry = setTimeout(connect, 3000);
+        };
 
         const connect = () => {
+            lastSeen = Date.now();
             es = new EventSource(url);
+            // Any frame — a score or the server's 15s "ping" heartbeat — proves the
+            // connection is alive and resets the watchdog clock.
+            const bump = () => { lastSeen = Date.now(); };
             const onScore = (e: MessageEvent) => {
+                bump();
                 try {
                     apply(JSON.parse(e.data));
                 } catch {
@@ -44,17 +57,27 @@ export function usePredictScores(): Record<number, LiveScore> {
                 }
             };
             es.addEventListener('score', onScore);
+            es.addEventListener('ping', bump); // heartbeat — liveness only, no payload
+            es.onopen = bump;
             es.onmessage = onScore;
-            es.onerror = () => {
-                es?.close();
-                if (!cancelled) retry = setTimeout(connect, 3000); // auto-reconnect
-            };
+            es.onerror = reconnect; // explicit error: drop and retry
+
+            // Watchdog for a *silently* dead connection: some proxies hold the socket
+            // open but stop forwarding, so onerror never fires and we'd sit on a stale
+            // score (e.g. a match stuck at LIVE 95' that has actually finished). If no
+            // frame arrives for 45s (3 missed 15s heartbeats), force a reconnect — and
+            // reconnecting re-seeds the current state from the server.
+            if (watchdog) clearInterval(watchdog);
+            watchdog = setInterval(() => {
+                if (Date.now() - lastSeen > 45000) reconnect();
+            }, 15000);
         };
         connect();
 
         return () => {
             cancelled = true;
             if (retry) clearTimeout(retry);
+            if (watchdog) clearInterval(watchdog);
             es?.close();
         };
         // eslint-disable-next-line react-hooks/exhaustive-deps
