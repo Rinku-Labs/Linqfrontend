@@ -2,6 +2,7 @@ import { ArrowUpRight, ArrowDownLeft, RefreshCw, Smartphone, Zap, Eye, EyeOff, W
 import ProductTour from '../components/ProductTour';
 import { getTransactionIcon } from '../utils/transactionIcons';
 import logo from '../assets/logo.png';
+import predictAndWinCard from '../assets/predict-and-win-card.jpg';
 import nairaLogo from '../assets/naira.png';
 import balanceCardBg from '../assets/balance-card-bg.png';
 import Button from '../components/ui/Button';
@@ -516,7 +517,7 @@ export default function Home() {
                 </div>
             )}
 
-            {/* Predict & Win — World Cup 2026 (matches the designer's lavender card) */}
+            {/* Predict & Win — World Cup 2026 (the designer's exact card asset) */}
             <div
                 id="tour-predict"
                 onClick={() => navigate('/predict')}
@@ -527,28 +528,14 @@ export default function Home() {
                     boxShadow: 'var(--card-shadow)',
                     borderRadius: '20px',
                     overflow: 'hidden',
-                    position: 'relative',
                     display: 'flex',
-                    alignItems: 'center',
-                    gap: '12px',
-                    padding: '18px 20px',
-                    minHeight: '92px',
-                    background: 'linear-gradient(135deg, #ece3fb 0%, #ddd0f7 100%)',
                 }}
             >
-                <div style={{ flex: 1, minWidth: 0, zIndex: 1 }}>
-                    <div style={{ fontSize: '17px', fontWeight: 800, color: '#2a2342' }}>
-                        Predict and win
-                    </div>
-                    <div style={{ fontSize: '12px', color: '#6b647e', marginTop: '4px', lineHeight: 1.4 }}>
-                        Predict the score of world cup matches and win prizes
-                    </div>
-                </div>
-                {/* Coins motif — placeholder until the exact card artwork PNG is supplied
-                    (then this whole card becomes a single <img>, like the other banners). */}
-                <div aria-hidden style={{ fontSize: '40px', lineHeight: 1, flexShrink: 0, zIndex: 1 }}>
-                    💰
-                </div>
+                <img
+                    src={predictAndWinCard}
+                    alt="Predict and win"
+                    style={{ width: '100%', height: 'auto', display: 'block' }}
+                />
             </div>
 
             {/* Volume Tracker - HIDDEN */}
