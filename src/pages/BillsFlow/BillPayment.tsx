@@ -531,7 +531,7 @@ export default function BillPayment() {
                         </div>
 
                         <h1 style={{ fontSize: '17px', fontWeight: 700, marginBottom: '4px', color: 'var(--text-main)', textAlign: 'center', marginTop: '16px' }}>
-                            🎉 Bill Paid!
+                            Bill Paid
                         </h1>
                         <p style={{ color: 'var(--text-secondary)', fontSize: '10px', marginBottom: '32px', textAlign: 'center' }}>
                             {billData?.itemName} delivered to {billData?.customerId}
@@ -586,6 +586,16 @@ export default function BillPayment() {
                                         <span style={{ fontWeight: 600, fontSize: '12px', color: 'var(--text-main)' }}>{vendInfo.units}</span>
                                     </div>
                                 )}
+                            </div>
+                        )}
+
+                        {/* Postpaid electricity has no token — reassure the user the credit went through */}
+                        {String(billData?.billType || '').toUpperCase() === 'ELECTRICITY'
+                            && String(billData?.meterType || '').toUpperCase() === 'POSTPAID' && (
+                            <div style={{ padding: '12px 16px', background: 'var(--surface-elevated)', borderRadius: '16px', width: '100%', marginBottom: '24px' }}>
+                                <p style={{ fontSize: '10px', color: 'var(--text-secondary)', textAlign: 'center' }}>
+                                    Your postpaid account has been credited — no token required.
+                                </p>
                             </div>
                         )}
 

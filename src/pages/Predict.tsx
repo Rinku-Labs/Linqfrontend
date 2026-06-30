@@ -143,7 +143,10 @@ export default function Predict() {
     // has World Cup fixtures for, sorted. The page opens on today.
     const days = (() => {
         const set = new Set<string>([yesterday, today]);
-        fixtures.forEach((f) => set.add(dayKey(f.startTime)));
+        fixtures.forEach((f) => {
+            const k = dayKey(f.startTime);
+            if (k >= yesterday) set.add(k); // never surface fixture dates older than yesterday
+        });
         return [...set].sort();
     })();
     const dayFixtures = fixtures.filter((f) => dayKey(f.startTime) === activeDay);
@@ -177,7 +180,7 @@ export default function Predict() {
             </div>
 
             {/* Date tabs — yesterday + today + available fixture dates */}
-            <div style={{ display: 'flex', gap: 10, overflowX: 'auto', paddingBottom: 8, marginBottom: 16 }}>
+            <div className="hide-scrollbar" style={{ display: 'flex', gap: 10, overflowX: 'auto', paddingBottom: 8, marginBottom: 16, WebkitOverflowScrolling: 'touch' }}>
                 {days.map((d) => {
                     const active = d === activeDay;
                     return (
@@ -256,13 +259,19 @@ function MatchCard({
     const showScore = !!score && (live || finished);
     const pens = score && (score.homePens || score.awayPens) ? `Penalties: ${score.homePens}-${score.awayPens}` : '';
 
-    let badge: React.ReactNode = null;
+    // Badge mirrors the demo's logic exactly: LIVE/FULL-TIME only come from a real
+    // score event, never inferred from the clock — otherwise an ended match with no
+    // score in the feed would falsely read "LIVE". With no score we just show the
+    // kickoff time.
+    let badge: React.ReactNode;
     if (live) {
         badge = <span style={darkPill('#ef4444', '#fff')}>● {score!.status === 'PE' ? 'PENALTIES' : `LIVE ${score!.minute || ''}'`}</span>;
     } else if (finished) {
         badge = <span style={darkPill('rgba(255,255,255,0.18)', '#fff')}>FULL-TIME</span>;
     } else if (stopped) {
         badge = <span style={darkPill('rgba(255,255,255,0.18)', '#fff')}>{stopped}</span>;
+    } else {
+        badge = <span style={darkPill('rgba(255,255,255,0.18)', '#fff')}>{koTime(fixture.startTime)} WAT</span>;
     }
 
     return (
@@ -294,12 +303,6 @@ function MatchCard({
                     </div>
                 </div>
 
-                {!showScore && !stopped && (
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 14, fontSize: 11, color: 'rgba(255,255,255,0.85)' }}>
-                        <span style={{ fontWeight: 700 }}>{koTime(fixture.startTime)} WAT</span>
-                        <span><Countdown target={toMs(fixture.startTime)} /></span>
-                    </div>
-                )}
             </div>
 
             <div style={{ background: 'var(--surface)', padding: '14px 16px' }}>
