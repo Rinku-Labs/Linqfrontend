@@ -1,7 +1,6 @@
 import { ArrowUpRight, ArrowDownLeft, RefreshCw, Smartphone, Zap, Eye, EyeOff, Wallet, Inbox, Copy, ScanLine } from 'lucide-react';
 import ProductTour from '../components/ProductTour';
 import { getTransactionIcon } from '../utils/transactionIcons';
-import clickToEarnImg from '../assets/click-to-earn.png';
 import logo from '../assets/logo.png';
 import nairaLogo from '../assets/naira.png';
 import balanceCardBg from '../assets/balance-card-bg.png';
@@ -517,10 +516,10 @@ export default function Home() {
                 </div>
             )}
 
-            {/* Earn Rewards Banner */}
+            {/* Predict & Win — World Cup 2026 */}
             <div
-                id="tour-rewards"
-                onClick={() => navigate('/rewards')}
+                id="tour-predict"
+                onClick={() => navigate('/predict')}
                 className="card-interactive"
                 style={{
                     marginBottom: '24px',
@@ -528,14 +527,32 @@ export default function Home() {
                     boxShadow: 'var(--card-shadow)',
                     borderRadius: '20px',
                     overflow: 'hidden',
-                    display: 'flex'
+                    position: 'relative',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '12px',
+                    padding: '18px 20px',
+                    background: 'linear-gradient(135deg, #7c3aed 0%, #a855f7 100%)',
                 }}
             >
-                <img 
-                    src={clickToEarnImg} 
-                    alt="Earn Rewards" 
-                    style={{ width: '100%', height: 'auto', display: 'block' }} 
-                />
+                <div style={{ flex: 1, minWidth: 0, zIndex: 1 }}>
+                    <div style={{ fontSize: '17px', fontWeight: 800, color: '#fff', letterSpacing: 0.3 }}>
+                        Predict and win
+                    </div>
+                    <div style={{ fontSize: '12px', color: 'rgba(255,255,255,0.85)', marginTop: '4px', lineHeight: 1.4 }}>
+                        Predict the score of world cup matches and win prizes
+                    </div>
+                </div>
+                {/* Trophy motif (emoji keeps it dependency-free; swap for a PNG asset when design ships one) */}
+                <div
+                    aria-hidden
+                    style={{
+                        fontSize: '46px', lineHeight: 1, flexShrink: 0, zIndex: 1,
+                        filter: 'drop-shadow(0 4px 8px rgba(0,0,0,0.25))',
+                    }}
+                >
+                    🏆
+                </div>
             </div>
 
             {/* Volume Tracker - HIDDEN */}

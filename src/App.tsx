@@ -27,6 +27,8 @@ import Swap from './pages/Swap';
 import Savings from './pages/Savings';
 import Rewards from './pages/Rewards';
 import Leaderboard from './pages/Leaderboard';
+import Predict from './pages/Predict';
+import PredictHistory from './pages/PredictHistory';
 import ScrollToTop from './components/ScrollToTop';
 import ErrorBoundary from './components/ErrorBoundary';
 import SEO from './components/SEO';
@@ -97,6 +99,10 @@ function App() {
           {/* Rewards & Leaderboard */}
           <Route path="/rewards" element={<><SEO title="Earn Rewards" /><Rewards /></>} />
           <Route path="/leaderboard" element={<><SEO title="Leaderboard" /><Leaderboard /></>} />
+
+          {/* Predict & Win (World Cup 2026) */}
+          <Route path="/predict" element={<><SEO title="Predict & Win" /><Predict /></>} />
+          <Route path="/predict/history" element={<><SEO title="Prediction History" /><PredictHistory /></>} />
 
           {/* Deposit Flow */}
           <Route path="/deposit" element={<><SEO title="Deposit Funds" /><DepositAmount /></>} />
