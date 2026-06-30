@@ -16,11 +16,6 @@ import heroImg from '../assets/predict-hero.jpg';
 const LIVE = new Set(['H1', 'HT', 'H2', 'ET1', 'HTET', 'ET2', 'PE', 'WET', 'WPE']);
 const FINISHED = new Set(['F', 'FET', 'FPE']);
 const STOPPED: Record<string, string> = { A: 'ABANDONED', C: 'CANCELLED', P: 'POSTPONED', I: 'INTERRUPTED' };
-// Phases where the match clock is running, so we can advance the minute locally.
-const ACTIVE_PLAY = new Set(['H1', 'H2', 'ET1', 'ET2']);
-// Per-phase ceilings so a missed full-time event can't run the local clock away
-// (the backend also force-finalizes a silent match within ~20m).
-const MIN_CAP: Record<string, number> = { H1: 48, H2: 95, ET1: 120, ET2: 135 };
 
 // Dark match-card background tuned to the mockup: warm gold glow on the home
 // (left) side, cool blue glow on the away (right) side, over a near-black base.
@@ -97,31 +92,6 @@ function Countdown({ target }: { target: number }) {
     const mm = String(Math.floor((s % 3600) / 60)).padStart(2, '0');
     const ss = String(s % 60).padStart(2, '0');
     return <span>{hh}:{mm}:{ss} to kickoff</span>;
-}
-
-// LiveMinute renders the match minute and, during active play, advances it once a
-// second from the timestamp of the last server event. The backend only pushes on
-// goal/status/penalty changes (to keep fan-out light across many live games and
-// browsers), so the raw minute would otherwise sit frozen between goals. Goals,
-// status and the kickoff lock all still come from the server — this is a
-// display-only clock, so it can't affect predictions, settlement or open any
-// cheating window. The next server push resets the base, correcting any drift.
-function LiveMinute({ score }: { score: LiveScore }) {
-    const [, force] = useState(0);
-    const ticking = ACTIVE_PLAY.has(score.status);
-    useEffect(() => {
-        if (!ticking) return;
-        const t = setInterval(() => force((n) => n + 1), 1000);
-        return () => clearInterval(t);
-    }, [ticking]);
-    let m = score.minute || 0;
-    if (ticking && score.updatedAt) {
-        const elapsed = Math.floor((Date.now() - score.updatedAt) / 60000);
-        if (elapsed > 0) m += elapsed;
-        const cap = MIN_CAP[score.status];
-        if (cap && m > cap) m = cap;
-    }
-    return <>{m}'</>;
 }
 
 export default function Predict() {
@@ -295,7 +265,7 @@ function MatchCard({
     // kickoff time.
     let badge: React.ReactNode;
     if (live) {
-        badge = <span style={darkPill('#ef4444', '#fff')}>● {score!.status === 'PE' ? 'PENALTIES' : <>LIVE <LiveMinute score={score!} /></>}</span>;
+        badge = <span style={darkPill('#ef4444', '#fff')}>● {score!.status === 'PE' ? 'PENALTIES' : `LIVE ${score!.minute || ''}'`}</span>;
     } else if (finished) {
         badge = <span style={darkPill('rgba(255,255,255,0.18)', '#fff')}>FULL-TIME</span>;
     } else if (stopped) {
