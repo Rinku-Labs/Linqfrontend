@@ -1,7 +1,11 @@
 import { ArrowLeft } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { useState, useEffect } from 'react';
-import { getHistory, type HistoryItem } from '../api/predict';
+import { useState, useEffect, useCallback } from 'react';
+import { toast } from 'sonner';
+import { getHistory, claimPrize, type HistoryItem } from '../api/predict';
+import ClaimPrizeModal from '../components/ClaimPrizeModal';
+
+const PURPLE_GRAD = 'linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)';
 
 function Flag({ url, name }: { url: string; name: string }) {
     const [broken, setBroken] = useState(false);
@@ -32,14 +36,42 @@ function formatKickoff(iso: string): string {
 export default function PredictHistory() {
     const navigate = useNavigate();
     const [items, setItems] = useState<HistoryItem[]>([]);
+    const [hasPayoutInfo, setHasPayoutInfo] = useState(false);
+    const [prizeUsd, setPrizeUsd] = useState(0);
     const [loading, setLoading] = useState(true);
+    const [claimId, setClaimId] = useState<number | null>(null); // fixture whose modal is open
+    const [busyId, setBusyId] = useState<number | null>(null);
 
-    useEffect(() => {
-        getHistory()
-            .then((res) => setItems(res.predictions))
-            .catch(() => setItems([]))
-            .finally(() => setLoading(false));
+    const load = useCallback(async () => {
+        try {
+            const res = await getHistory();
+            setItems(res.predictions);
+            setHasPayoutInfo(res.hasPayoutInfo);
+            setPrizeUsd(res.prizeUsd);
+        } catch {
+            /* keep existing */
+        } finally {
+            setLoading(false);
+        }
     }, []);
+
+    useEffect(() => { load(); }, [load]);
+
+    const onClaim = useCallback(async (fixtureId: number) => {
+        if (!hasPayoutInfo) { setClaimId(fixtureId); return; }
+        setBusyId(fixtureId);
+        try {
+            await claimPrize(fixtureId);
+            toast.success('Prize claimed! 🎉');
+            await load();
+        } catch (e: unknown) {
+            const err = e as { response?: { data?: { error?: string; needPayoutInfo?: boolean } } };
+            if (err?.response?.data?.needPayoutInfo) { setClaimId(fixtureId); return; }
+            toast.error(err?.response?.data?.error || 'Could not claim prize.');
+        } finally {
+            setBusyId(null);
+        }
+    }, [hasPayoutInfo, load]);
 
     return (
         <div style={{ maxWidth: 480, margin: '0 auto', padding: 20, paddingBottom: 100 }}>
@@ -109,10 +141,36 @@ export default function PredictHistory() {
                                         {!settled ? 'PENDING' : won ? 'WON' : 'LOST'}
                                     </span>
                                 </div>
+
+                                {/* Claim action for a won prize */}
+                                {won && (
+                                    it.claimed ? (
+                                        <div style={{ marginTop: 12, textAlign: 'center', fontSize: 13, fontWeight: 700, color: '#15803d', background: '#dcfce7', borderRadius: 12, padding: '10px 12px' }}>
+                                            Prize claimed ✓{it.prizeUsd != null ? ` — $${it.prizeUsd}` : ''}
+                                        </div>
+                                    ) : (
+                                        <button
+                                            onClick={() => onClaim(it.fixtureId)}
+                                            disabled={busyId === it.fixtureId}
+                                            style={{ width: '100%', marginTop: 12, padding: 13, borderRadius: 14, border: 'none', fontSize: 14, fontWeight: 800, color: '#fff', background: PURPLE_GRAD, cursor: busyId === it.fixtureId ? 'default' : 'pointer' }}
+                                        >
+                                            {busyId === it.fixtureId ? 'Claiming…' : 'Claim Prize'}
+                                        </button>
+                                    )
+                                )}
                             </div>
                         );
                     })}
                 </div>
+            )}
+
+            {claimId != null && (
+                <ClaimPrizeModal
+                    fixtureId={claimId}
+                    prizeUsd={prizeUsd}
+                    onClose={() => setClaimId(null)}
+                    onClaimed={async () => { setClaimId(null); await load(); }}
+                />
             )}
         </div>
     );

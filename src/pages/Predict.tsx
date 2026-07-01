@@ -12,6 +12,7 @@ import {
     type LiveScore,
 } from '../api/predict';
 import { usePredictScores } from '../hooks/usePredictScores';
+import ClaimPrizeModal from '../components/ClaimPrizeModal';
 import heroImg from '../assets/predict-hero.jpg';
 
 const LIVE = new Set(['H1', 'HT', 'H2', 'ET1', 'HTET', 'ET2', 'PE', 'WET', 'WPE']);
@@ -289,8 +290,8 @@ export default function Predict() {
             )}
 
             {claimFixture && (
-                <ClaimModal
-                    fixture={claimFixture}
+                <ClaimPrizeModal
+                    fixtureId={claimFixture.fixtureId}
                     prizeUsd={prizeUsd}
                     onClose={() => setClaimFixture(null)}
                     onClaimed={async () => {
@@ -520,71 +521,6 @@ function PredictModal({
     );
 }
 
-function ClaimModal({
-    fixture,
-    prizeUsd,
-    onClose,
-    onClaimed,
-}: {
-    fixture: Fixture;
-    prizeUsd: number;
-    onClose: () => void;
-    onClaimed: () => void;
-}) {
-    const [wallet, setWallet] = useState('');
-    const [handle, setHandle] = useState('');
-    const [busy, setBusy] = useState(false);
-
-    async function submit() {
-        if (!wallet.trim() || !handle.trim()) { toast.error('Enter your Sui wallet address and X handle.'); return; }
-        setBusy(true);
-        try {
-            await claimPrize(fixture.fixtureId, wallet.trim(), handle.trim());
-            toast.success('Prize claimed! 🎉');
-            onClaimed();
-        } catch (e: unknown) {
-            const msg = (e as { response?: { data?: { error?: string } } })?.response?.data?.error || 'Could not claim prize.';
-            toast.error(msg);
-        } finally {
-            setBusy(false);
-        }
-    }
-
-    return (
-        <Sheet onClose={onClose} title="CLAIM PRIZE">
-            {/* Prize panel */}
-            <div style={{ position: 'relative', overflow: 'hidden', borderRadius: 18, marginBottom: 22, background: 'linear-gradient(160deg, #7c3aed 0%, #2a1055 100%)', padding: '18px 16px 26px', textAlign: 'center' }}>
-                <Confetti />
-                <div style={{ position: 'relative', zIndex: 1 }}>
-                    <div style={{ display: 'inline-block', background: 'rgba(255,255,255,0.16)', color: '#fff', fontSize: 13, fontWeight: 800, letterSpacing: 1, padding: '5px 18px', borderRadius: 20 }}>YOU WON</div>
-                    <div style={{ fontSize: 56, fontWeight: 900, color: '#fff', marginTop: 8, textShadow: '0 4px 18px rgba(0,0,0,0.35)' }}>${prizeUsd}</div>
-                </div>
-            </div>
-
-            <label style={fieldLabel}>Sui wallet address</label>
-            <input
-                value={wallet}
-                onChange={(e) => setWallet(e.target.value)}
-                placeholder="Enter sui wallet address"
-                autoCapitalize="off" autoCorrect="off" spellCheck={false}
-                style={fieldInput}
-            />
-            <label style={{ ...fieldLabel, marginTop: 16 }}>X handle</label>
-            <input
-                value={handle}
-                onChange={(e) => setHandle(e.target.value)}
-                placeholder="Enter X handle"
-                autoCapitalize="off" autoCorrect="off" spellCheck={false}
-                style={fieldInput}
-            />
-
-            <button onClick={submit} disabled={busy} style={{ ...btnPrimary(false), marginTop: 24 }}>
-                {busy ? 'Claiming…' : 'Claim prize'}
-            </button>
-        </Sheet>
-    );
-}
-
 // Sheet is the shared bottom-sheet chrome: backdrop, slide-up white sheet, header.
 function Sheet({ title, onClose, children }: { title: string; onClose: () => void; children: React.ReactNode }) {
     return (
@@ -602,24 +538,6 @@ function Sheet({ title, onClose, children }: { title: string; onClose: () => voi
                 </div>
                 {children}
             </div>
-        </div>
-    );
-}
-
-// Confetti draws a handful of static purple flecks behind the prize amount.
-function Confetti() {
-    const bits = [
-        [12, 20, -20], [30, 60, 15], [55, 15, 40], [72, 48, -30], [85, 25, 10],
-        [20, 70, 25], [46, 80, -15], [64, 68, 35], [90, 62, -20], [8, 48, 12],
-    ];
-    return (
-        <div style={{ position: 'absolute', inset: 0, zIndex: 0 }} aria-hidden>
-            {bits.map(([x, y, r], i) => (
-                <span key={i} style={{
-                    position: 'absolute', left: `${x}%`, top: `${y}%`, width: 8, height: 3, borderRadius: 1,
-                    background: i % 2 ? '#c4b5fd' : '#8b5cf6', transform: `rotate(${r}deg)`, opacity: 0.85,
-                }} />
-            ))}
         </div>
     );
 }
@@ -667,8 +585,6 @@ function Stepper({ value, onSet }: { value: number; onSet: (v: number) => void }
 const teamCol: React.CSSProperties = { display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10, flexBasis: 0, flexGrow: 1, minWidth: 0 };
 const teamName: React.CSSProperties = { fontSize: 12, fontWeight: 800, color: '#fff', textAlign: 'center', textShadow: '0 1px 3px rgba(0,0,0,0.5)', maxWidth: '100%', wordBreak: 'break-word', lineHeight: 1.2 };
 const stepBtn = (): React.CSSProperties => ({ background: 'none', border: 'none', cursor: 'pointer', padding: 2, display: 'flex' });
-const fieldLabel: React.CSSProperties = { display: 'block', fontSize: 15, fontWeight: 700, color: 'var(--text-main)', marginBottom: 8 };
-const fieldInput: React.CSSProperties = { width: '100%', padding: '15px 16px', borderRadius: 16, border: '1.5px solid var(--border, #d1d5db)', background: 'var(--surface)', color: 'var(--text-main)', fontSize: 15, outline: 'none', boxSizing: 'border-box' };
 
 function btnPrimary(disabled: boolean): React.CSSProperties {
     return {
