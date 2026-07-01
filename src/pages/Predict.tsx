@@ -105,9 +105,9 @@ function StageTab({ round }: { round: string }) {
     );
 }
 
-// Countdown renders the ticking "HH:MM:SS / to kickoff" (two lines) that
-// re-renders only itself.
-function Countdown({ target }: { target: number }) {
+// Countdown renders the ticking "HH:MM:SS to kickoff" — two lines by default
+// (card), single line when inline (modal). Re-renders only itself.
+function Countdown({ target, inline }: { target: number; inline?: boolean }) {
     const [, force] = useState(0);
     useEffect(() => {
         const t = setInterval(() => force((n) => n + 1), 1000);
@@ -119,6 +119,9 @@ function Countdown({ target }: { target: number }) {
     const hh = String(Math.floor(s / 3600)).padStart(2, '0');
     const mm = String(Math.floor((s % 3600) / 60)).padStart(2, '0');
     const ss = String(s % 60).padStart(2, '0');
+    if (inline) {
+        return <span style={{ whiteSpace: 'nowrap' }}><b style={{ fontWeight: 800 }}>{hh}:{mm}:{ss}</b> to kickoff</span>;
+    }
     return (
         <span style={{ whiteSpace: 'nowrap' }}>
             <b style={{ fontWeight: 800 }}>{hh}:{mm}:{ss}</b>
@@ -369,9 +372,9 @@ function MatchCard({
                 </div>
             </div>
 
-            {/* White inset panel (Frame 2147261720) with the RO16 tab straddling its top */}
-            <div style={{ position: 'relative', zIndex: 1, margin: '30px 6px 6px', background: '#FFFFFF', borderRadius: 18, padding: '26px 16px 16px' }}>
-                <div style={{ position: 'absolute', top: -14, left: '50%', transform: 'translateX(-50%)', zIndex: 2 }}>
+            {/* White inset panel (Frame 2147261720) with the RO16 tab resting on its top edge */}
+            <div style={{ position: 'relative', zIndex: 1, margin: '26px 6px 6px', background: '#FFFFFF', borderRadius: 18, padding: '28px 16px 16px' }}>
+                <div style={{ position: 'absolute', top: 0, left: '50%', transform: 'translate(-50%, -50%)', zIndex: 2 }}>
                     <StageTab round={stageRound(fixture.competition)} />
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8, fontFamily: HEAD, color: '#000', letterSpacing: '-0.5px' }}>
@@ -483,26 +486,24 @@ function PredictModal({
 
     return (
         <Sheet onClose={onClose} title="PREDICT THE SCORE">
-            {/* Black match panel (Frame 2147261719) with the RO16 tab straddling its top */}
-            <div style={{ position: 'relative', marginTop: 16, marginBottom: 28 }}>
-                <div style={{ position: 'absolute', top: -14, left: '50%', transform: 'translateX(-50%)', zIndex: 3 }}>
+            {/* Black match panel (Frame 2147261719) — RO16 tab rests on its top edge */}
+            <div style={{ position: 'relative', marginTop: 22, marginBottom: 28, background: DARK_CARD, borderRadius: 20, padding: '32px 16px 22px' }}>
+                <div style={{ position: 'absolute', top: 0, left: '50%', transform: 'translate(-50%, -50%)', zIndex: 3 }}>
                     <StageTab round={stageRound(fixture.competition)} />
                 </div>
-                <div style={{ background: DARK_CARD, borderRadius: 20, overflow: 'hidden', padding: '30px 16px 22px', position: 'relative' }}>
-                    <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'baseline', gap: 22, fontFamily: HEAD, fontSize: 14, fontWeight: 800, letterSpacing: '-0.6px', color: '#fff', marginBottom: 18 }}>
-                        <span>{koTime(fixture.startTime)} WAT</span>
-                        <span><Countdown target={toMs(fixture.startTime)} /></span>
+                <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 18, fontFamily: HEAD, fontSize: 14, fontWeight: 800, color: '#fff', marginBottom: 20, whiteSpace: 'nowrap' }}>
+                    <span>{koTime(fixture.startTime)} WAT</span>
+                    <span><Countdown target={toMs(fixture.startTime)} inline /></span>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 30 }}>
+                    <div style={teamCol}>
+                        <CircleFlag url={fixture.homeFlag} name={fixture.homeTeam} size={90} />
+                        <span style={teamName}>{fixture.homeTeam.toUpperCase()}</span>
                     </div>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 30 }}>
-                        <div style={teamCol}>
-                            <CircleFlag url={fixture.homeFlag} name={fixture.homeTeam} size={90} />
-                            <span style={teamName}>{fixture.homeTeam.toUpperCase()}</span>
-                        </div>
-                        <span style={{ fontFamily: HEAD, fontSize: 20, fontWeight: 700, letterSpacing: '-1px', color: '#fff' }}>VS</span>
-                        <div style={teamCol}>
-                            <CircleFlag url={fixture.awayFlag} name={fixture.awayTeam} size={90} />
-                            <span style={teamName}>{fixture.awayTeam.toUpperCase()}</span>
-                        </div>
+                    <span style={{ fontFamily: HEAD, fontSize: 20, fontWeight: 700, letterSpacing: '-1px', color: '#fff' }}>VS</span>
+                    <div style={teamCol}>
+                        <CircleFlag url={fixture.awayFlag} name={fixture.awayTeam} size={90} />
+                        <span style={teamName}>{fixture.awayTeam.toUpperCase()}</span>
                     </div>
                 </div>
             </div>
@@ -531,7 +532,7 @@ function Sheet({ title, onClose, children }: { title: string; onClose: () => voi
         >
             <div className="animate-slideUp" style={{ background: 'var(--surface)', borderRadius: '24px 24px 0 0', width: '100%', maxWidth: 480, padding: '20px 20px calc(env(safe-area-inset-bottom, 0px) + 24px)', maxHeight: '92vh', overflowY: 'auto' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-                    <span style={{ fontFamily: HEAD, fontSize: 16, fontWeight: 800, letterSpacing: '-1px', color: '#000' }}>{title}</span>
+                    <span style={{ fontFamily: HEAD, fontSize: 16, fontWeight: 800, color: '#000' }}>{title}</span>
                     <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer' }}>
                         <X size={22} color="#141B34" />
                     </button>
