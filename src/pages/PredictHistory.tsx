@@ -36,7 +36,7 @@ export default function PredictHistory() {
 
     useEffect(() => {
         getHistory()
-            .then(setItems)
+            .then((res) => setItems(res.predictions))
             .catch(() => setItems([]))
             .finally(() => setLoading(false));
     }, []);

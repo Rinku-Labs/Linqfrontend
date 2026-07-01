@@ -53,6 +53,15 @@ export interface HistoryItem {
     status: string;
     result: string; // '' | 'won' | 'lost'
     settledAt: string | null;
+    claimed: boolean;
+    prizeUsd: number | null;
+    claimedAt: string | null;
+}
+
+export interface HistoryResponse {
+    predictions: HistoryItem[];
+    hasPayoutInfo: boolean;
+    prizeUsd: number;
 }
 
 export async function getFixtures(): Promise<Fixture[]> {
@@ -70,9 +79,26 @@ export async function submitPrediction(fixtureId: number, home: number, away: nu
     return data;
 }
 
-export async function getHistory(): Promise<HistoryItem[]> {
-    const { data } = await client.get<{ predictions: HistoryItem[] }>('/predict/history');
-    return data?.predictions ?? [];
+export async function getHistory(): Promise<HistoryResponse> {
+    const { data } = await client.get<HistoryResponse>('/predict/history');
+    return {
+        predictions: data?.predictions ?? [],
+        hasPayoutInfo: !!data?.hasPayoutInfo,
+        prizeUsd: data?.prizeUsd ?? 0,
+    };
+}
+
+// claimPrize claims a won match. Pass suiWallet + xHandle only the first time
+// (when the user has no saved payout details); afterwards they're optional and the
+// claim goes through directly. A 422 { needPayoutInfo:true } means the app must
+// collect the wallet + handle and resubmit.
+export async function claimPrize(
+    fixtureId: number,
+    suiWallet?: string,
+    xHandle?: string,
+): Promise<Prediction> {
+    const { data } = await client.post<Prediction>('/predict/claim', { fixtureId, suiWallet, xHandle });
+    return data;
 }
 
 // scoresStreamURL builds the absolute URL for the live-scores SSE endpoint from
