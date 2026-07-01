@@ -210,11 +210,13 @@ export default function Predict() {
     const dayFixtures = fixtures.filter((f) => dayKey(f.startTime) === activeDay);
 
     return (
-        <div style={{ maxWidth: 480, margin: '0 auto', paddingBottom: 100, position: 'relative' }}>
+        // Break out of MainLayout's 16px page padding so the hero is flush to the
+        // top and screen edges (no white gap above it).
+        <div style={{ margin: '-16px -16px 0', position: 'relative' }}>
             {/* Hero — full-width artwork with the nav overlaid on top */}
             <div style={{ position: 'relative', lineHeight: 0 }}>
                 <img src={heroImg} alt="Predict and Win" style={{ width: '100%', height: 'auto', display: 'block' }} />
-                <div style={{ position: 'absolute', top: 12, left: 12, right: 12, display: 'flex', alignItems: 'center', justifyContent: 'space-between', zIndex: 5 }}>
+                <div style={{ position: 'absolute', top: 'calc(env(safe-area-inset-top, 0px) + 8px)', left: 14, right: 14, display: 'flex', alignItems: 'center', justifyContent: 'space-between', zIndex: 5 }}>
                     <button
                         onClick={() => navigate('/')}
                         style={{ background: 'rgba(0,0,0,0.35)', border: 'none', borderRadius: '50%', width: 38, height: 38, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', backdropFilter: 'blur(4px)' }}
