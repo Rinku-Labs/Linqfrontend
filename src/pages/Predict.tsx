@@ -93,10 +93,10 @@ function StageTab({ round }: { round: string }) {
         <span
             style={{
                 display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-                minWidth: 108, padding: '7px 22px 9px', color: '#fff',
-                fontFamily: HEAD, fontSize: 20, fontWeight: 700, letterSpacing: '-1.5px',
+                minWidth: 108, maxWidth: 170, padding: '7px 24px 10px', color: '#fff', whiteSpace: 'nowrap',
+                fontFamily: HEAD, fontSize: 17, fontWeight: 700, letterSpacing: '-1px',
                 background: TAB_GRAD,
-                clipPath: 'polygon(0 0, 100% 0, 85% 100%, 15% 100%)',
+                clipPath: 'polygon(0 0, 100% 0, 86% 100%, 14% 100%)',
                 filter: 'drop-shadow(0 1.25px 0 rgba(138,79,255,0.36))',
             }}
         >
@@ -370,8 +370,8 @@ function MatchCard({
             </div>
 
             {/* White inset panel (Frame 2147261720) with the RO16 tab straddling its top */}
-            <div style={{ position: 'relative', zIndex: 1, margin: '22px 6px 6px', background: '#FFFFFF', borderRadius: 18, padding: '22px 16px 16px' }}>
-                <div style={{ position: 'absolute', top: -15, left: '50%', transform: 'translateX(-50%)', zIndex: 2 }}>
+            <div style={{ position: 'relative', zIndex: 1, margin: '30px 6px 6px', background: '#FFFFFF', borderRadius: 18, padding: '26px 16px 16px' }}>
+                <div style={{ position: 'absolute', top: -14, left: '50%', transform: 'translateX(-50%)', zIndex: 2 }}>
                     <StageTab round={stageRound(fixture.competition)} />
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8, fontFamily: HEAD, color: '#000', letterSpacing: '-0.5px' }}>
@@ -483,37 +483,38 @@ function PredictModal({
 
     return (
         <Sheet onClose={onClose} title="PREDICT THE SCORE">
-            {/* Dark match panel with the RO16 tab at the top-center */}
-            <div style={{ background: DARK_CARD, borderRadius: 18, padding: '0 16px 20px', marginBottom: 22, position: 'relative', overflow: 'hidden' }}>
-                <div style={{ display: 'flex', justifyContent: 'center' }}>
+            {/* Black match panel (Frame 2147261719) with the RO16 tab straddling its top */}
+            <div style={{ position: 'relative', marginTop: 16, marginBottom: 28 }}>
+                <div style={{ position: 'absolute', top: -14, left: '50%', transform: 'translateX(-50%)', zIndex: 3 }}>
                     <StageTab round={stageRound(fixture.competition)} />
                 </div>
-                <div style={{ textAlign: 'center', fontSize: 13, color: 'rgba(255,255,255,0.9)', margin: '12px 0 16px' }}>
-                    <b style={{ fontWeight: 800 }}>{koTime(fixture.startTime)} WAT</b>
-                    <span style={{ opacity: 0.6 }}> • </span>
-                    <Countdown target={toMs(fixture.startTime)} />
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-around', gap: 8 }}>
-                    <div style={teamCol}>
-                        <CircleFlag url={fixture.homeFlag} name={fixture.homeTeam} size={66} />
-                        <span style={teamName}>{fixture.homeTeam.toUpperCase()}</span>
+                <div style={{ background: DARK_CARD, borderRadius: 20, overflow: 'hidden', padding: '30px 16px 22px', position: 'relative' }}>
+                    <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'baseline', gap: 22, fontFamily: HEAD, fontSize: 14, fontWeight: 800, letterSpacing: '-0.6px', color: '#fff', marginBottom: 18 }}>
+                        <span>{koTime(fixture.startTime)} WAT</span>
+                        <span><Countdown target={toMs(fixture.startTime)} /></span>
                     </div>
-                    <span style={{ fontSize: 22, fontWeight: 800, color: '#fff' }}>VS</span>
-                    <div style={teamCol}>
-                        <CircleFlag url={fixture.awayFlag} name={fixture.awayTeam} size={66} />
-                        <span style={teamName}>{fixture.awayTeam.toUpperCase()}</span>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 30 }}>
+                        <div style={teamCol}>
+                            <CircleFlag url={fixture.homeFlag} name={fixture.homeTeam} size={90} />
+                            <span style={teamName}>{fixture.homeTeam.toUpperCase()}</span>
+                        </div>
+                        <span style={{ fontFamily: HEAD, fontSize: 20, fontWeight: 700, letterSpacing: '-1px', color: '#fff' }}>VS</span>
+                        <div style={teamCol}>
+                            <CircleFlag url={fixture.awayFlag} name={fixture.awayTeam} size={90} />
+                            <span style={teamName}>{fixture.awayTeam.toUpperCase()}</span>
+                        </div>
                     </div>
                 </div>
             </div>
 
             {/* Steppers — tap the chevrons, or drag/scroll up & down to scrub */}
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 20 }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 20, marginBottom: 32 }}>
                 <Stepper value={home} onSet={(v) => setHome(clamp(v))} />
-                <span style={{ fontSize: 40, fontWeight: 900, color: 'var(--text-main)' }}>:</span>
+                <span style={{ fontFamily: HEAD, fontSize: 48, fontWeight: 700, letterSpacing: '-1px', color: '#000' }}>:</span>
                 <Stepper value={away} onSet={(v) => setAway(clamp(v))} />
             </div>
 
-            <button onClick={submit} disabled={submitting} style={{ ...btnPrimary(false), marginTop: 26 }}>
+            <button onClick={submit} disabled={submitting} style={btnPrimary(false)}>
                 {submitting ? 'Submitting…' : 'Submit Prediction'}
             </button>
         </Sheet>
@@ -530,9 +531,9 @@ function Sheet({ title, onClose, children }: { title: string; onClose: () => voi
         >
             <div className="animate-slideUp" style={{ background: 'var(--surface)', borderRadius: '24px 24px 0 0', width: '100%', maxWidth: 480, padding: '20px 20px calc(env(safe-area-inset-bottom, 0px) + 24px)', maxHeight: '92vh', overflowY: 'auto' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-                    <span style={{ fontSize: 16, fontWeight: 800, letterSpacing: 0.5, color: 'var(--text-main)' }}>{title}</span>
+                    <span style={{ fontFamily: HEAD, fontSize: 16, fontWeight: 800, letterSpacing: '-1px', color: '#000' }}>{title}</span>
                     <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer' }}>
-                        <X size={22} color="var(--text-main)" />
+                        <X size={22} color="#141B34" />
                     </button>
                 </div>
                 {children}
@@ -569,14 +570,14 @@ function Stepper({ value, onSet }: { value: number; onSet: (v: number) => void }
             onPointerCancel={endDrag}
             onWheel={(e) => onSet(value + (e.deltaY < 0 ? 1 : -1))}
             style={{
-                border: `2px solid ${PURPLE}`, borderRadius: 22, padding: '14px 0', width: 128, height: 150,
+                border: `1px solid ${PURPLE}`, borderRadius: 20, padding: '15px 0', width: 118, height: 132,
                 display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'space-between',
-                background: 'var(--surface)', touchAction: 'none', userSelect: 'none', cursor: 'ns-resize',
+                background: '#FFFFFF', touchAction: 'none', userSelect: 'none', cursor: 'ns-resize',
             }}
         >
-            <button onClick={() => onSet(value + 1)} style={stepBtn()} aria-label="increase score"><ChevronUp size={28} color={PURPLE} /></button>
-            <span key={value} className="animate-digit" style={{ fontSize: 48, fontWeight: 900, color: 'var(--text-main)', lineHeight: 1.0 }}>{value}</span>
-            <button onClick={() => onSet(value - 1)} style={stepBtn()} aria-label="decrease score"><ChevronDown size={28} color={PURPLE} /></button>
+            <button onClick={() => onSet(value + 1)} style={stepBtn()} aria-label="increase score"><ChevronUp size={22} strokeWidth={3} color={PURPLE} /></button>
+            <span key={value} className="animate-digit" style={{ fontFamily: HEAD, fontSize: 48, fontWeight: 700, letterSpacing: '-1px', color: '#000', lineHeight: 1.0 }}>{value}</span>
+            <button onClick={() => onSet(value - 1)} style={stepBtn()} aria-label="decrease score"><ChevronDown size={22} strokeWidth={3} color={PURPLE} /></button>
         </div>
     );
 }
