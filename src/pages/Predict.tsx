@@ -19,17 +19,22 @@ const LIVE = new Set(['H1', 'HT', 'H2', 'ET1', 'HTET', 'ET2', 'PE', 'WET', 'WPE'
 const FINISHED = new Set(['F', 'FET', 'FPE']);
 const STOPPED: Record<string, string> = { A: 'ABANDONED', C: 'CANCELLED', P: 'POSTPONED', I: 'INTERRUPTED' };
 
-const PURPLE = '#7c3aed';
-const PURPLE_GRAD = 'linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)';
+// Design tokens taken from the Figma spec (Frame 2147261706 et al).
+const PURPLE = '#8A4FFF';
+const PURPLE_GRAD = '#8A4FFF';
+// RO16 tab gradient (Rectangle 32).
+const TAB_GRAD = 'linear-gradient(89.83deg, #8A4FFF 0.15%, #532F99 47.09%, #8A4FFF 94.04%)';
+// Belfast Grotesk is the designer's display face (not yet in the project — falls
+// back until the font file is added).
+const HEAD = "'Belfast Grotesk', 'Special Gothic Expanded One', system-ui, sans-serif";
 
-// Dark match-panel background: warm gold glow on the home (left) side, cool blue
-// glow on the away (right) side, faint concentric radar arcs, over near-black.
+// Match-card background: black base, warm/cool team glows, faint concentric radar
+// arcs (approximating the designer's blurred-crest + ring layers).
 const DARK_CARD = `
-  repeating-radial-gradient(circle at 50% 46%, transparent 0 22px, rgba(255,255,255,0.03) 22px 23px),
-  radial-gradient(circle at 16% 50%, rgba(216,158,46,0.36), transparent 42%),
-  radial-gradient(circle at 86% 50%, rgba(38,118,200,0.34), transparent 44%),
-  radial-gradient(circle at 50% 130%, rgba(124,58,237,0.20), transparent 52%),
-  linear-gradient(180deg, #0b0913 0%, #161024 100%)`;
+  repeating-radial-gradient(ellipse 130% 96% at 50% 42%, transparent 0 20px, rgba(255,255,255,0.055) 20px 21px),
+  radial-gradient(circle at 20% 46%, rgba(216,158,46,0.34), transparent 44%),
+  radial-gradient(circle at 82% 48%, rgba(38,118,200,0.32), transparent 46%),
+  #000000`;
 
 // TxLINE StartTime is unix ms; guard against other magnitudes just in case.
 function toMs(t: number): number {
@@ -66,33 +71,33 @@ function stageRound(competition: string): string {
     return 'WORLD CUP';
 }
 
-function CircleFlag({ url, name, size = 64 }: { url: string; name: string; size?: number }) {
+function CircleFlag({ url, name, size = 90 }: { url: string; name: string; size?: number }) {
     const [broken, setBroken] = useState(false);
     const common: React.CSSProperties = {
         width: size, height: size, borderRadius: '50%', objectFit: 'cover', flexShrink: 0,
-        boxShadow: '0 4px 14px rgba(0,0,0,0.45)',
     };
     if (url && !broken) {
         return <img src={url} alt={name} onError={() => setBroken(true)} style={common} />;
     }
     return (
-        <span style={{ ...common, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', background: '#2a2438', color: '#fff', fontSize: 14, fontWeight: 800 }}>
+        <span style={{ ...common, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', background: '#2a2438', color: '#fff', fontSize: 16, fontWeight: 800 }}>
             {abbr(name)}
         </span>
     );
 }
 
-// StageTab is the purple RO16-style tab that straddles the dark/white seam.
+// StageTab is the purple RO16 tab (Group 427319478): a downward-tapering trapezoid
+// with the horizontal 3-stop gradient, meant to straddle the white panel's top.
 function StageTab({ round }: { round: string }) {
     return (
         <span
             style={{
                 display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-                minWidth: 92, padding: '6px 20px 8px', color: '#fff', fontSize: 13, fontWeight: 800,
-                letterSpacing: 0.5, background: PURPLE_GRAD,
-                borderRadius: '4px 4px 0 0',
-                clipPath: 'polygon(10% 0, 90% 0, 100% 100%, 0 100%)',
-                boxShadow: '0 -2px 10px rgba(124,58,237,0.4)',
+                minWidth: 108, padding: '7px 22px 9px', color: '#fff',
+                fontFamily: HEAD, fontSize: 20, fontWeight: 700, letterSpacing: '-1.5px',
+                background: TAB_GRAD,
+                clipPath: 'polygon(0 0, 100% 0, 85% 100%, 15% 100%)',
+                filter: 'drop-shadow(0 1.25px 0 rgba(138,79,255,0.36))',
             }}
         >
             {round}
@@ -100,7 +105,8 @@ function StageTab({ round }: { round: string }) {
     );
 }
 
-// Countdown renders a ticking "HH:MM:SS to kickoff" that re-renders only itself.
+// Countdown renders the ticking "HH:MM:SS / to kickoff" (two lines) that
+// re-renders only itself.
 function Countdown({ target }: { target: number }) {
     const [, force] = useState(0);
     useEffect(() => {
@@ -108,15 +114,16 @@ function Countdown({ target }: { target: number }) {
         return () => clearInterval(t);
     }, []);
     const diff = target - Date.now();
-    if (diff <= 0) return null;
+    if (diff <= 0) return <span style={{ fontWeight: 800 }}>kicking off…</span>;
     const s = Math.floor(diff / 1000);
     const hh = String(Math.floor(s / 3600)).padStart(2, '0');
     const mm = String(Math.floor((s % 3600) / 60)).padStart(2, '0');
     const ss = String(s % 60).padStart(2, '0');
     return (
         <span style={{ whiteSpace: 'nowrap' }}>
-            <b style={{ fontWeight: 800 }}>{hh}:{mm}:{ss}</b>{' '}
-            <span style={{ fontWeight: 600, opacity: 0.75 }}>to kickoff</span>
+            <b style={{ fontWeight: 800 }}>{hh}:{mm}:{ss}</b>
+            <br />
+            <span style={{ fontWeight: 600, fontSize: 12 }}>to kickoff</span>
         </span>
     );
 }
@@ -237,11 +244,10 @@ export default function Predict() {
                             key={d}
                             onClick={() => setActiveDay(d)}
                             style={{
-                                flexShrink: 0, padding: '10px 22px', borderRadius: 22, border: 'none', cursor: 'pointer',
-                                fontSize: 13, fontWeight: 700,
-                                background: active ? PURPLE_GRAD : 'var(--surface)',
-                                color: active ? '#fff' : 'var(--text-secondary)',
-                                boxShadow: active ? '0 4px 12px rgba(124,58,237,0.35)' : 'var(--card-shadow)',
+                                flexShrink: 0, minWidth: 96, padding: '11px 20px', borderRadius: 22, border: 'none', cursor: 'pointer',
+                                fontFamily: "'Roboto', system-ui, sans-serif", fontSize: 13, fontWeight: 500,
+                                background: active ? '#8A4FFF' : '#E5E5E5',
+                                color: active ? '#FFFFFF' : '#797979',
                             }}
                         >
                             {labelForDay(d, today, yesterday)}
@@ -324,72 +330,65 @@ function MatchCard({
     const stopped = score ? STOPPED[score.status] : '';
     const kickedOff = !!score || Date.now() >= toMs(fixture.startTime);
     const showScore = !!score && (live || finished);
-    const pens = score && (score.homePens || score.awayPens) ? `Penalties: ${score.homePens}-${score.awayPens}` : '';
+    const pens = score && (score.homePens || score.awayPens) ? `Pens ${score.homePens}-${score.awayPens}` : '';
     const settled = !!prediction?.result;
 
-    // Right side of the footer time row: countdown (upcoming), live minute, or FT.
+    // Right side of the panel's time row: countdown (upcoming), live minute, or FT.
     let statusRight: React.ReactNode;
     if (live) {
         statusRight = <span style={{ color: '#ef4444', fontWeight: 800 }}>● {score!.status === 'PE' ? 'PENALTIES' : `LIVE ${score!.minute || ''}'`}</span>;
     } else if (finished) {
-        statusRight = <span style={{ fontWeight: 800, color: 'var(--text-main)' }}>FULL-TIME</span>;
+        statusRight = <span style={{ fontWeight: 800, color: '#000' }}>FULL-TIME</span>;
     } else if (stopped) {
-        statusRight = <span style={{ fontWeight: 800, color: 'var(--text-secondary)' }}>{stopped}</span>;
+        statusRight = <span style={{ fontWeight: 800, color: '#797979' }}>{stopped}</span>;
     } else {
         statusRight = <Countdown target={toMs(fixture.startTime)} />;
     }
 
     return (
-        <div style={{ borderRadius: 22, overflow: 'hidden', boxShadow: '0 10px 28px rgba(0,0,0,0.20)', background: 'var(--surface)' }}>
-            {/* Dark top: flags · VS/score · names */}
-            <div style={{ background: DARK_CARD, padding: '22px 18px 26px', position: 'relative' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                    <div style={teamCol}>
-                        <CircleFlag url={fixture.homeFlag} name={fixture.homeTeam} />
-                        <span style={teamName}>{fixture.homeTeam.toUpperCase()}</span>
-                    </div>
-                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: 92, flexShrink: 0 }}>
-                        {showScore ? (
-                            <>
-                                <span style={{ fontSize: 30, fontWeight: 900, color: '#fff', whiteSpace: 'nowrap' }}>{score!.homeGoals} - {score!.awayGoals}</span>
-                                {pens && <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.75)', whiteSpace: 'nowrap' }}>{pens}</span>}
-                            </>
-                        ) : (
-                            <span style={{ fontSize: 22, fontWeight: 800, color: '#fff' }}>VS</span>
-                        )}
-                    </div>
-                    <div style={teamCol}>
-                        <CircleFlag url={fixture.awayFlag} name={fixture.awayTeam} />
-                        <span style={teamName}>{fixture.awayTeam.toUpperCase()}</span>
-                    </div>
+        <div style={{ position: 'relative', background: DARK_CARD, borderRadius: 20, overflow: 'hidden', boxShadow: '0 12px 30px rgba(0,0,0,0.28)' }}>
+            {/* Flags · VS/score · names */}
+            <div style={{ position: 'relative', zIndex: 1, padding: '20px 14px 0', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 24 }}>
+                <div style={teamCol}>
+                    <CircleFlag url={fixture.homeFlag} name={fixture.homeTeam} />
+                    <span style={teamName}>{fixture.homeTeam.toUpperCase()}</span>
+                </div>
+                <div style={{ width: 70, flexShrink: 0, textAlign: 'center', marginTop: -18 }}>
+                    {showScore ? (
+                        <>
+                            <div style={{ fontFamily: HEAD, fontSize: 30, fontWeight: 700, color: '#fff', whiteSpace: 'nowrap' }}>{score!.homeGoals} - {score!.awayGoals}</div>
+                            {pens && <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.75)', whiteSpace: 'nowrap' }}>{pens}</div>}
+                        </>
+                    ) : (
+                        <span style={{ fontFamily: HEAD, fontSize: 22, fontWeight: 700, color: '#fff', letterSpacing: '-1px' }}>VS</span>
+                    )}
+                </div>
+                <div style={teamCol}>
+                    <CircleFlag url={fixture.awayFlag} name={fixture.awayTeam} />
+                    <span style={teamName}>{fixture.awayTeam.toUpperCase()}</span>
                 </div>
             </div>
 
-            {/* White footer with the RO16 tab straddling the seam */}
-            <div style={{ background: 'var(--surface)', padding: '0 16px 16px', position: 'relative' }}>
-                <div style={{ display: 'flex', justifyContent: 'center', marginTop: -16, marginBottom: 8, position: 'relative', zIndex: 2 }}>
+            {/* White inset panel (Frame 2147261720) with the RO16 tab straddling its top */}
+            <div style={{ position: 'relative', zIndex: 1, margin: '22px 6px 6px', background: '#FFFFFF', borderRadius: 18, padding: '22px 16px 16px' }}>
+                <div style={{ position: 'absolute', top: -15, left: '50%', transform: 'translateX(-50%)', zIndex: 2 }}>
                     <StageTab round={stageRound(fixture.competition)} />
                 </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginTop: -22, fontSize: 12, color: 'var(--text-main)', gap: 8 }}>
-                    <span style={{ fontWeight: 800, maxWidth: 90, lineHeight: 1.15 }}>{koTime(fixture.startTime)} WAT</span>
-                    <span style={{ textAlign: 'right', fontSize: 12 }}>{statusRight}</span>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8, fontFamily: HEAD, color: '#000', letterSpacing: '-0.5px' }}>
+                    <span style={{ fontWeight: 800, fontSize: 16, lineHeight: 1.1, maxWidth: 84 }}>{koTime(fixture.startTime)} WAT</span>
+                    <span style={{ textAlign: 'right', fontWeight: 800, fontSize: 16, lineHeight: 1.1 }}>{statusRight}</span>
                 </div>
 
-                <div style={{ marginTop: 14 }}>
+                <div style={{ marginTop: 16 }}>
                     {settled ? (
-                        <ResultFooter
-                            prediction={prediction!}
-                            fixture={fixture}
-                            claiming={claiming}
-                            onClaim={onClaim}
-                        />
+                        <ResultFooter prediction={prediction!} fixture={fixture} claiming={claiming} onClaim={onClaim} />
                     ) : prediction ? (
                         <>
                             <PredictionPill fixture={fixture} prediction={prediction} />
                             {kickedOff ? (
                                 <button disabled style={btnMuted()}>Predictions closed</button>
                             ) : (
-                                <button onClick={onPredict} style={btnLavender()}>Prediction submitted!</button>
+                                <button onClick={onPredict} style={btnLavender()}>Change prediction</button>
                             )}
                         </>
                     ) : kickedOff ? (
@@ -405,7 +404,7 @@ function MatchCard({
 
 function PredictionPill({ fixture, prediction }: { fixture: Fixture; prediction: HistoryItem }) {
     return (
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, background: '#dbeafe', color: '#2563eb', borderRadius: 14, padding: '10px 12px', fontSize: 13, fontWeight: 700, marginBottom: 12 }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, background: '#DDE9FF', color: '#2563eb', borderRadius: 14, padding: '11px 12px', fontSize: 14, fontWeight: 700, marginBottom: 12 }}>
             <Info size={16} />
             Your prediction is {abbr(fixture.homeTeam)} {prediction.predHome} - {prediction.predAway} {abbr(fixture.awayTeam)}
         </div>
@@ -424,22 +423,22 @@ function ResultFooter({
     onClaim: () => void;
 }) {
     const won = prediction.result === 'won';
-    const bg = won ? '#dcfce7' : '#fee2e2';
-    const badgeBg = won ? '#16a34a' : '#ef4444';
-    const textColor = won ? '#15803d' : '#dc2626';
+    const bg = won ? '#DCFCE7' : '#FEE2E2';
+    const badgeBg = won ? '#16A34A' : '#EF4444';
+    const textColor = won ? '#15803D' : '#DC2626';
     return (
         <>
             <div style={{ display: 'flex', alignItems: 'center', gap: 12, background: bg, borderRadius: 16, padding: '10px 12px' }}>
-                <span style={{ background: badgeBg, color: '#fff', fontSize: 12, fontWeight: 800, padding: '6px 16px', borderRadius: 20, flexShrink: 0 }}>
+                <span style={{ background: badgeBg, color: '#fff', fontSize: 13, fontWeight: 800, padding: '7px 18px', borderRadius: 20, flexShrink: 0 }}>
                     {won ? 'WON' : 'LOST'}
                 </span>
-                <span style={{ color: textColor, fontSize: 13, fontWeight: 700 }}>
+                <span style={{ color: textColor, fontSize: 14, fontWeight: 700 }}>
                     You predicted {abbr(fixture.homeTeam)} {prediction.predHome} - {prediction.predAway} {abbr(fixture.awayTeam)}
                 </span>
             </div>
             {won && (
                 prediction.claimed ? (
-                    <button disabled style={{ ...btnMuted(), marginTop: 12, background: '#dcfce7', color: '#15803d', opacity: 1 }}>
+                    <button disabled style={{ ...btnMuted(), marginTop: 12, background: '#DCFCE7', color: '#15803D', opacity: 1 }}>
                         Prize claimed ✓
                     </button>
                 ) : (
@@ -582,19 +581,20 @@ function Stepper({ value, onSet }: { value: number; onSet: (v: number) => void }
     );
 }
 
-const teamCol: React.CSSProperties = { display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10, flexBasis: 0, flexGrow: 1, minWidth: 0 };
-const teamName: React.CSSProperties = { fontSize: 12, fontWeight: 800, color: '#fff', textAlign: 'center', textShadow: '0 1px 3px rgba(0,0,0,0.5)', maxWidth: '100%', wordBreak: 'break-word', lineHeight: 1.2 };
+const teamCol: React.CSSProperties = { display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 7, flexBasis: 0, flexGrow: 1, minWidth: 0 };
+const teamName: React.CSSProperties = { fontFamily: HEAD, fontSize: 13, fontWeight: 700, color: '#fff', textAlign: 'center', letterSpacing: '-0.6px', textShadow: '0 1px 4px rgba(0,0,0,0.6)', maxWidth: '100%', wordBreak: 'break-word', lineHeight: 1.15 };
 const stepBtn = (): React.CSSProperties => ({ background: 'none', border: 'none', cursor: 'pointer', padding: 2, display: 'flex' });
 
+const ROBOTO = "'Roboto', system-ui, sans-serif";
 function btnPrimary(disabled: boolean): React.CSSProperties {
     return {
-        width: '100%', padding: 16, borderRadius: 18, border: 'none', fontSize: 15, fontWeight: 800, color: '#fff',
-        cursor: disabled ? 'default' : 'pointer', background: disabled ? '#9ca3af' : PURPLE_GRAD, opacity: disabled ? 0.9 : 1,
+        width: '100%', padding: 15, borderRadius: 20, border: 'none', fontFamily: ROBOTO, fontSize: 14, fontWeight: 600, color: '#fff',
+        cursor: disabled ? 'default' : 'pointer', background: disabled ? '#9ca3af' : '#8A4FFF', opacity: disabled ? 0.9 : 1,
     };
 }
 function btnMuted(): React.CSSProperties {
-    return { width: '100%', padding: 15, borderRadius: 16, border: 'none', fontSize: 15, fontWeight: 800, color: '#6b7280', background: '#e5e7eb', cursor: 'default' };
+    return { width: '100%', padding: 15, borderRadius: 20, border: 'none', fontFamily: ROBOTO, fontSize: 14, fontWeight: 600, color: '#797979', background: '#E5E5E5', cursor: 'default' };
 }
 function btnLavender(): React.CSSProperties {
-    return { width: '100%', padding: 15, borderRadius: 16, border: 'none', fontSize: 15, fontWeight: 800, cursor: 'pointer', color: '#fff', background: '#c4b5fd' };
+    return { width: '100%', padding: 15, borderRadius: 20, border: 'none', fontFamily: ROBOTO, fontSize: 14, fontWeight: 600, cursor: 'pointer', color: '#8A4FFF', background: '#EDE4FF' };
 }
