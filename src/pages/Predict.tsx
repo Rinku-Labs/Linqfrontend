@@ -93,10 +93,10 @@ function StageTab({ round }: { round: string }) {
         <span
             style={{
                 display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-                minWidth: 104, maxWidth: 168, padding: '6px 22px 9px', color: '#fff', whiteSpace: 'nowrap',
-                fontFamily: HEAD, fontSize: 16, fontWeight: 800, letterSpacing: '-0.5px',
+                minWidth: 88, maxWidth: 150, padding: '4px 18px 6px', color: '#fff', whiteSpace: 'nowrap',
+                fontFamily: HEAD, fontSize: 13, fontWeight: 800, letterSpacing: '-0.4px',
                 background: TAB_GRAD,
-                clipPath: 'polygon(0 0, 100% 0, 86% 100%, 14% 100%)',
+                clipPath: 'polygon(0 0, 100% 0, 88% 100%, 12% 100%)',
             }}
         >
             {round}
@@ -371,9 +371,9 @@ function MatchCard({
                 </div>
             </div>
 
-            {/* Inset panel (Frame 2147261720) — themed surface; RO16 tab rests on its top edge */}
-            <div style={{ position: 'relative', zIndex: 1, margin: '30px 6px 6px', background: 'var(--surface)', borderRadius: 18, padding: '16px 16px 14px' }}>
-                <div style={{ position: 'absolute', top: 0, left: '50%', transform: 'translate(-50%, -72%)', zIndex: 2 }}>
+            {/* Inset panel (Frame 2147261720) — themed surface; RO16 tab sits inside at the top */}
+            <div style={{ position: 'relative', zIndex: 1, margin: '12px 6px 6px', background: 'var(--surface)', borderRadius: 18, padding: '12px 16px 14px' }}>
+                <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 8 }}>
                     <StageTab round={stageRound(fixture.competition)} />
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, fontFamily: HEAD, color: 'var(--text-main)', letterSpacing: '-0.4px', whiteSpace: 'nowrap' }}>
@@ -406,7 +406,7 @@ function MatchCard({
 
 function PredictionPill({ fixture, prediction }: { fixture: Fixture; prediction: HistoryItem }) {
     return (
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, background: '#DDE9FF', color: '#2563eb', borderRadius: 14, padding: '11px 12px', fontSize: 14, fontWeight: 700, marginBottom: 12 }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, background: '#DDE9FF', color: '#2563eb', borderRadius: 14, padding: '11px 12px', fontFamily: HEAD, fontSize: 14, fontWeight: 700, marginBottom: 12 }}>
             <Info size={16} />
             Your prediction is {abbr(fixture.homeTeam)} {prediction.predHome} - {prediction.predAway} {abbr(fixture.awayTeam)}
         </div>
@@ -430,7 +430,7 @@ function ResultFooter({
     const textColor = won ? '#15803D' : '#DC2626';
     return (
         <>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12, background: bg, borderRadius: 16, padding: '10px 12px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, background: bg, borderRadius: 16, padding: '10px 12px', fontFamily: HEAD }}>
                 <span style={{ background: badgeBg, color: '#fff', fontSize: 13, fontWeight: 800, padding: '7px 18px', borderRadius: 20, flexShrink: 0 }}>
                     {won ? 'WON' : 'LOST'}
                 </span>
@@ -485,9 +485,9 @@ function PredictModal({
 
     return (
         <Sheet onClose={onClose} title="PREDICT THE SCORE">
-            {/* Black match panel (Frame 2147261719) — RO16 tab rests on its top edge */}
-            <div style={{ position: 'relative', marginTop: 26, marginBottom: 28, background: DARK_CARD, borderRadius: 20, padding: '32px 16px 22px' }}>
-                <div style={{ position: 'absolute', top: 0, left: '50%', transform: 'translate(-50%, -72%)', zIndex: 3 }}>
+            {/* Black match panel (Frame 2147261719) — RO16 tab sits inside at the top */}
+            <div style={{ position: 'relative', marginTop: 8, marginBottom: 28, background: DARK_CARD, borderRadius: 20, padding: '14px 16px 22px' }}>
+                <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 12 }}>
                     <StageTab round={stageRound(fixture.competition)} />
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 18, fontFamily: HEAD, fontSize: 14, fontWeight: 800, color: '#fff', marginBottom: 20, whiteSpace: 'nowrap' }}>
@@ -531,9 +531,9 @@ function Sheet({ title, onClose, children }: { title: string; onClose: () => voi
         >
             <div className="animate-slideUp" style={{ background: 'var(--surface)', borderRadius: '24px 24px 0 0', width: '100%', maxWidth: 480, padding: '20px 20px calc(env(safe-area-inset-bottom, 0px) + 24px)', maxHeight: '92vh', overflowY: 'auto' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-                    <span style={{ fontFamily: HEAD, fontSize: 16, fontWeight: 800, color: '#000' }}>{title}</span>
+                    <span style={{ fontFamily: HEAD, fontSize: 16, fontWeight: 800, color: 'var(--text-main)' }}>{title}</span>
                     <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer' }}>
-                        <X size={22} color="#141B34" />
+                        <X size={22} color="var(--text-main)" />
                     </button>
                 </div>
                 {children}
