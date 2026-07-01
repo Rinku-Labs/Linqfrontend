@@ -24,9 +24,9 @@ const PURPLE = '#8A4FFF';
 const PURPLE_GRAD = '#8A4FFF';
 // RO16 tab gradient (Rectangle 32).
 const TAB_GRAD = 'linear-gradient(89.83deg, #8A4FFF 0.15%, #532F99 47.09%, #8A4FFF 94.04%)';
-// Belfast Grotesk is the designer's display face (not yet in the project — falls
-// back until the font file is added).
-const HEAD = "'Belfast Grotesk', 'Special Gothic Expanded One', system-ui, sans-serif";
+// Archivo — a free grotesque standing in for the designer's Belfast Grotesk on
+// the display text (RO16, team names, scores, times, stepper numbers).
+const HEAD = "'Archivo', system-ui, sans-serif";
 
 // Match-card background: black base, warm/cool team glows, faint concentric radar
 // arcs (approximating the designer's blurred-crest + ring layers).
@@ -93,11 +93,10 @@ function StageTab({ round }: { round: string }) {
         <span
             style={{
                 display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-                minWidth: 108, maxWidth: 170, padding: '7px 24px 10px', color: '#fff', whiteSpace: 'nowrap',
-                fontFamily: HEAD, fontSize: 17, fontWeight: 700, letterSpacing: '-1px',
+                minWidth: 104, maxWidth: 168, padding: '6px 22px 9px', color: '#fff', whiteSpace: 'nowrap',
+                fontFamily: HEAD, fontSize: 16, fontWeight: 800, letterSpacing: '-0.5px',
                 background: TAB_GRAD,
                 clipPath: 'polygon(0 0, 100% 0, 86% 100%, 14% 100%)',
-                filter: 'drop-shadow(0 1.25px 0 rgba(138,79,255,0.36))',
             }}
         >
             {round}
@@ -249,8 +248,8 @@ export default function Predict() {
                             style={{
                                 flexShrink: 0, minWidth: 96, padding: '11px 20px', borderRadius: 22, border: 'none', cursor: 'pointer',
                                 fontFamily: "'Roboto', system-ui, sans-serif", fontSize: 13, fontWeight: 500,
-                                background: active ? '#8A4FFF' : '#E5E5E5',
-                                color: active ? '#FFFFFF' : '#797979',
+                                background: active ? '#8A4FFF' : 'var(--progress-bg)',
+                                color: active ? '#FFFFFF' : 'var(--text-secondary)',
                             }}
                         >
                             {labelForDay(d, today, yesterday)}
@@ -341,48 +340,48 @@ function MatchCard({
     if (live) {
         statusRight = <span style={{ color: '#ef4444', fontWeight: 800 }}>● {score!.status === 'PE' ? 'PENALTIES' : `LIVE ${score!.minute || ''}'`}</span>;
     } else if (finished) {
-        statusRight = <span style={{ fontWeight: 800, color: '#000' }}>FULL-TIME</span>;
+        statusRight = <span style={{ fontWeight: 800, color: 'var(--text-main)' }}>FULL-TIME</span>;
     } else if (stopped) {
-        statusRight = <span style={{ fontWeight: 800, color: '#797979' }}>{stopped}</span>;
+        statusRight = <span style={{ fontWeight: 800, color: 'var(--text-secondary)' }}>{stopped}</span>;
     } else {
-        statusRight = <Countdown target={toMs(fixture.startTime)} />;
+        statusRight = <Countdown target={toMs(fixture.startTime)} inline />;
     }
 
     return (
-        <div style={{ position: 'relative', background: DARK_CARD, borderRadius: 20, overflow: 'hidden', boxShadow: '0 12px 30px rgba(0,0,0,0.28)' }}>
+        <div style={{ position: 'relative', background: DARK_CARD, borderRadius: 20, overflow: 'hidden', boxShadow: '0 10px 26px rgba(0,0,0,0.28)' }}>
             {/* Flags · VS/score · names */}
-            <div style={{ position: 'relative', zIndex: 1, padding: '20px 14px 0', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 24 }}>
+            <div style={{ position: 'relative', zIndex: 1, padding: '14px 14px 0', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 20 }}>
                 <div style={teamCol}>
-                    <CircleFlag url={fixture.homeFlag} name={fixture.homeTeam} />
+                    <CircleFlag url={fixture.homeFlag} name={fixture.homeTeam} size={82} />
                     <span style={teamName}>{fixture.homeTeam.toUpperCase()}</span>
                 </div>
-                <div style={{ width: 70, flexShrink: 0, textAlign: 'center', marginTop: -18 }}>
+                <div style={{ width: 66, flexShrink: 0, textAlign: 'center', marginTop: -16 }}>
                     {showScore ? (
                         <>
-                            <div style={{ fontFamily: HEAD, fontSize: 30, fontWeight: 700, color: '#fff', whiteSpace: 'nowrap' }}>{score!.homeGoals} - {score!.awayGoals}</div>
+                            <div style={{ fontFamily: HEAD, fontSize: 28, fontWeight: 800, color: '#fff', whiteSpace: 'nowrap' }}>{score!.homeGoals} - {score!.awayGoals}</div>
                             {pens && <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.75)', whiteSpace: 'nowrap' }}>{pens}</div>}
                         </>
                     ) : (
-                        <span style={{ fontFamily: HEAD, fontSize: 22, fontWeight: 700, color: '#fff', letterSpacing: '-1px' }}>VS</span>
+                        <span style={{ fontFamily: HEAD, fontSize: 20, fontWeight: 800, color: '#fff', letterSpacing: '-1px' }}>VS</span>
                     )}
                 </div>
                 <div style={teamCol}>
-                    <CircleFlag url={fixture.awayFlag} name={fixture.awayTeam} />
+                    <CircleFlag url={fixture.awayFlag} name={fixture.awayTeam} size={82} />
                     <span style={teamName}>{fixture.awayTeam.toUpperCase()}</span>
                 </div>
             </div>
 
-            {/* White inset panel (Frame 2147261720) with the RO16 tab resting on its top edge */}
-            <div style={{ position: 'relative', zIndex: 1, margin: '26px 6px 6px', background: '#FFFFFF', borderRadius: 18, padding: '28px 16px 16px' }}>
-                <div style={{ position: 'absolute', top: 0, left: '50%', transform: 'translate(-50%, -50%)', zIndex: 2 }}>
+            {/* Inset panel (Frame 2147261720) — themed surface; RO16 tab rests on its top edge */}
+            <div style={{ position: 'relative', zIndex: 1, margin: '30px 6px 6px', background: 'var(--surface)', borderRadius: 18, padding: '16px 16px 14px' }}>
+                <div style={{ position: 'absolute', top: 0, left: '50%', transform: 'translate(-50%, -72%)', zIndex: 2 }}>
                     <StageTab round={stageRound(fixture.competition)} />
                 </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8, fontFamily: HEAD, color: '#000', letterSpacing: '-0.5px' }}>
-                    <span style={{ fontWeight: 800, fontSize: 16, lineHeight: 1.1, maxWidth: 84 }}>{koTime(fixture.startTime)} WAT</span>
-                    <span style={{ textAlign: 'right', fontWeight: 800, fontSize: 16, lineHeight: 1.1 }}>{statusRight}</span>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, fontFamily: HEAD, color: 'var(--text-main)', letterSpacing: '-0.4px', whiteSpace: 'nowrap' }}>
+                    <span style={{ fontWeight: 800, fontSize: 13 }}>{koTime(fixture.startTime)} WAT</span>
+                    <span style={{ textAlign: 'right', fontWeight: 800, fontSize: 13 }}>{statusRight}</span>
                 </div>
 
-                <div style={{ marginTop: 16 }}>
+                <div style={{ marginTop: 14 }}>
                     {settled ? (
                         <ResultFooter prediction={prediction!} fixture={fixture} claiming={claiming} onClaim={onClaim} />
                     ) : prediction ? (
@@ -487,8 +486,8 @@ function PredictModal({
     return (
         <Sheet onClose={onClose} title="PREDICT THE SCORE">
             {/* Black match panel (Frame 2147261719) — RO16 tab rests on its top edge */}
-            <div style={{ position: 'relative', marginTop: 22, marginBottom: 28, background: DARK_CARD, borderRadius: 20, padding: '32px 16px 22px' }}>
-                <div style={{ position: 'absolute', top: 0, left: '50%', transform: 'translate(-50%, -50%)', zIndex: 3 }}>
+            <div style={{ position: 'relative', marginTop: 26, marginBottom: 28, background: DARK_CARD, borderRadius: 20, padding: '32px 16px 22px' }}>
+                <div style={{ position: 'absolute', top: 0, left: '50%', transform: 'translate(-50%, -72%)', zIndex: 3 }}>
                     <StageTab round={stageRound(fixture.competition)} />
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 18, fontFamily: HEAD, fontSize: 14, fontWeight: 800, color: '#fff', marginBottom: 20, whiteSpace: 'nowrap' }}>
@@ -511,7 +510,7 @@ function PredictModal({
             {/* Steppers — tap the chevrons, or drag/scroll up & down to scrub */}
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 20, marginBottom: 32 }}>
                 <Stepper value={home} onSet={(v) => setHome(clamp(v))} />
-                <span style={{ fontFamily: HEAD, fontSize: 48, fontWeight: 700, letterSpacing: '-1px', color: '#000' }}>:</span>
+                <span style={{ fontFamily: HEAD, fontSize: 48, fontWeight: 800, letterSpacing: '-1px', color: 'var(--text-main)' }}>:</span>
                 <Stepper value={away} onSet={(v) => setAway(clamp(v))} />
             </div>
 
@@ -571,13 +570,13 @@ function Stepper({ value, onSet }: { value: number; onSet: (v: number) => void }
             onPointerCancel={endDrag}
             onWheel={(e) => onSet(value + (e.deltaY < 0 ? 1 : -1))}
             style={{
-                border: `1px solid ${PURPLE}`, borderRadius: 20, padding: '15px 0', width: 118, height: 132,
+                border: `1.5px solid ${PURPLE}`, borderRadius: 20, padding: '15px 0', width: 118, height: 132,
                 display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'space-between',
-                background: '#FFFFFF', touchAction: 'none', userSelect: 'none', cursor: 'ns-resize',
+                background: 'var(--surface)', touchAction: 'none', userSelect: 'none', cursor: 'ns-resize',
             }}
         >
             <button onClick={() => onSet(value + 1)} style={stepBtn()} aria-label="increase score"><ChevronUp size={22} strokeWidth={3} color={PURPLE} /></button>
-            <span key={value} className="animate-digit" style={{ fontFamily: HEAD, fontSize: 48, fontWeight: 700, letterSpacing: '-1px', color: '#000', lineHeight: 1.0 }}>{value}</span>
+            <span key={value} className="animate-digit" style={{ fontFamily: HEAD, fontSize: 48, fontWeight: 800, letterSpacing: '-1px', color: 'var(--text-main)', lineHeight: 1.0 }}>{value}</span>
             <button onClick={() => onSet(value - 1)} style={stepBtn()} aria-label="decrease score"><ChevronDown size={22} strokeWidth={3} color={PURPLE} /></button>
         </div>
     );
@@ -595,7 +594,7 @@ function btnPrimary(disabled: boolean): React.CSSProperties {
     };
 }
 function btnMuted(): React.CSSProperties {
-    return { width: '100%', padding: 15, borderRadius: 20, border: 'none', fontFamily: ROBOTO, fontSize: 14, fontWeight: 600, color: '#797979', background: '#E5E5E5', cursor: 'default' };
+    return { width: '100%', padding: 15, borderRadius: 20, border: 'none', fontFamily: ROBOTO, fontSize: 14, fontWeight: 600, color: 'var(--text-secondary)', background: 'var(--progress-bg)', cursor: 'default' };
 }
 function btnLavender(): React.CSSProperties {
     return { width: '100%', padding: 15, borderRadius: 20, border: 'none', fontFamily: ROBOTO, fontSize: 14, fontWeight: 600, cursor: 'pointer', color: '#8A4FFF', background: '#EDE4FF' };
