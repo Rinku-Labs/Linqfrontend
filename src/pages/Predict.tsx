@@ -210,35 +210,30 @@ export default function Predict() {
     const dayFixtures = fixtures.filter((f) => dayKey(f.startTime) === activeDay);
 
     return (
-        <div style={{ maxWidth: 480, margin: '0 auto', padding: 16, paddingBottom: 100 }}>
-            {/* Top bar */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
-                <button
-                    onClick={() => navigate('/')}
-                    style={{
-                        background: 'var(--surface)', border: 'none', borderRadius: '50%', width: 40, height: 40,
-                        display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer',
-                        boxShadow: 'var(--card-shadow)', flexShrink: 0,
-                    }}
-                >
-                    <ArrowLeft size={18} color="var(--text-main)" />
-                </button>
-                <div style={{ flex: 1 }} />
-                <button
-                    onClick={() => navigate('/predict/history')}
-                    style={{ background: 'none', border: 'none', color: PURPLE, fontSize: 14, fontWeight: 700, cursor: 'pointer' }}
-                >
-                    History
-                </button>
-            </div>
-
-            {/* Hero — the designer's artwork */}
-            <div style={{ borderRadius: 22, overflow: 'hidden', marginBottom: 18, lineHeight: 0, boxShadow: 'var(--card-shadow)' }}>
+        <div style={{ maxWidth: 480, margin: '0 auto', paddingBottom: 100, position: 'relative' }}>
+            {/* Hero — full-width artwork with the nav overlaid on top */}
+            <div style={{ position: 'relative', lineHeight: 0 }}>
                 <img src={heroImg} alt="Predict and Win" style={{ width: '100%', height: 'auto', display: 'block' }} />
+                <div style={{ position: 'absolute', top: 12, left: 12, right: 12, display: 'flex', alignItems: 'center', justifyContent: 'space-between', zIndex: 5 }}>
+                    <button
+                        onClick={() => navigate('/')}
+                        style={{ background: 'rgba(0,0,0,0.35)', border: 'none', borderRadius: '50%', width: 38, height: 38, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', backdropFilter: 'blur(4px)' }}
+                    >
+                        <ArrowLeft size={18} color="#fff" />
+                    </button>
+                    <button
+                        onClick={() => navigate('/predict/history')}
+                        style={{ background: 'rgba(0,0,0,0.35)', border: 'none', borderRadius: 18, padding: '8px 14px', color: '#fff', fontFamily: "'Roboto', system-ui, sans-serif", fontSize: 13, fontWeight: 600, cursor: 'pointer', backdropFilter: 'blur(4px)' }}
+                    >
+                        History
+                    </button>
+                </div>
             </div>
 
-            {/* Date tabs */}
-            <div className="hide-scrollbar" style={{ display: 'flex', gap: 10, overflowX: 'auto', paddingBottom: 8, marginBottom: 16, WebkitOverflowScrolling: 'touch' }}>
+            {/* Content card — tabs + fixtures, seated on top of the hero (rounded top overlaps it) */}
+            <div style={{ position: 'relative', zIndex: 2, marginTop: -30, background: 'var(--surface)', borderRadius: '30px 30px 0 0', padding: '22px 14px 40px', minHeight: 320 }}>
+                {/* Date tabs */}
+                <div className="hide-scrollbar" style={{ display: 'flex', gap: 10, overflowX: 'auto', paddingBottom: 8, marginBottom: 16, WebkitOverflowScrolling: 'touch' }}>
                 {days.map((d) => {
                     const active = d === activeDay;
                     return (
@@ -284,6 +279,7 @@ export default function Predict() {
                     ))}
                 </div>
             )}
+            </div>
 
             {modalFixture && (
                 <PredictModal
