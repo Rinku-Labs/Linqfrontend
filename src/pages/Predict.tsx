@@ -406,9 +406,9 @@ function MatchCard({
 
 function PredictionPill({ fixture, prediction }: { fixture: Fixture; prediction: HistoryItem }) {
     return (
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, background: '#DDE9FF', color: '#2563eb', borderRadius: 14, padding: '11px 12px', fontFamily: HEAD, fontSize: 14, fontWeight: 700, marginBottom: 12 }}>
-            <Info size={16} />
-            Your prediction is {abbr(fixture.homeTeam)} {prediction.predHome} - {prediction.predAway} {abbr(fixture.awayTeam)}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, background: '#DDE9FF', color: '#2563eb', borderRadius: 14, padding: '11px 12px', fontFamily: HEAD, fontSize: 13, fontWeight: 700, lineHeight: 1.25, marginBottom: 12, textAlign: 'center' }}>
+            <Info size={16} style={{ flexShrink: 0 }} />
+            <span>Your prediction is <span style={{ whiteSpace: 'nowrap' }}>{abbr(fixture.homeTeam)} {prediction.predHome} - {prediction.predAway} {abbr(fixture.awayTeam)}</span></span>
         </div>
     );
 }
@@ -430,12 +430,12 @@ function ResultFooter({
     const textColor = won ? '#15803D' : '#DC2626';
     return (
         <>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12, background: bg, borderRadius: 16, padding: '10px 12px', fontFamily: HEAD }}>
-                <span style={{ background: badgeBg, color: '#fff', fontSize: 13, fontWeight: 800, padding: '7px 18px', borderRadius: 20, flexShrink: 0 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, background: bg, borderRadius: 16, padding: '10px 12px', fontFamily: HEAD }}>
+                <span style={{ background: badgeBg, color: '#fff', fontSize: 13, fontWeight: 800, padding: '7px 16px', borderRadius: 20, flexShrink: 0 }}>
                     {won ? 'WON' : 'LOST'}
                 </span>
-                <span style={{ color: textColor, fontSize: 14, fontWeight: 700 }}>
-                    You predicted {abbr(fixture.homeTeam)} {prediction.predHome} - {prediction.predAway} {abbr(fixture.awayTeam)}
+                <span style={{ color: textColor, fontSize: 13, fontWeight: 700, lineHeight: 1.25 }}>
+                    You predicted <span style={{ whiteSpace: 'nowrap' }}>{abbr(fixture.homeTeam)} {prediction.predHome} - {prediction.predAway} {abbr(fixture.awayTeam)}</span>
                 </span>
             </div>
             {won && (
