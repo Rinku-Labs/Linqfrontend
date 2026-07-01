@@ -371,9 +371,9 @@ function MatchCard({
                 </div>
             </div>
 
-            {/* Inset panel (Frame 2147261720) — themed surface; RO16 tab sits inside at the top */}
-            <div style={{ position: 'relative', zIndex: 1, margin: '12px 6px 6px', background: 'var(--surface)', borderRadius: 18, padding: '12px 16px 14px' }}>
-                <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 8 }}>
+            {/* Inset panel (Frame 2147261720) — themed surface; RO16 tab rests on its top boundary */}
+            <div style={{ position: 'relative', zIndex: 1, margin: '12px 6px 6px', background: 'var(--surface)', borderRadius: 18, padding: '0 16px 14px' }}>
+                <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 10 }}>
                     <StageTab round={stageRound(fixture.competition)} />
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, fontFamily: HEAD, color: 'var(--text-main)', letterSpacing: '-0.4px', whiteSpace: 'nowrap' }}>
@@ -486,8 +486,8 @@ function PredictModal({
     return (
         <Sheet onClose={onClose} title="PREDICT THE SCORE">
             {/* Black match panel (Frame 2147261719) — RO16 tab sits inside at the top */}
-            <div style={{ position: 'relative', marginTop: 8, marginBottom: 28, background: DARK_CARD, borderRadius: 20, padding: '14px 16px 22px' }}>
-                <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 12 }}>
+            <div style={{ position: 'relative', marginTop: 8, marginBottom: 28, background: DARK_CARD, borderRadius: 20, padding: '0 16px 22px' }}>
+                <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 14 }}>
                     <StageTab round={stageRound(fixture.competition)} />
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 18, fontFamily: HEAD, fontSize: 14, fontWeight: 800, color: '#fff', marginBottom: 20, whiteSpace: 'nowrap' }}>
