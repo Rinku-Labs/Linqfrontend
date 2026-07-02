@@ -214,7 +214,13 @@ export default function Predict() {
             {/* Hero — full-width artwork with the nav overlaid on top */}
             <div style={{ position: 'relative', lineHeight: 0 }}>
                 <img src={heroImg} alt="Predict and Win" style={{ width: '100%', height: 'auto', display: 'block' }} />
-                <div style={{ position: 'absolute', top: 'calc(env(safe-area-inset-top, 0px) + 8px)', left: 14, right: 14, display: 'flex', alignItems: 'center', justifyContent: 'space-between', zIndex: 5 }}>
+                {/* Nav pinned to the top of the hero. Uses a flat offset (not
+                    env(safe-area-inset-top)): the hero always renders below the
+                    browser chrome — like the rest of the app, which never applies a
+                    top safe-area inset — and some browsers report a large spurious
+                    inset in a normal tab, which used to shove these buttons down
+                    into the title. A flat offset keeps them consistent everywhere. */}
+                <div style={{ position: 'absolute', top: 12, left: 14, right: 14, display: 'flex', alignItems: 'center', justifyContent: 'space-between', zIndex: 5 }}>
                     <button
                         onClick={() => navigate('/')}
                         style={{ background: 'rgba(0,0,0,0.35)', border: 'none', borderRadius: '50%', width: 38, height: 38, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', backdropFilter: 'blur(4px)' }}
