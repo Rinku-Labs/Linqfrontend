@@ -9,7 +9,9 @@ interface ExplainerContent {
     steps: string[];
 }
 
-const EXPLAINER_CONTENT: Record<FeatureKey, ExplainerContent> = {
+// 'predict' is intentionally omitted — the Predict & Win page has its own hero
+// and product tour, so it navigates without a step-by-step explainer.
+const EXPLAINER_CONTENT: Partial<Record<FeatureKey, ExplainerContent>> = {
     invite: {
         title: 'How to Invite & Earn',
         steps: [
@@ -67,6 +69,7 @@ export default function FeatureExplainerModal() {
     if (!visible || !feature) return null;
 
     const content = EXPLAINER_CONTENT[feature];
+    if (!content) return null;
 
     return createPortal(
         <div

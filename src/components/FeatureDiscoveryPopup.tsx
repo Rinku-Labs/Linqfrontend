@@ -5,8 +5,10 @@ import inviteImg from '../assets/invite.png';
 import saveAndSaveImg from '../assets/save-and-save.png';
 import multipleChainImg from '../assets/multiple-chain.png';
 import swapImg from '../assets/swap.png';
+import predictImg from '../assets/predict-and-win-popup.png';
 
 const featureImages: Record<FeatureKey, string> = {
+    predict: predictImg,
     invite: inviteImg,
     'save-and-save': saveAndSaveImg,
     'multiple-chain': multipleChainImg,
