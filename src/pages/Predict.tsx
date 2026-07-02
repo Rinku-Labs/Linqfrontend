@@ -645,6 +645,7 @@ function TermsSheet({
                     <div style={bullet}>{dot}<span>The first <b>{maxWinners} players</b> to correctly call a match's exact full-time scoreline <b>share a prize pool ranging from $20 to $100</b>.</span></div>
                     <div style={bullet}>{dot}<span>You share the pool <b>equally</b> with the other correct callers — your position (1st, 2nd, 3rd…) is shown on each match.</span></div>
                     <div style={bullet}>{dot}<span>Only the <b>exact</b> scoreline wins. The earliest correct callers are ranked first, so predict early.</span></div>
+                    <div style={bullet}>{dot}<span>Your rank is set by the <b>last time you commit</b> to your final scoreline. Change your prediction and later switch back, and you rejoin at the <b>back of the line</b> — you don't get your earlier position back.</span></div>
                     <div style={bullet}>{dot}<span>Predictions <b>lock at kickoff</b> and can't be changed after that. Extra time counts; penalty shootouts do not.</span></div>
                 </div>
 
