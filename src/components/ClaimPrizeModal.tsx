@@ -1,4 +1,4 @@
-import { X } from 'lucide-react';
+import { X, Pencil } from 'lucide-react';
 import { useState } from 'react';
 import { toast } from 'sonner';
 import { claimPrize } from '../api/predict';
@@ -23,29 +23,46 @@ function Confetti() {
     );
 }
 
-// ClaimPrizeModal collects the Sui wallet + X handle once and claims the prize.
-// Shown only when the user has no saved payout details; used by both the predict
-// page and the history page so every unclaimed win is claimable.
+// ClaimPrizeModal shows the winner's share (and the pool it came from) and collects
+// / confirms the Sui wallet + X handle. Payout details are saved once and reused:
+// when the user already has them, the fields are prefilled and locked, with an
+// "Edit" toggle to change them. Used by both the predict page and the history page.
 export default function ClaimPrizeModal({
     fixtureId,
-    prizeUsd,
+    prizeShareUsd,
+    prizePoolUsd,
+    savedWallet,
+    savedHandle,
     onClose,
     onClaimed,
 }: {
     fixtureId: number;
-    prizeUsd: number;
+    prizeShareUsd: number;
+    prizePoolUsd: number;
+    savedWallet?: string;
+    savedHandle?: string;
     onClose: () => void;
     onClaimed: () => void;
 }) {
-    const [wallet, setWallet] = useState('');
-    const [handle, setHandle] = useState('');
+    const hasSaved = !!(savedWallet && savedHandle);
+    const [wallet, setWallet] = useState(savedWallet ?? '');
+    const [handle, setHandle] = useState(savedHandle ?? '');
+    // When details are already saved, start locked (read-only) so the user just sees
+    // what's on file; "Edit" unlocks the inputs to change them.
+    const [editing, setEditing] = useState(!hasSaved);
     const [busy, setBusy] = useState(false);
 
     async function submit() {
-        if (!wallet.trim() || !handle.trim()) { toast.error('Enter your Sui wallet address and X handle.'); return; }
+        // Only send wallet/handle when the user is entering or editing them; a plain
+        // confirm of saved details sends nothing and reuses what's on file.
+        const sendCreds = editing;
+        if (sendCreds && (!wallet.trim() || !handle.trim())) {
+            toast.error('Enter your Sui wallet address and X handle.');
+            return;
+        }
         setBusy(true);
         try {
-            await claimPrize(fixtureId, wallet.trim(), handle.trim());
+            await claimPrize(fixtureId, sendCreds ? wallet.trim() : undefined, sendCreds ? handle.trim() : undefined);
             toast.success('Prize claimed! 🎉');
             onClaimed();
         } catch (e: unknown) {
@@ -56,8 +73,13 @@ export default function ClaimPrizeModal({
         }
     }
 
-    const fieldLabel: React.CSSProperties = { display: 'block', fontSize: 15, fontWeight: 700, color: 'var(--text-main)', marginBottom: 8 };
-    const fieldInput: React.CSSProperties = { width: '100%', padding: '15px 16px', borderRadius: 16, border: '1.5px solid var(--border, #d1d5db)', background: 'var(--surface)', color: 'var(--text-main)', fontSize: 15, outline: 'none', boxSizing: 'border-box' };
+    const fieldLabel: React.CSSProperties = { display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: 15, fontWeight: 700, color: 'var(--text-main)', marginBottom: 8 };
+    const fieldInput = (locked: boolean): React.CSSProperties => ({
+        width: '100%', padding: '15px 16px', borderRadius: 16, border: '1.5px solid var(--border, #d1d5db)',
+        background: locked ? 'var(--progress-bg)' : 'var(--surface)', color: locked ? 'var(--text-secondary)' : 'var(--text-main)',
+        fontSize: 15, outline: 'none', boxSizing: 'border-box',
+    });
+    const editBtn: React.CSSProperties = { display: 'inline-flex', alignItems: 'center', gap: 4, background: 'none', border: 'none', color: '#8A4FFF', fontSize: 13, fontWeight: 700, cursor: 'pointer', padding: 0 };
 
     return (
         <div
@@ -73,30 +95,40 @@ export default function ClaimPrizeModal({
                     </button>
                 </div>
 
-                {/* Prize panel */}
-                <div style={{ position: 'relative', overflow: 'hidden', borderRadius: 18, marginBottom: 22, background: 'linear-gradient(160deg, #7c3aed 0%, #2a1055 100%)', padding: '18px 16px 26px', textAlign: 'center' }}>
+                {/* Prize panel — the winner's share, with the pool it came from */}
+                <div style={{ position: 'relative', overflow: 'hidden', borderRadius: 18, marginBottom: 22, background: 'linear-gradient(160deg, #7c3aed 0%, #2a1055 100%)', padding: '18px 16px 24px', textAlign: 'center' }}>
                     <Confetti />
                     <div style={{ position: 'relative', zIndex: 1 }}>
                         <div style={{ display: 'inline-block', background: 'rgba(255,255,255,0.16)', color: '#fff', fontSize: 13, fontWeight: 800, letterSpacing: 1, padding: '5px 18px', borderRadius: 20 }}>YOU WON</div>
-                        <div style={{ fontSize: 56, fontWeight: 900, color: '#fff', marginTop: 8, textShadow: '0 4px 18px rgba(0,0,0,0.35)' }}>${prizeUsd}</div>
+                        <div style={{ fontSize: 56, fontWeight: 900, color: '#fff', marginTop: 8, textShadow: '0 4px 18px rgba(0,0,0,0.35)' }}>${prizeShareUsd}</div>
+                        {prizePoolUsd > 0 && (
+                            <div style={{ color: 'rgba(255,255,255,0.82)', fontSize: 13, fontWeight: 600 }}>your share of the ${prizePoolUsd} prize pool</div>
+                        )}
                     </div>
                 </div>
 
-                <label style={fieldLabel}>Sui wallet address</label>
+                <label style={fieldLabel}>
+                    <span>Sui wallet address</span>
+                    {hasSaved && !editing && (
+                        <button style={editBtn} onClick={() => setEditing(true)}><Pencil size={13} /> Edit</button>
+                    )}
+                </label>
                 <input
                     value={wallet}
                     onChange={(e) => setWallet(e.target.value)}
                     placeholder="Enter sui wallet address"
+                    readOnly={hasSaved && !editing}
                     autoCapitalize="off" autoCorrect="off" spellCheck={false}
-                    style={fieldInput}
+                    style={fieldInput(hasSaved && !editing)}
                 />
                 <label style={{ ...fieldLabel, marginTop: 16 }}>X handle</label>
                 <input
                     value={handle}
                     onChange={(e) => setHandle(e.target.value)}
                     placeholder="Enter X handle"
+                    readOnly={hasSaved && !editing}
                     autoCapitalize="off" autoCorrect="off" spellCheck={false}
-                    style={fieldInput}
+                    style={fieldInput(hasSaved && !editing)}
                 />
 
                 <button

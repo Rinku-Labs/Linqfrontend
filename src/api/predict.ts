@@ -53,15 +53,25 @@ export interface HistoryItem {
     status: string;
     result: string; // '' | 'won' | 'lost'
     settledAt: string | null;
+    // position is this user's rank among everyone who called this exact scoreline
+    // (1 = first). Powers the "You're 3rd to call 2-1" line.
+    position: number;
+    // Prize (meaningful when result === 'won').
+    prizeEligible: boolean;       // correct AND in the first N callers → claimable
+    prizeShareUsd: number | null; // this winner's share of the pool
+    prizePoolUsd: number | null;  // the pool the share came from
     claimed: boolean;
-    prizeUsd: number | null;
     claimedAt: string | null;
 }
 
 export interface HistoryResponse {
     predictions: HistoryItem[];
     hasPayoutInfo: boolean;
-    prizeUsd: number;
+    prizePoolUsd: number;
+    maxWinners: number;
+    acceptedTerms: boolean;
+    suiWallet: string; // saved payout details (own), for prefill + edit
+    xHandle: string;
 }
 
 export async function getFixtures(): Promise<Fixture[]> {
@@ -84,14 +94,24 @@ export async function getHistory(): Promise<HistoryResponse> {
     return {
         predictions: data?.predictions ?? [],
         hasPayoutInfo: !!data?.hasPayoutInfo,
-        prizeUsd: data?.prizeUsd ?? 0,
+        prizePoolUsd: data?.prizePoolUsd ?? 0,
+        maxWinners: data?.maxWinners ?? 5,
+        acceptedTerms: !!data?.acceptedTerms,
+        suiWallet: data?.suiWallet ?? '',
+        xHandle: data?.xHandle ?? '',
     };
 }
 
-// claimPrize claims a won match. Pass suiWallet + xHandle only the first time
-// (when the user has no saved payout details); afterwards they're optional and the
-// claim goes through directly. A 422 { needPayoutInfo:true } means the app must
-// collect the wallet + handle and resubmit.
+// acceptTerms records that the user accepted the game's Terms & Conditions. Called
+// only from the "Agree & Submit" action — declining must NOT call this, so the user
+// is prompted again next time.
+export async function acceptTerms(): Promise<void> {
+    await client.post('/predict/accept-terms', {});
+}
+
+// claimPrize claims a won match. Pass suiWallet + xHandle to save/update the user's
+// payout details (first claim, or an "Edit"); omit them to reuse saved details.
+// A 422 { needPayoutInfo:true } means the app must collect the wallet + handle.
 export async function claimPrize(
     fixtureId: number,
     suiWallet?: string,

@@ -1,11 +1,17 @@
 import { ArrowLeft } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useState, useEffect, useCallback } from 'react';
-import { toast } from 'sonner';
-import { getHistory, claimPrize, type HistoryItem } from '../api/predict';
+import { getHistory, type HistoryItem } from '../api/predict';
 import ClaimPrizeModal from '../components/ClaimPrizeModal';
 
 const PURPLE_GRAD = 'linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)';
+
+// ordinal turns 1 -> "1st", 2 -> "2nd", 3 -> "3rd", 11 -> "11th", etc.
+function ordinal(n: number): string {
+    const v = n % 100;
+    const suffix = v >= 11 && v <= 13 ? 'th' : (['th', 'st', 'nd', 'rd'][n % 10] || 'th');
+    return `${n}${suffix}`;
+}
 
 function Flag({ url, name }: { url: string; name: string }) {
     const [broken, setBroken] = useState(false);
@@ -36,18 +42,19 @@ function formatKickoff(iso: string): string {
 export default function PredictHistory() {
     const navigate = useNavigate();
     const [items, setItems] = useState<HistoryItem[]>([]);
-    const [hasPayoutInfo, setHasPayoutInfo] = useState(false);
-    const [prizeUsd, setPrizeUsd] = useState(0);
+    const [savedWallet, setSavedWallet] = useState('');
+    const [savedHandle, setSavedHandle] = useState('');
+    const [poolFallback, setPoolFallback] = useState(0);
     const [loading, setLoading] = useState(true);
     const [claimId, setClaimId] = useState<number | null>(null); // fixture whose modal is open
-    const [busyId, setBusyId] = useState<number | null>(null);
 
     const load = useCallback(async () => {
         try {
             const res = await getHistory();
             setItems(res.predictions);
-            setHasPayoutInfo(res.hasPayoutInfo);
-            setPrizeUsd(res.prizeUsd);
+            setSavedWallet(res.suiWallet);
+            setSavedHandle(res.xHandle);
+            setPoolFallback(res.prizePoolUsd);
         } catch {
             /* keep existing */
         } finally {
@@ -57,21 +64,10 @@ export default function PredictHistory() {
 
     useEffect(() => { load(); }, [load]);
 
-    const onClaim = useCallback(async (fixtureId: number) => {
-        if (!hasPayoutInfo) { setClaimId(fixtureId); return; }
-        setBusyId(fixtureId);
-        try {
-            await claimPrize(fixtureId);
-            toast.success('Prize claimed! 🎉');
-            await load();
-        } catch (e: unknown) {
-            const err = e as { response?: { data?: { error?: string; needPayoutInfo?: boolean } } };
-            if (err?.response?.data?.needPayoutInfo) { setClaimId(fixtureId); return; }
-            toast.error(err?.response?.data?.error || 'Could not claim prize.');
-        } finally {
-            setBusyId(null);
-        }
-    }, [hasPayoutInfo, load]);
+    // Always open the Claim modal — it shows the share and prefills/collects payout
+    // details.
+    const onClaim = useCallback((fixtureId: number) => { setClaimId(fixtureId); }, []);
+    const claimItem = items.find((it) => it.fixtureId === claimId);
 
     return (
         <div style={{ maxWidth: 480, margin: '0 auto', padding: 20, paddingBottom: 100 }}>
@@ -142,21 +138,34 @@ export default function PredictHistory() {
                                     </span>
                                 </div>
 
-                                {/* Claim action for a won prize */}
-                                {won && (
+                                {/* Position among callers of this exact scoreline */}
+                                {it.position > 0 && (
+                                    <div style={{ marginTop: 10, fontSize: 11, fontWeight: 600, color: 'var(--text-secondary)' }}>
+                                        You were {ordinal(it.position)} to call {it.predHome}-{it.predAway}
+                                    </div>
+                                )}
+
+                                {/* Claim action for a won prize (only when eligible) */}
+                                {won && it.prizeEligible && (
                                     it.claimed ? (
                                         <div style={{ marginTop: 12, textAlign: 'center', fontSize: 13, fontWeight: 700, color: '#15803d', background: '#dcfce7', borderRadius: 12, padding: '10px 12px' }}>
-                                            Prize claimed ✓{it.prizeUsd != null ? ` — $${it.prizeUsd}` : ''}
+                                            Prize claimed ✓{it.prizeShareUsd != null ? ` — $${it.prizeShareUsd}` : ''}
                                         </div>
                                     ) : (
                                         <button
                                             onClick={() => onClaim(it.fixtureId)}
-                                            disabled={busyId === it.fixtureId}
-                                            style={{ width: '100%', marginTop: 12, padding: 13, borderRadius: 14, border: 'none', fontSize: 14, fontWeight: 800, color: '#fff', background: PURPLE_GRAD, cursor: busyId === it.fixtureId ? 'default' : 'pointer' }}
+                                            style={{ width: '100%', marginTop: 12, padding: 13, borderRadius: 14, border: 'none', fontSize: 14, fontWeight: 800, color: '#fff', background: PURPLE_GRAD, cursor: 'pointer' }}
                                         >
-                                            {busyId === it.fixtureId ? 'Claiming…' : 'Claim Prize'}
+                                            Claim Prize{it.prizeShareUsd != null ? ` — $${it.prizeShareUsd}` : ''}
                                         </button>
                                     )
+                                )}
+
+                                {/* Correct scoreline but missed the pool — encourage, no claim */}
+                                {won && !it.prizeEligible && (
+                                    <div style={{ marginTop: 12, textAlign: 'center', fontSize: 13, fontWeight: 700, color: '#15803d', background: '#dcfce7', borderRadius: 12, padding: '10px 12px', lineHeight: 1.35 }}>
+                                        You nailed {it.predHome}-{it.predAway} — others just beat you to it. Next one's yours.
+                                    </div>
                                 )}
                             </div>
                         );
@@ -167,7 +176,10 @@ export default function PredictHistory() {
             {claimId != null && (
                 <ClaimPrizeModal
                     fixtureId={claimId}
-                    prizeUsd={prizeUsd}
+                    prizeShareUsd={claimItem?.prizeShareUsd ?? 0}
+                    prizePoolUsd={claimItem?.prizePoolUsd ?? poolFallback}
+                    savedWallet={savedWallet}
+                    savedHandle={savedHandle}
                     onClose={() => setClaimId(null)}
                     onClaimed={async () => { setClaimId(null); await load(); }}
                 />

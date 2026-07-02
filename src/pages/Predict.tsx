@@ -6,7 +6,7 @@ import {
     getFixtures,
     getHistory,
     submitPrediction,
-    claimPrize,
+    acceptTerms,
     type Fixture,
     type HistoryItem,
     type LiveScore,
@@ -52,6 +52,13 @@ const dayKey = (t: number) => localDay(toMs(t));
 const koTime = (t: number) =>
     new Date(toMs(t)).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' }).toUpperCase();
 const abbr = (name: string) => name.replace(/[^A-Za-z]/g, '').slice(0, 3).toUpperCase();
+
+// ordinal turns 1 -> "1st", 2 -> "2nd", 3 -> "3rd", 4 -> "4th", 11 -> "11th", etc.
+function ordinal(n: number): string {
+    const v = n % 100;
+    const suffix = v >= 11 && v <= 13 ? 'th' : (['th', 'st', 'nd', 'rd'][n % 10] || 'th');
+    return `${n}${suffix}`;
+}
 
 // labelForDay shows Today/Yesterday for those two days, else DD/MM.
 function labelForDay(d: string, today: string, yesterday: string): string {
@@ -138,12 +145,14 @@ export default function Predict() {
     const [fixtures, setFixtures] = useState<Fixture[]>([]);
     const [activeDay, setActiveDay] = useState<string>(today); // always start on today
     const [myPreds, setMyPreds] = useState<Record<number, HistoryItem>>({});
-    const [hasPayoutInfo, setHasPayoutInfo] = useState(false);
-    const [prizeUsd, setPrizeUsd] = useState(0);
+    const [savedWallet, setSavedWallet] = useState('');
+    const [savedHandle, setSavedHandle] = useState('');
+    const [prizePoolUsd, setPrizePoolUsd] = useState(0);
+    const [maxWinners, setMaxWinners] = useState(5);
+    const [acceptedTerms, setAcceptedTerms] = useState(true); // assume until history says otherwise (avoids a flash)
     const [loading, setLoading] = useState(true);
     const [modalFixture, setModalFixture] = useState<Fixture | null>(null);
     const [claimFixture, setClaimFixture] = useState<Fixture | null>(null);
-    const [claimingId, setClaimingId] = useState<number | null>(null);
     const fixturesRef = useRef<Fixture[]>([]);
 
     const scores = usePredictScores();
@@ -154,8 +163,11 @@ export default function Predict() {
             const map: Record<number, HistoryItem> = {};
             res.predictions.forEach((it) => { map[it.fixtureId] = it; });
             setMyPreds(map);
-            setHasPayoutInfo(res.hasPayoutInfo);
-            setPrizeUsd(res.prizeUsd);
+            setSavedWallet(res.suiWallet);
+            setSavedHandle(res.xHandle);
+            setPrizePoolUsd(res.prizePoolUsd);
+            setMaxWinners(res.maxWinners);
+            setAcceptedTerms(res.acceptedTerms);
         } catch {
             /* keep existing */
         }
@@ -181,23 +193,9 @@ export default function Predict() {
         return () => clearInterval(refresh);
     }, [loadFixtures, loadHistory]);
 
-    // Claim a won match. If we already have the user's payout details, claim
-    // directly (no popup); otherwise open the Claim modal to collect them once.
-    const onClaim = useCallback(async (f: Fixture) => {
-        if (!hasPayoutInfo) { setClaimFixture(f); return; }
-        setClaimingId(f.fixtureId);
-        try {
-            await claimPrize(f.fixtureId);
-            toast.success('Prize claimed! 🎉');
-            await loadHistory();
-        } catch (e: unknown) {
-            const err = e as { response?: { status?: number; data?: { error?: string; needPayoutInfo?: boolean } } };
-            if (err?.response?.data?.needPayoutInfo) { setClaimFixture(f); return; }
-            toast.error(err?.response?.data?.error || 'Could not claim prize.');
-        } finally {
-            setClaimingId(null);
-        }
-    }, [hasPayoutInfo, loadHistory]);
+    // Claim a won match — always open the Claim modal, which shows the prize share
+    // and prefills (or collects) the payout details.
+    const onClaim = useCallback((f: Fixture) => { setClaimFixture(f); }, []);
 
     const days = (() => {
         const set = new Set<string>([yesterday, today]);
@@ -274,7 +272,7 @@ export default function Predict() {
                             fixture={f}
                             score={scores[f.fixtureId]}
                             prediction={myPreds[f.fixtureId]}
-                            claiming={claimingId === f.fixtureId}
+                            maxWinners={maxWinners}
                             onPredict={() => setModalFixture(f)}
                             onClaim={() => onClaim(f)}
                         />
@@ -287,6 +285,10 @@ export default function Predict() {
                 <PredictModal
                     fixture={modalFixture}
                     existing={myPreds[modalFixture.fixtureId]}
+                    acceptedTerms={acceptedTerms}
+                    prizePoolUsd={prizePoolUsd}
+                    maxWinners={maxWinners}
+                    onAccepted={() => setAcceptedTerms(true)}
                     onClose={() => setModalFixture(null)}
                     onSubmitted={async () => {
                         setModalFixture(null);
@@ -298,7 +300,10 @@ export default function Predict() {
             {claimFixture && (
                 <ClaimPrizeModal
                     fixtureId={claimFixture.fixtureId}
-                    prizeUsd={prizeUsd}
+                    prizeShareUsd={myPreds[claimFixture.fixtureId]?.prizeShareUsd ?? 0}
+                    prizePoolUsd={myPreds[claimFixture.fixtureId]?.prizePoolUsd ?? prizePoolUsd}
+                    savedWallet={savedWallet}
+                    savedHandle={savedHandle}
                     onClose={() => setClaimFixture(null)}
                     onClaimed={async () => {
                         setClaimFixture(null);
@@ -314,14 +319,14 @@ function MatchCard({
     fixture,
     score,
     prediction,
-    claiming,
+    maxWinners,
     onPredict,
     onClaim,
 }: {
     fixture: Fixture;
     score?: LiveScore;
     prediction?: HistoryItem;
-    claiming: boolean;
+    maxWinners: number;
     onPredict: () => void;
     onClaim: () => void;
 }) {
@@ -381,10 +386,11 @@ function MatchCard({
 
                 <div style={{ marginTop: 14 }}>
                     {settled ? (
-                        <ResultFooter prediction={prediction!} fixture={fixture} claiming={claiming} onClaim={onClaim} />
+                        <ResultFooter prediction={prediction!} fixture={fixture} maxWinners={maxWinners} onClaim={onClaim} />
                     ) : prediction ? (
                         <>
                             <PredictionPill fixture={fixture} prediction={prediction} />
+                            <PositionLine prediction={prediction} />
                             {kickedOff ? (
                                 <button disabled style={btnMuted()}>Predictions closed</button>
                             ) : (
@@ -404,9 +410,21 @@ function MatchCard({
 
 function PredictionPill({ fixture, prediction }: { fixture: Fixture; prediction: HistoryItem }) {
     return (
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, background: '#DDE9FF', color: '#2563eb', borderRadius: 14, padding: '11px 12px', fontFamily: HEAD, fontSize: 13, fontWeight: 700, lineHeight: 1.25, marginBottom: 12, textAlign: 'center' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, background: '#DDE9FF', color: '#2563eb', borderRadius: 14, padding: '11px 12px', fontFamily: HEAD, fontSize: 13, fontWeight: 700, lineHeight: 1.25, marginBottom: 8, textAlign: 'center' }}>
             <Info size={16} style={{ flexShrink: 0 }} />
             <span>Your prediction is <span style={{ whiteSpace: 'nowrap' }}>{abbr(fixture.homeTeam)} {prediction.predHome} - {prediction.predAway} {abbr(fixture.awayTeam)}</span></span>
+        </div>
+    );
+}
+
+// PositionLine tells the user where they rank among everyone who called this exact
+// scoreline — e.g. "You're 3rd to call 2-1". Rank alone (the pool size is explained
+// in the Terms), spelled with the score so the number always has an object.
+function PositionLine({ prediction }: { prediction: HistoryItem }) {
+    if (!prediction.position || prediction.position < 1) return null;
+    return (
+        <div style={{ textAlign: 'center', fontFamily: HEAD, fontSize: 12.5, fontWeight: 700, color: 'var(--text-secondary)', marginBottom: 12 }}>
+            You're {ordinal(prediction.position)} to call {prediction.predHome}-{prediction.predAway}
         </div>
     );
 }
@@ -414,15 +432,25 @@ function PredictionPill({ fixture, prediction }: { fixture: Fixture; prediction:
 function ResultFooter({
     prediction,
     fixture,
-    claiming,
+    maxWinners,
     onClaim,
 }: {
     prediction: HistoryItem;
     fixture: Fixture;
-    claiming: boolean;
+    maxWinners: number;
     onClaim: () => void;
 }) {
     const won = prediction.result === 'won';
+    // A "won" (correct scoreline) that missed the pool: encourage, don't discourage,
+    // and never show a Claim button.
+    if (won && !prediction.prizeEligible) {
+        return (
+            <div style={{ background: '#DCFCE7', borderRadius: 16, padding: '12px 14px', fontFamily: HEAD, color: '#15803D', fontSize: 13, fontWeight: 700, lineHeight: 1.35, textAlign: 'center' }}>
+                You nailed <span style={{ whiteSpace: 'nowrap' }}>{prediction.predHome}-{prediction.predAway}</span> — the first {maxWinners} just beat you to it. Next one's yours.
+            </div>
+        );
+    }
+
     const bg = won ? '#DCFCE7' : '#FEE2E2';
     const badgeBg = won ? '#16A34A' : '#EF4444';
     const textColor = won ? '#15803D' : '#DC2626';
@@ -439,11 +467,11 @@ function ResultFooter({
             {won && (
                 prediction.claimed ? (
                     <button disabled style={{ ...btnMuted(), marginTop: 12, background: '#DCFCE7', color: '#15803D', opacity: 1 }}>
-                        Prize claimed ✓
+                        Prize claimed ✓{prediction.prizeShareUsd != null ? ` — $${prediction.prizeShareUsd}` : ''}
                     </button>
                 ) : (
-                    <button onClick={onClaim} disabled={claiming} style={{ ...btnPrimary(false), marginTop: 12 }}>
-                        {claiming ? 'Claiming…' : 'Claim Prize'}
+                    <button onClick={onClaim} style={{ ...btnPrimary(false), marginTop: 12 }}>
+                        Claim Prize{prediction.prizeShareUsd != null ? ` — $${prediction.prizeShareUsd}` : ''}
                     </button>
                 )
             )}
@@ -454,20 +482,32 @@ function ResultFooter({
 function PredictModal({
     fixture,
     existing,
+    acceptedTerms,
+    prizePoolUsd,
+    maxWinners,
+    onAccepted,
     onClose,
     onSubmitted,
 }: {
     fixture: Fixture;
     existing?: HistoryItem;
+    acceptedTerms: boolean;
+    prizePoolUsd: number;
+    maxWinners: number;
+    onAccepted: () => void;
     onClose: () => void;
     onSubmitted: () => void;
 }) {
     const [home, setHome] = useState(existing?.predHome ?? 1);
     const [away, setAway] = useState(existing?.predAway ?? 1);
     const [submitting, setSubmitting] = useState(false);
+    const [showTerms, setShowTerms] = useState(false);
+    // Terms are shown once ever, and only on a FIRST prediction ("Predict score"),
+    // never on "Change prediction" (existing prediction).
+    const needsTerms = !existing && !acceptedTerms;
     const clamp = (n: number) => Math.max(0, Math.min(30, n));
 
-    async function submit() {
+    async function doSubmit() {
         setSubmitting(true);
         try {
             await submitPrediction(fixture.fixtureId, home, away);
@@ -479,6 +519,37 @@ function PredictModal({
         } finally {
             setSubmitting(false);
         }
+    }
+
+    // Submit intercepts the first-ever prediction to show the Terms; once accepted
+    // (this session or previously) it goes straight through.
+    function submit() {
+        if (needsTerms) { setShowTerms(true); return; }
+        void doSubmit();
+    }
+
+    async function agreeTerms() {
+        setSubmitting(true);
+        try {
+            await acceptTerms();
+            onAccepted();
+            setShowTerms(false);
+            await doSubmit();
+        } catch {
+            setSubmitting(false);
+            toast.error('Could not record your acceptance. Please try again.');
+        }
+    }
+
+    // "I don't agree" returns the user to the predict main page without persisting
+    // acceptance — so they're prompted again next time.
+    function declineTerms() {
+        setShowTerms(false);
+        onClose();
+    }
+
+    if (showTerms) {
+        return <TermsSheet prizePoolUsd={prizePoolUsd} maxWinners={maxWinners} busy={submitting} onAgree={agreeTerms} onDecline={declineTerms} />;
     }
 
     return (
@@ -535,6 +606,54 @@ function Sheet({ title, onClose, children }: { title: string; onClose: () => voi
                     </button>
                 </div>
                 {children}
+            </div>
+        </div>
+    );
+}
+
+// TermsSheet is the non-dismissible Terms & Conditions gate shown once, on a user's
+// first prediction. It uses the same bottom-sheet chrome as the rest of the game
+// (no foreign styling) but deliberately has NO close affordance — the only way out
+// is "I don't agree", which returns them to the predict page without accepting.
+function TermsSheet({
+    prizePoolUsd,
+    maxWinners,
+    busy,
+    onAgree,
+    onDecline,
+}: {
+    prizePoolUsd: number;
+    maxWinners: number;
+    busy: boolean;
+    onAgree: () => void;
+    onDecline: () => void;
+}) {
+    const bullet: React.CSSProperties = { fontFamily: HEAD, fontSize: 13.5, fontWeight: 500, color: 'var(--text-main)', lineHeight: 1.5, marginBottom: 12, display: 'flex', gap: 10 };
+    const dot = <span style={{ color: PURPLE, fontWeight: 900, flexShrink: 0 }}>•</span>;
+    return (
+        <div
+            className="animate-fadeIn"
+            style={{ position: 'fixed', inset: 0, zIndex: 300, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }}
+        >
+            <div className="animate-slideUp" style={{ background: 'var(--surface)', borderRadius: '24px 24px 0 0', width: '100%', maxWidth: 480, padding: '24px 20px calc(env(safe-area-inset-bottom, 0px) + 20px)', maxHeight: '92vh', overflowY: 'auto' }}>
+                <div style={{ fontFamily: HEAD, fontSize: 17, fontWeight: 800, color: 'var(--text-main)', textAlign: 'center', marginBottom: 6 }}>TERMS &amp; CONDITIONS</div>
+                <div style={{ fontFamily: ROBOTO, fontSize: 13, color: 'var(--text-secondary)', textAlign: 'center', marginBottom: 18 }}>
+                    Please read before making your first prediction.
+                </div>
+
+                <div style={{ background: 'var(--progress-bg)', borderRadius: 16, padding: '16px 16px 6px' }}>
+                    <div style={bullet}>{dot}<span>The first <b>{maxWinners} players</b> to correctly call a match's exact full-time scoreline <b>share a prize pool ranging from $20 to $100</b>.</span></div>
+                    <div style={bullet}>{dot}<span>You share the pool <b>equally</b> with the other correct callers — your position (1st, 2nd, 3rd…) is shown on each match.</span></div>
+                    <div style={bullet}>{dot}<span>Only the <b>exact</b> scoreline wins. The earliest correct callers are ranked first, so predict early.</span></div>
+                    <div style={bullet}>{dot}<span>Predictions <b>lock at kickoff</b> and can't be changed after that. Extra time counts; penalty shootouts do not.</span></div>
+                </div>
+
+                <button onClick={onAgree} disabled={busy} style={{ ...btnPrimary(false), marginTop: 22 }}>
+                    {busy ? 'Submitting…' : 'Agree & Submit'}
+                </button>
+                <button onClick={onDecline} disabled={busy} style={{ width: '100%', marginTop: 10, padding: 15, borderRadius: 20, border: 'none', background: 'none', fontFamily: ROBOTO, fontSize: 14, fontWeight: 600, color: 'var(--text-secondary)', cursor: busy ? 'default' : 'pointer' }}>
+                    I don't agree
+                </button>
             </div>
         </div>
     );
