@@ -54,10 +54,11 @@ export default function ClaimPrizeModal({
 
     async function submit() {
         // Only send wallet/handle when the user is entering or editing them; a plain
-        // confirm of saved details sends nothing and reuses what's on file.
+        // confirm of saved details sends nothing and reuses what's on file. Only the
+        // Sui wallet is required — the X handle is optional.
         const sendCreds = editing;
-        if (sendCreds && (!wallet.trim() || !handle.trim())) {
-            toast.error('Enter your Sui wallet address and X handle.');
+        if (sendCreds && !wallet.trim()) {
+            toast.error('Enter your Sui wallet address.');
             return;
         }
         setBusy(true);
@@ -121,11 +122,13 @@ export default function ClaimPrizeModal({
                     autoCapitalize="off" autoCorrect="off" spellCheck={false}
                     style={fieldInput(hasSaved && !editing)}
                 />
-                <label style={{ ...fieldLabel, marginTop: 16 }}>X handle</label>
+                <label style={{ ...fieldLabel, marginTop: 16 }}>
+                    <span>X handle <span style={{ fontWeight: 500, color: 'var(--text-secondary)' }}>(optional)</span></span>
+                </label>
                 <input
                     value={handle}
                     onChange={(e) => setHandle(e.target.value)}
-                    placeholder="Enter X handle"
+                    placeholder="Enter X handle (optional)"
                     readOnly={hasSaved && !editing}
                     autoCapitalize="off" autoCorrect="off" spellCheck={false}
                     style={fieldInput(hasSaved && !editing)}
