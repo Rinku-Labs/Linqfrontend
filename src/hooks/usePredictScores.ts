@@ -44,7 +44,11 @@ export function usePredictScores(): Record<number, LiveScore> {
 
         const connect = () => {
             lastSeen = Date.now();
-            es = new EventSource(url);
+            // withCredentials so the browser sends the Authorization cookie set at
+            // login — EventSource can't set an Authorization header, and the stream
+            // is now authenticated on the backend (RequireAuth falls back to the
+            // cookie). CORS already allows credentials for our origins.
+            es = new EventSource(url, { withCredentials: true });
             // Any frame — a score or the server's 15s "ping" heartbeat — proves the
             // connection is alive and resets the watchdog clock.
             const bump = () => { lastSeen = Date.now(); };
