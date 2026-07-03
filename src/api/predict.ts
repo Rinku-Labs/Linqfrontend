@@ -124,11 +124,17 @@ export async function claimPrize(
 // scoresStreamURL builds the absolute URL for the live-scores SSE endpoint from
 // VITE_API_URL. There is deliberately NO localhost fallback — in production the
 // env var must point at the deployed backend.
+//
+// The stream is authenticated, but EventSource can't send an Authorization
+// header and the cross-site auth cookie is blocked by many mobile browsers —
+// so the JWT rides in ?token= instead, which the backend lifts into the
+// Authorization header and validates like any other request.
 export function scoresStreamURL(): string {
     const base = (import.meta.env.VITE_API_URL as string | undefined)?.replace(/\/$/, '');
     if (!base) {
         console.warn('VITE_API_URL is not set — live scores will not stream.');
         return '';
     }
-    return `${base}/predict/scores/stream`;
+    const token = localStorage.getItem('linqAuthToken');
+    return `${base}/predict/scores/stream${token ? `?token=${encodeURIComponent(token)}` : ''}`;
 }
