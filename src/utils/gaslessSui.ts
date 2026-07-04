@@ -53,7 +53,13 @@ export function buildGaslessTransferTx(sender: string, transfers: GaslessTransfe
         });
     }
 
+    // All three must be set: leaving gasBudget unset makes the SDK's own gas
+    // resolver try to simulate a budget with a nonzero placeholder while price
+    // stays 0, which the node rejects outright ("gas_budget must be 0 for
+    // gasless transactions"). Setting all three up front skips that resolver
+    // entirely instead of relying on it to auto-detect eligibility.
     tx.setGasPrice(0);
+    tx.setGasBudget(0);
     tx.setGasPayment([]);
 
     return tx;
