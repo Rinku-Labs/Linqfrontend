@@ -161,8 +161,6 @@ export default function Confirm() {
 
     // Payment Handlers
     const handleSuiPayment = async (walletAddress: string, orderId: string, txBytes?: string, sponsorSignature?: string) => {
-        console.log('[gasless-debug] handleSuiPayment build marker: getBalance-fix+gasless-2026-07', { walletAddress, orderId, hasSponsorTx: !!txBytes });
-
         if (!currentAccount) {
             setError("Please connect your Sui wallet");
             return;
@@ -234,21 +232,6 @@ export default function Confirm() {
             const amountInMist = Math.round(parseFloat(amountWithFee.toString()) * 1_000_000);
             let totalNeeded = amountInMist + savingsAmountInMist;
 
-            console.log('[gasless-debug] balance check', {
-                network: suiClient.network,
-                sender: currentAccount.address,
-                coinType: SUI_USDC_COIN_TYPE,
-                totalBalanceMist: totalBalance,
-                totalBalanceUsdc: totalBalance / 1_000_000,
-                amount,
-                orderFee: orderFeeRef.current,
-                amountWithFee,
-                amountInMist,
-                savingsAmountInMist,
-                totalNeeded,
-                totalNeededUsdc: totalNeeded / 1_000_000,
-            });
-
             if (totalBalance < totalNeeded) {
                 if (totalBalance >= amountInMist) {
                     hasSavings = false;
@@ -256,7 +239,6 @@ export default function Confirm() {
                     savingsAmountInMist = 0;
                     totalNeeded = amountInMist;
                 } else {
-                    console.error('[gasless-debug] insufficient balance', { totalBalance, totalNeeded, amountInMist });
                     throw new Error(`Insufficient USDC balance. Required: ${(totalNeeded / 1_000_000).toFixed(2)} (incl. ${savingsAmountUSDC} savings), Available: ${(totalBalance / 1_000_000).toFixed(2)}`);
                 }
             }
