@@ -86,6 +86,9 @@ export async function computeGoogleAddress(idToken: string): Promise<string | nu
             iss: 'https://accounts.google.com',
             aud: GOOGLE_CLIENT_ID,
             userSalt: salt,
+            // Must stay true: preserves the address derivation used by @mysten/sui 1.x so
+            // existing users' zkLogin wallets keep resolving to the same Sui address.
+            legacyAddress: true,
         });
 
         return zkLoginAddress;

@@ -27,6 +27,7 @@ import { getBillStatus } from '../../api/bills';
 import { useAuth } from '../../context/AuthContext';
 import { sanitizeErrorMessage } from '../../utils/sanitize';
 import { addBillBeneficiary, type AddBillBeneficiaryPayload } from '../../api/user';
+import { isGaslessEligible, buildGaslessTransferTx, verifyGaslessTransaction, type GaslessTransfer } from '../../utils/gaslessSui';
 
 const SUI_USDC_COIN_TYPE = "0xdba34672e30cb065b1f93e3ab55318768fd6fef66c15942c9f7cb846e2f900e7::usdc::USDC";
 const SOLANA_USDC_MINT = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v";
@@ -112,7 +113,6 @@ export default function BillPayment() {
 
             if (!coins || coins.length === 0) throw new Error("No USDC coins found in wallet");
 
-            const tx = new Transaction();
             const amountInMist = Math.floor(parseFloat(amount) * 1_000_000);
 
             const totalBalance = (coins as any).reduce((sum: number, coin: SuiCoin) => sum + parseInt(coin.balance), 0);
@@ -120,37 +120,61 @@ export default function BillPayment() {
                 throw new Error(`Insufficient USDC balance. Required: ${amount}, Available: ${(totalBalance / 1_000_000).toFixed(2)}`);
             }
 
-            let primaryCoin = (coins as any).find((c: SuiCoin) => parseInt(c.balance) >= amountInMist);
-            let coinToTransfer;
+            let tx: Transaction | undefined;
 
-            if (primaryCoin) {
-                const [splitCoin] = tx.splitCoins(tx.object(primaryCoin.coinObjectId), [amountInMist]);
-                coinToTransfer = splitCoin;
-            } else {
-                const sortedCoins = (coins as any).sort((a: SuiCoin, b: SuiCoin) => parseInt(b.balance) - parseInt(a.balance));
-                primaryCoin = sortedCoins[0];
-
-                const coinsToMerge: SuiCoin[] = [];
-                let currentBalance = parseInt(primaryCoin.balance);
-
-                for (let i = 1; i < sortedCoins.length; i++) {
-                    if (currentBalance >= amountInMist) break;
-                    coinsToMerge.push(sortedCoins[i]);
-                    currentBalance += parseInt(sortedCoins[i].balance);
+            // Try Sui's native gasless USDC transfer first (no SUI needed for gas).
+            // Verified via dry run before ever asking the user to sign, so a failed
+            // attempt here falls back to the self-pay flow below with only one
+            // signature prompt total.
+            if (isGaslessEligible(SUI_USDC_COIN_TYPE, parseFloat(amount))) {
+                try {
+                    const transfers: GaslessTransfer[] = [
+                        { coinType: SUI_USDC_COIN_TYPE, amountRaw: BigInt(amountInMist), recipient: walletAddress },
+                    ];
+                    const gaslessTx = buildGaslessTransferTx(currentSuiAccount.address, transfers);
+                    await verifyGaslessTransaction(suiClient, gaslessTx);
+                    tx = gaslessTx;
+                } catch (gaslessError) {
+                    console.warn('Gasless USDC transfer unavailable, falling back to self-paid gas:', gaslessError);
                 }
-
-                if (coinsToMerge.length > 0) {
-                    tx.mergeCoins(
-                        tx.object(primaryCoin.coinObjectId),
-                        coinsToMerge.map((c: SuiCoin) => tx.object(c.coinObjectId))
-                    );
-                }
-
-                const [splitCoin] = tx.splitCoins(tx.object(primaryCoin.coinObjectId), [amountInMist]);
-                coinToTransfer = splitCoin;
             }
 
-            tx.transferObjects([coinToTransfer], walletAddress);
+            if (!tx) {
+                const legacyTx = new Transaction();
+                tx = legacyTx;
+
+                let primaryCoin = (coins as any).find((c: SuiCoin) => parseInt(c.balance) >= amountInMist);
+                let coinToTransfer;
+
+                if (primaryCoin) {
+                    const [splitCoin] = legacyTx.splitCoins(legacyTx.object(primaryCoin.coinObjectId), [amountInMist]);
+                    coinToTransfer = splitCoin;
+                } else {
+                    const sortedCoins = (coins as any).sort((a: SuiCoin, b: SuiCoin) => parseInt(b.balance) - parseInt(a.balance));
+                    primaryCoin = sortedCoins[0];
+
+                    const coinsToMerge: SuiCoin[] = [];
+                    let currentBalance = parseInt(primaryCoin.balance);
+
+                    for (let i = 1; i < sortedCoins.length; i++) {
+                        if (currentBalance >= amountInMist) break;
+                        coinsToMerge.push(sortedCoins[i]);
+                        currentBalance += parseInt(sortedCoins[i].balance);
+                    }
+
+                    if (coinsToMerge.length > 0) {
+                        legacyTx.mergeCoins(
+                            legacyTx.object(primaryCoin.coinObjectId),
+                            coinsToMerge.map((c: SuiCoin) => legacyTx.object(c.coinObjectId))
+                        );
+                    }
+
+                    const [splitCoin] = legacyTx.splitCoins(legacyTx.object(primaryCoin.coinObjectId), [amountInMist]);
+                    coinToTransfer = splitCoin;
+                }
+
+                legacyTx.transferObjects([coinToTransfer], walletAddress);
+            }
 
             setStatus('signing');
             setMessage('Please sign the transaction in your wallet...');

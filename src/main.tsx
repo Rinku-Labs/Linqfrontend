@@ -13,14 +13,14 @@ import { TronWalletProvider } from './context/TronWalletProvider.tsx'
 import { SavingsProvider } from './context/SavingsContext.tsx'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { SuiClientProvider, WalletProvider, createNetworkConfig } from '@mysten/dapp-kit'
-import { getFullnodeUrl } from '@mysten/sui/client'
+import { getJsonRpcFullnodeUrl } from '@mysten/sui/jsonRpc'
 import '@mysten/dapp-kit/dist/index.css'
 
 // Network configuration
 const { networkConfig } = createNetworkConfig({
-  devnet: { url: getFullnodeUrl('devnet') },
-  testnet: { url: getFullnodeUrl('testnet') },
-  mainnet: { url: getFullnodeUrl('mainnet') },
+  devnet: { url: getJsonRpcFullnodeUrl('devnet'), network: 'devnet' },
+  testnet: { url: getJsonRpcFullnodeUrl('testnet'), network: 'testnet' },
+  mainnet: { url: getJsonRpcFullnodeUrl('mainnet'), network: 'mainnet' },
 })
 
 const queryClient = new QueryClient()

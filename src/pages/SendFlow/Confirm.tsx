@@ -30,6 +30,7 @@ import { useAuth } from '../../context/AuthContext';
 import { invalidateOrdersCache } from '../../utils/ordersCache';
 import { useSavings } from '../../context/SavingsContext';
 import { getSavingsConfig } from '../../utils/savingsConfig';
+import { isGaslessEligible, buildGaslessTransferTx, verifyGaslessTransaction, type GaslessTransfer } from '../../utils/gaslessSui';
 
 import { toast } from 'sonner';
 
@@ -229,7 +230,6 @@ export default function Confirm() {
 
             if (!coins || coins.length === 0) throw new Error("No USDC coins found in wallet");
 
-            const tx = new Transaction();
             const amountWithFee = amount + orderFeeRef.current;
             const amountInMist = Math.round(parseFloat(amountWithFee.toString()) * 1_000_000);
             let totalNeeded = amountInMist + savingsAmountInMist;
@@ -247,39 +247,66 @@ export default function Confirm() {
                 }
             }
 
-            let primaryCoin = coins.find(c => parseInt(c.balance) >= totalNeeded);
+            let tx: Transaction | undefined;
 
-            if (!primaryCoin) {
-                const sortedCoins = coins.sort((a, b) => parseInt(b.balance) - parseInt(a.balance));
-                primaryCoin = sortedCoins[0];
-
-                const coinsToMerge = [];
-                let currentBalance = parseInt(primaryCoin.balance);
-
-                for (let i = 1; i < sortedCoins.length; i++) {
-                    if (currentBalance >= totalNeeded) break;
-                    coinsToMerge.push(sortedCoins[i]);
-                    currentBalance += parseInt(sortedCoins[i].balance);
-                }
-
-                if (currentBalance < totalNeeded) {
-                    throw new Error(`Insufficient USDC balance. merged: ${(currentBalance / 1_000_000).toFixed(2)}, required: ${(totalNeeded / 1_000_000).toFixed(2)}`);
-                }
-
-                if (coinsToMerge.length > 0) {
-                    tx.mergeCoins(
-                        tx.object(primaryCoin.coinObjectId),
-                        coinsToMerge.map(c => tx.object(c.coinObjectId))
-                    );
+            // Try Sui's native gasless USDC transfer first (no SUI needed for gas).
+            // Verified via dry run before ever asking the user to sign, so a failed
+            // attempt here falls back to the self-pay flow below with only one
+            // signature prompt total.
+            if (isGaslessEligible(SUI_USDC_COIN_TYPE, amountWithFee)) {
+                try {
+                    const transfers: GaslessTransfer[] = [
+                        { coinType: SUI_USDC_COIN_TYPE, amountRaw: BigInt(amountInMist), recipient: walletAddress },
+                    ];
+                    if (hasSavings && savingsAmountInMist > 0) {
+                        transfers.push({ coinType: SUI_USDC_COIN_TYPE, amountRaw: BigInt(savingsAmountInMist), recipient: savingsConfig.savingsAddress });
+                    }
+                    const gaslessTx = buildGaslessTransferTx(currentAccount.address, transfers);
+                    await verifyGaslessTransaction(suiClient, gaslessTx);
+                    tx = gaslessTx;
+                } catch (gaslessError) {
+                    console.warn('Gasless USDC transfer unavailable, falling back to self-paid gas:', gaslessError);
                 }
             }
 
-            const [coinToTransfer] = tx.splitCoins(tx.object(primaryCoin.coinObjectId), [amountInMist]);
-            tx.transferObjects([coinToTransfer], walletAddress);
+            if (!tx) {
+                const legacyTx = new Transaction();
+                tx = legacyTx;
 
-            if (hasSavings && savingsAmountInMist > 0) {
-                const [savingsCoin] = tx.splitCoins(tx.object(primaryCoin.coinObjectId), [savingsAmountInMist]);
-                tx.transferObjects([savingsCoin], savingsConfig.savingsAddress);
+                let primaryCoin = coins.find(c => parseInt(c.balance) >= totalNeeded);
+
+                if (!primaryCoin) {
+                    const sortedCoins = coins.sort((a, b) => parseInt(b.balance) - parseInt(a.balance));
+                    primaryCoin = sortedCoins[0];
+
+                    const coinsToMerge = [];
+                    let currentBalance = parseInt(primaryCoin.balance);
+
+                    for (let i = 1; i < sortedCoins.length; i++) {
+                        if (currentBalance >= totalNeeded) break;
+                        coinsToMerge.push(sortedCoins[i]);
+                        currentBalance += parseInt(sortedCoins[i].balance);
+                    }
+
+                    if (currentBalance < totalNeeded) {
+                        throw new Error(`Insufficient USDC balance. merged: ${(currentBalance / 1_000_000).toFixed(2)}, required: ${(totalNeeded / 1_000_000).toFixed(2)}`);
+                    }
+
+                    if (coinsToMerge.length > 0) {
+                        legacyTx.mergeCoins(
+                            legacyTx.object(primaryCoin.coinObjectId),
+                            coinsToMerge.map(c => legacyTx.object(c.coinObjectId))
+                        );
+                    }
+                }
+
+                const [coinToTransfer] = legacyTx.splitCoins(legacyTx.object(primaryCoin.coinObjectId), [amountInMist]);
+                legacyTx.transferObjects([coinToTransfer], walletAddress);
+
+                if (hasSavings && savingsAmountInMist > 0) {
+                    const [savingsCoin] = legacyTx.splitCoins(legacyTx.object(primaryCoin.coinObjectId), [savingsAmountInMist]);
+                    legacyTx.transferObjects([savingsCoin], savingsConfig.savingsAddress);
+                }
             }
 
             setIsLoading(false);
