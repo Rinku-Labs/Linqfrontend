@@ -5,7 +5,7 @@ import Button from '../components/ui/Button';
 import Input from '../components/ui/Input';
 import { verifyNIN } from '../api/kyc';
 import { useAuth } from '../context/AuthContext';
-import { ShieldCheck, CheckCircle2, ArrowLeft } from 'lucide-react';
+import { ShieldCheck, CheckCircle2 } from 'lucide-react';
 import { useMutation } from '@tanstack/react-query';
 import InlineError from '../components/ui/InlineError';
 
@@ -70,16 +70,6 @@ export default function Verification() {
                 </div>
             ) : (
                 <div style={{ maxWidth: '400px', margin: '0 auto', padding: '20px' }}>
-                    {/* Back button */}
-                    <div style={{ display: 'flex', justifyContent: 'flex-start', marginBottom: '20px' }}>
-                        <button
-                            onClick={() => navigate('/')}
-                            style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)' }}
-                        >
-                            <ArrowLeft size={24} />
-                        </button>
-                    </div>
-
                     <div className="glass-card" style={{ padding: '32px', borderRadius: '24px', textAlign: 'center' }}>
                         {/* Icon */}
                         <div style={{
