@@ -20,16 +20,27 @@ export function usePredictScores(): Record<number, LiveScore> {
     useEffect(() => {
         let cancelled = false;
 
-        // Seed from the snapshot so a freshly-opened page shows current scores fast.
-        getScores()
-            .then((list) => {
-                if (cancelled) return;
-                list.forEach(apply);
-            })
-            .catch(() => {});
+        // Seed from the REST snapshot (goes through axios with the auth header, so it
+        // works even when the SSE stream can't).
+        const seed = () =>
+            getScores()
+                .then((list) => { if (!cancelled) list.forEach(apply); })
+                .catch(() => {});
+        seed(); // initial paint
+
+        // Guaranteed fallback: the SSE stream can silently stall (a proxy holding the
+        // socket open but not forwarding) or fail — leaving scores frozen until the
+        // user refreshes. So while ANY match is live, re-seed from REST every 25s.
+        // This recovers scores independently of the stream's health. It is gated on a
+        // live match, so between matches there is NO polling and no backend load.
+        const LIVE = new Set(['H1', 'HT', 'H2', 'ET1', 'HTET', 'ET2', 'PE', 'WET', 'WPE']);
+        const poll = setInterval(() => {
+            if (cancelled) return;
+            if (Object.values(scoresRef.current).some((s) => LIVE.has(s.status))) seed();
+        }, 25000);
 
         const url = scoresStreamURL();
-        if (!url) return; // VITE_API_URL not set — nothing to stream
+        if (!url) return () => { cancelled = true; clearInterval(poll); }; // no stream — poll only
 
         let es: EventSource | null = null;
         let retry: ReturnType<typeof setTimeout> | undefined;
@@ -44,7 +55,11 @@ export function usePredictScores(): Record<number, LiveScore> {
 
         const connect = () => {
             lastSeen = Date.now();
-            es = new EventSource(url);
+            // withCredentials so the browser sends the Authorization cookie set at
+            // login — EventSource can't set an Authorization header, and the stream
+            // is now authenticated on the backend (RequireAuth falls back to the
+            // cookie). CORS already allows credentials for our origins.
+            es = new EventSource(url, { withCredentials: true });
             // Any frame — a score or the server's 15s "ping" heartbeat — proves the
             // connection is alive and resets the watchdog clock.
             const bump = () => { lastSeen = Date.now(); };
@@ -76,6 +91,7 @@ export function usePredictScores(): Record<number, LiveScore> {
 
         return () => {
             cancelled = true;
+            clearInterval(poll);
             if (retry) clearTimeout(retry);
             if (watchdog) clearInterval(watchdog);
             es?.close();

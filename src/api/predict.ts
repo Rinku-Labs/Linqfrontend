@@ -12,6 +12,7 @@ export interface Fixture {
     awayTeam: string;
     homeFlag: string;
     awayFlag: string;
+    closed?: boolean; // display-only match: visible, but no predicting and no payout
 }
 
 export interface LiveScore {
@@ -53,6 +54,25 @@ export interface HistoryItem {
     status: string;
     result: string; // '' | 'won' | 'lost'
     settledAt: string | null;
+    // position is this user's rank among everyone who called this exact scoreline
+    // (1 = first). Powers the "You're 3rd to call 2-1" line.
+    position: number;
+    // Prize (meaningful when result === 'won').
+    prizeEligible: boolean;       // correct AND in the first N callers → claimable
+    prizeShareUsd: number | null; // this winner's share of the pool
+    prizePoolUsd: number | null;  // the pool the share came from
+    claimed: boolean;
+    claimedAt: string | null;
+}
+
+export interface HistoryResponse {
+    predictions: HistoryItem[];
+    hasPayoutInfo: boolean;
+    prizePoolUsd: number;
+    maxWinners: number;
+    acceptedTerms: boolean;
+    suiWallet: string; // saved payout details (own), for prefill + edit
+    xHandle: string;
 }
 
 export async function getFixtures(): Promise<Fixture[]> {
@@ -70,19 +90,52 @@ export async function submitPrediction(fixtureId: number, home: number, away: nu
     return data;
 }
 
-export async function getHistory(): Promise<HistoryItem[]> {
-    const { data } = await client.get<{ predictions: HistoryItem[] }>('/predict/history');
-    return data?.predictions ?? [];
+export async function getHistory(): Promise<HistoryResponse> {
+    const { data } = await client.get<HistoryResponse>('/predict/history');
+    return {
+        predictions: data?.predictions ?? [],
+        hasPayoutInfo: !!data?.hasPayoutInfo,
+        prizePoolUsd: data?.prizePoolUsd ?? 0,
+        maxWinners: data?.maxWinners ?? 5,
+        acceptedTerms: !!data?.acceptedTerms,
+        suiWallet: data?.suiWallet ?? '',
+        xHandle: data?.xHandle ?? '',
+    };
+}
+
+// acceptTerms records that the user accepted the game's Terms & Conditions. Called
+// only from the "Agree & Submit" action — declining must NOT call this, so the user
+// is prompted again next time.
+export async function acceptTerms(): Promise<void> {
+    await client.post('/predict/accept-terms', {});
+}
+
+// claimPrize claims a won match. Pass suiWallet + xHandle to save/update the user's
+// payout details (first claim, or an "Edit"); omit them to reuse saved details.
+// A 422 { needPayoutInfo:true } means the app must collect the wallet + handle.
+export async function claimPrize(
+    fixtureId: number,
+    suiWallet?: string,
+    xHandle?: string,
+): Promise<Prediction> {
+    const { data } = await client.post<Prediction>('/predict/claim', { fixtureId, suiWallet, xHandle });
+    return data;
 }
 
 // scoresStreamURL builds the absolute URL for the live-scores SSE endpoint from
 // VITE_API_URL. There is deliberately NO localhost fallback — in production the
 // env var must point at the deployed backend.
+//
+// The stream is authenticated, but EventSource can't send an Authorization
+// header and the cross-site auth cookie is blocked by many mobile browsers —
+// so the JWT rides in ?token= instead, which the backend lifts into the
+// Authorization header and validates like any other request.
 export function scoresStreamURL(): string {
     const base = (import.meta.env.VITE_API_URL as string | undefined)?.replace(/\/$/, '');
     if (!base) {
         console.warn('VITE_API_URL is not set — live scores will not stream.');
         return '';
     }
-    return `${base}/predict/scores/stream`;
+    const token = localStorage.getItem('linqAuthToken');
+    return `${base}/predict/scores/stream${token ? `?token=${encodeURIComponent(token)}` : ''}`;
 }
