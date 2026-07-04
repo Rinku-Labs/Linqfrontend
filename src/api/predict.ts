@@ -12,6 +12,7 @@ export interface Fixture {
     awayTeam: string;
     homeFlag: string;
     awayFlag: string;
+    closed?: boolean; // display-only match: visible, but no predicting and no payout
 }
 
 export interface LiveScore {

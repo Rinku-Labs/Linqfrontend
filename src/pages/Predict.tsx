@@ -391,7 +391,10 @@ function MatchCard({
                 </div>
 
                 <div style={{ marginTop: 14 }}>
-                    {settled ? (
+                    {fixture.closed ? (
+                        // Display-only match: visible, but no predicting, no result, no payout.
+                        <button disabled style={btnMuted()}>Predictions closed</button>
+                    ) : settled ? (
                         <ResultFooter prediction={prediction!} fixture={fixture} maxWinners={maxWinners} onClaim={onClaim} />
                     ) : prediction ? (
                         <>
