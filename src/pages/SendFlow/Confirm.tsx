@@ -100,8 +100,19 @@ export default function Confirm() {
     const { address: tronAddress } = useTronWallet();
 
     const { selectedChain } = useChain();
-    const { activeWalletSource, validatePin } = useAuth();
+    const { activeWalletSource, validatePin, isVerified, trialVolumeUsed, checkVerificationStatus } = useAuth();
     const { addEntry } = useSavings();
+
+    // Refresh trial/verification status when entering the Confirm screen so the
+    // trial-remaining notice below reflects the latest backend state rather
+    // than AuthContext's up-to-30s-stale cache.
+    useEffect(() => {
+        checkVerificationStatus(true);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
+
+    const trialRemaining = Math.max(0, 5 - trialVolumeUsed);
+    const isTrialLimitError = (message: string) => message.toLowerCase().includes('verify your nin');
 
     // PIN Modal State
     const [showPinModal, setShowPinModal] = useState(false);
@@ -1219,12 +1230,33 @@ export default function Confirm() {
                 </div>
 
                 <div style={{ marginTop: 'auto' }}>
+                    {!isVerified && !error && (
+                        <div style={{ marginBottom: '16px' }}>
+                            <InlineError
+                                type="info"
+                                message={`You have $${trialRemaining.toFixed(2)} of your $5 free trial remaining.`}
+                                suggestion="Verify your NIN for unlimited transfers."
+                            />
+                        </div>
+                    )}
                     <div style={{ marginBottom: '16px' }}>
                         {error && (
-                            <InlineError
-                                message={error}
-                                onDismiss={() => setError(null)}
-                            />
+                            <>
+                                <InlineError
+                                    message={error}
+                                    onDismiss={() => setError(null)}
+                                />
+                                {isTrialLimitError(error) && (
+                                    <Button
+                                        fullWidth
+                                        variant="secondary"
+                                        onClick={() => navigate('/verification')}
+                                        style={{ marginTop: '10px' }}
+                                    >
+                                        Verify NIN Now
+                                    </Button>
+                                )}
+                            </>
                         )}
                     </div>
                     <Button

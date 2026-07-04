@@ -40,6 +40,7 @@ interface AuthContextType {
     checkVerificationStatus: (force?: boolean) => Promise<void>;
     markVerified: () => void;
     hasTrialRemaining: boolean;
+    trialVolumeUsed: number;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -330,7 +331,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             hasPin, setTransactionPin, validatePin,
             activeWalletSource, setActiveWalletSource, zkAddress,
             updateProfilePicture,
-            isVerified, isCheckingVerification, checkVerificationStatus, markVerified, hasTrialRemaining
+            isVerified, isCheckingVerification, checkVerificationStatus, markVerified, hasTrialRemaining, trialVolumeUsed
         }}>
             {children}
         </AuthContext.Provider>
