@@ -19,7 +19,12 @@ const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const modelsOut = join(root, 'public', 'models');
 
 // PP-OCRv5 mobile models, pinned by sha256 for integrity.
-const MODEL_BASE = 'https://raw.githubusercontent.com/X3ZvaWQ/paddleocr.js/main/assets';
+//
+// paddleocr.js externalized its bundled ONNX assets to this Hugging Face repo
+// on 2026-07-03 (upstream commit bae1a31, "refactor(assets): externalize ONNX
+// model asset repository"); the old raw.githubusercontent.com/.../assets path
+// 404s as of that commit. Verified these files hash-match the pins below.
+const MODEL_BASE = 'https://huggingface.co/x3zvawq/paddleocr-js-onnx/resolve/main/ppocr_v5_mobile';
 const MODELS = [
     { name: 'PP-OCRv5_mobile_det_infer.onnx', sha256: '4d97c44a20d30a81aad087d6a396b08f786c4635742afc391f6621f5c6ae78ae' },
     { name: 'PP-OCRv5_mobile_rec_infer.onnx', sha256: '86b1f8bffa31748e0d6364a98af983bbd33b92523141d4a02fa587b4b66b54af' },
