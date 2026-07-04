@@ -1,7 +1,11 @@
-import { X, Pencil } from 'lucide-react';
-import { useState } from 'react';
+import { X, Pencil, AlertTriangle } from 'lucide-react';
+import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
 import { claimPrize } from '../api/predict';
+
+// READ_SECONDS gates the Claim button so the wallet disclaimer can't be skipped —
+// losses to unsupported wallets are unrecoverable, so we force a short read.
+const READ_SECONDS = 5;
 
 const PURPLE_GRAD = 'linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)';
 
@@ -50,7 +54,19 @@ export default function ClaimPrizeModal({
     // When details are already saved, start locked (read-only) so the user just sees
     // what's on file; "Edit" unlocks the inputs to change them.
     const [editing, setEditing] = useState(!hasSaved);
+    // Required acknowledgment that the address can receive Sui USDC — only when the
+    // user is actually entering/changing an address (a plain re-confirm of saved
+    // details already acknowledged once). Prizes lost to unsupported wallets are
+    // unrecoverable, so this is a hard gate, not just a disclaimer.
+    const [ack, setAck] = useState(false);
     const [busy, setBusy] = useState(false);
+    // Countdown so the disclaimer is actually read before the prize can be claimed.
+    const [readLeft, setReadLeft] = useState(READ_SECONDS);
+    useEffect(() => {
+        if (readLeft <= 0) return;
+        const t = setTimeout(() => setReadLeft((n) => n - 1), 1000);
+        return () => clearTimeout(t);
+    }, [readLeft]);
 
     async function submit() {
         // Only send wallet/handle when the user is entering or editing them; a plain
@@ -59,6 +75,10 @@ export default function ClaimPrizeModal({
         const sendCreds = editing;
         if (sendCreds && (!wallet.trim() || !handle.trim())) {
             toast.error('Enter your Sui wallet address and X handle.');
+            return;
+        }
+        if (sendCreds && !ack) {
+            toast.error('Please confirm your address supports Sui USDC.');
             return;
         }
         setBusy(true);
@@ -102,10 +122,28 @@ export default function ClaimPrizeModal({
                     <div style={{ position: 'relative', zIndex: 1 }}>
                         <div style={{ display: 'inline-block', background: 'rgba(255,255,255,0.16)', color: '#fff', fontSize: 13, fontWeight: 800, letterSpacing: 1, padding: '5px 18px', borderRadius: 20 }}>YOU WON</div>
                         <div style={{ fontSize: 56, fontWeight: 900, color: '#fff', marginTop: 8, textShadow: '0 4px 18px rgba(0,0,0,0.35)' }}>${prizeShareUsd}</div>
+                        <div style={{ color: 'rgba(255,255,255,0.92)', fontSize: 12.5, fontWeight: 800, letterSpacing: 0.4 }}>paid in USDC on the Sui network</div>
                         {prizePoolUsd > 0 && (
-                            <div style={{ color: 'rgba(255,255,255,0.82)', fontSize: 13, fontWeight: 600 }}>your share of the ${prizePoolUsd} prize pool</div>
+                            <div style={{ color: 'rgba(255,255,255,0.82)', fontSize: 13, fontWeight: 600, marginTop: 2 }}>your share of the ${prizePoolUsd} prize pool</div>
                         )}
                     </div>
+                </div>
+
+                {/* Wallet disclaimer — the FIRST thing after the prize card, before the
+                    inputs. Funds sent to unsupported wallets are lost with no refund. */}
+                <div style={{ background: 'rgba(245,158,11,0.12)', border: '1px solid rgba(245,158,11,0.45)', borderRadius: 14, padding: '13px 15px', marginBottom: 20, color: 'var(--text-main)' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 7, fontSize: 14, fontWeight: 800, marginBottom: 8, color: '#B45309' }}>
+                        <AlertTriangle size={16} /> Wallet Disclaimer
+                    </div>
+                    <p style={{ margin: '0 0 8px', fontSize: 12.8, lineHeight: 1.5 }}>
+                        Only submit a <b>decentralized wallet address</b> (e.g. Slush Wallet, Suiet, OKX Wallet) that supports <b>Sui USDC</b>.
+                    </p>
+                    <p style={{ margin: '0 0 8px', fontSize: 12.8, lineHeight: 1.5 }}>
+                        Do <b>NOT</b> submit CEX addresses (Binance, Bybit, Spenda etc.) — most don't support Sui USDC and <b>your prize will be lost, with no refund.</b>
+                    </p>
+                    <p style={{ margin: 0, fontSize: 12.8, lineHeight: 1.5 }}>
+                        Linq is not responsible for funds sent to unsupported wallets. Double-check before submitting.
+                    </p>
                 </div>
 
                 <label style={fieldLabel}>
@@ -132,12 +170,19 @@ export default function ClaimPrizeModal({
                     style={fieldInput(hasSaved && !editing)}
                 />
 
+                {editing && (
+                    <label style={{ display: 'flex', gap: 9, alignItems: 'flex-start', marginTop: 16, fontSize: 13, lineHeight: 1.45, color: 'var(--text-secondary)', cursor: 'pointer' }}>
+                        <input type="checkbox" checked={ack} onChange={(e) => setAck(e.target.checked)} style={{ marginTop: 2, width: 17, height: 17, flexShrink: 0, accentColor: '#8A4FFF' }} />
+                        <span>I've double-checked — this address supports <b>Sui USDC</b> and is <b>not</b> a CEX (exchange) address.</span>
+                    </label>
+                )}
+
                 <button
                     onClick={submit}
-                    disabled={busy}
-                    style={{ width: '100%', padding: 16, borderRadius: 18, border: 'none', fontSize: 15, fontWeight: 800, color: '#fff', cursor: busy ? 'default' : 'pointer', background: PURPLE_GRAD, marginTop: 24 }}
+                    disabled={busy || readLeft > 0 || (editing && !ack)}
+                    style={{ width: '100%', padding: 16, borderRadius: 18, border: 'none', fontSize: 15, fontWeight: 800, color: '#fff', cursor: busy || readLeft > 0 || (editing && !ack) ? 'default' : 'pointer', background: PURPLE_GRAD, opacity: busy || readLeft > 0 || (editing && !ack) ? 0.6 : 1, marginTop: 20 }}
                 >
-                    {busy ? 'Claiming…' : 'Claim prize'}
+                    {busy ? 'Claiming…' : readLeft > 0 ? `Please read the disclaimer… ${readLeft}s` : 'Claim prize'}
                 </button>
             </div>
         </div>
