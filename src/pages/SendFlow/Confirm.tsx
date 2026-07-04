@@ -31,6 +31,7 @@ import { invalidateOrdersCache } from '../../utils/ordersCache';
 import { useSavings } from '../../context/SavingsContext';
 import { getSavingsConfig } from '../../utils/savingsConfig';
 import { isGaslessEligible, buildGaslessTransferTx, verifyGaslessTransaction, type GaslessTransfer } from '../../utils/gaslessSui';
+import { getTotalBalance, getAllCoins } from '../../utils/suiCoins';
 
 import { toast } from 'sonner';
 
@@ -223,18 +224,13 @@ export default function Confirm() {
             let savingsAmountUSDC = hasSavings ? parseFloat((amount * savingsConfig.percentage / 100).toFixed(6)) : 0;
             let savingsAmountInMist = hasSavings ? Math.floor(savingsAmountUSDC * 1_000_000) : 0;
 
-            const { data: coins } = await suiClient.getCoins({
-                owner: currentAccount.address,
-                coinType: SUI_USDC_COIN_TYPE,
-            });
+            const totalBalance = await getTotalBalance(suiClient, currentAccount.address, SUI_USDC_COIN_TYPE);
 
-            if (!coins || coins.length === 0) throw new Error("No USDC coins found in wallet");
+            if (totalBalance === 0) throw new Error("No USDC coins found in wallet");
 
             const amountWithFee = amount + orderFeeRef.current;
             const amountInMist = Math.round(parseFloat(amountWithFee.toString()) * 1_000_000);
             let totalNeeded = amountInMist + savingsAmountInMist;
-
-            const totalBalance = coins.reduce((sum, coin) => sum + parseInt(coin.balance), 0);
 
             if (totalBalance < totalNeeded) {
                 if (totalBalance >= amountInMist) {
@@ -272,6 +268,9 @@ export default function Confirm() {
             if (!tx) {
                 const legacyTx = new Transaction();
                 tx = legacyTx;
+
+                const coins = await getAllCoins(suiClient, currentAccount.address, SUI_USDC_COIN_TYPE);
+                if (coins.length === 0) throw new Error("No USDC coins found in wallet");
 
                 let primaryCoin = coins.find(c => parseInt(c.balance) >= totalNeeded);
 

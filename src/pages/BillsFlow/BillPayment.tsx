@@ -28,6 +28,7 @@ import { useAuth } from '../../context/AuthContext';
 import { sanitizeErrorMessage } from '../../utils/sanitize';
 import { addBillBeneficiary, type AddBillBeneficiaryPayload } from '../../api/user';
 import { isGaslessEligible, buildGaslessTransferTx, verifyGaslessTransaction, type GaslessTransfer } from '../../utils/gaslessSui';
+import { getTotalBalance, getAllCoins } from '../../utils/suiCoins';
 
 const SUI_USDC_COIN_TYPE = "0xdba34672e30cb065b1f93e3ab55318768fd6fef66c15942c9f7cb846e2f900e7::usdc::USDC";
 const SOLANA_USDC_MINT = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v";
@@ -106,16 +107,11 @@ export default function BillPayment() {
         if (!currentSuiAccount) return;
 
         try {
-            const { data: coins } = await suiClient.getCoins({
-                owner: currentSuiAccount.address,
-                coinType: SUI_USDC_COIN_TYPE,
-            });
-
-            if (!coins || coins.length === 0) throw new Error("No USDC coins found in wallet");
+            const totalBalance = await getTotalBalance(suiClient, currentSuiAccount.address, SUI_USDC_COIN_TYPE);
+            if (totalBalance === 0) throw new Error("No USDC coins found in wallet");
 
             const amountInMist = Math.floor(parseFloat(amount) * 1_000_000);
 
-            const totalBalance = (coins as any).reduce((sum: number, coin: SuiCoin) => sum + parseInt(coin.balance), 0);
             if (totalBalance < amountInMist) {
                 throw new Error(`Insufficient USDC balance. Required: ${amount}, Available: ${(totalBalance / 1_000_000).toFixed(2)}`);
             }
@@ -142,6 +138,9 @@ export default function BillPayment() {
             if (!tx) {
                 const legacyTx = new Transaction();
                 tx = legacyTx;
+
+                const coins = await getAllCoins(suiClient, currentSuiAccount.address, SUI_USDC_COIN_TYPE);
+                if (coins.length === 0) throw new Error("No USDC coins found in wallet");
 
                 let primaryCoin = (coins as any).find((c: SuiCoin) => parseInt(c.balance) >= amountInMist);
                 let coinToTransfer;
