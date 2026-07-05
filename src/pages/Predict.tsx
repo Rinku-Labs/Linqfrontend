@@ -198,22 +198,20 @@ export default function Predict() {
         return () => clearInterval(refresh);
     }, [loadFixtures, loadHistory]);
 
-    // Show the "Convert to Naira" popup once in a while on the predict page — but
-    // only to users who actually have winnings (otherwise the message is moot), and
-    // only every 5th qualifying visit so it stays a gentle nudge. Runs once per mount
-    // (after history loads); the always-after-claim trigger is separate, below.
+    // Show the "Convert to Naira" popup once in a while on the predict page — to
+    // everyone, on the same every-5th-visit cadence the home discovery popups use
+    // (no winnings requirement). Runs once per mount. The always-after-claim
+    // trigger is separate and unconditional, below.
     useEffect(() => {
         if (convertCheckedRef.current) return;
-        if (Object.keys(myPreds).length === 0) return; // wait for history
         convertCheckedRef.current = true;
-        const hasWinnings = Object.values(myPreds).some((p) => p.result === 'won');
-        if (!hasWinnings) return;
+        if (localStorage.getItem('linq_showTour') === 'true') return; // don't interrupt onboarding
         try {
             const n = (parseInt(localStorage.getItem('linqConvertNairaCount') || '0', 10)) + 1;
             localStorage.setItem('linqConvertNairaCount', String(n));
             if (n % 5 === 0) setShowConvert(true);
         } catch { /* ignore */ }
-    }, [myPreds]);
+    }, []);
 
     // Claim a won match — always open the Claim modal, which shows the prize share
     // and prefills (or collects) the payout details.
