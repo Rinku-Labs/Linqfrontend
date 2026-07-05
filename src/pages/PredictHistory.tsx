@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useState, useEffect, useCallback } from 'react';
 import { getHistory, type HistoryItem } from '../api/predict';
 import ClaimPrizeModal from '../components/ClaimPrizeModal';
+import ConvertNairaPopup from '../components/ConvertNairaPopup';
 
 const PURPLE_GRAD = 'linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)';
 
@@ -47,6 +48,7 @@ export default function PredictHistory() {
     const [poolFallback, setPoolFallback] = useState(0);
     const [loading, setLoading] = useState(true);
     const [claimId, setClaimId] = useState<number | null>(null); // fixture whose modal is open
+    const [showConvert, setShowConvert] = useState(false); // "Convert to Naira" popup, shown after a claim
 
     const load = useCallback(async () => {
         try {
@@ -181,7 +183,14 @@ export default function PredictHistory() {
                     savedWallet={savedWallet}
                     savedHandle={savedHandle}
                     onClose={() => setClaimId(null)}
-                    onClaimed={async () => { setClaimId(null); await load(); }}
+                    onClaimed={async () => { setClaimId(null); await load(); setShowConvert(true); }}
+                />
+            )}
+
+            {showConvert && (
+                <ConvertNairaPopup
+                    onClose={() => setShowConvert(false)}
+                    onCtaClick={() => { setShowConvert(false); navigate('/send/details'); }}
                 />
             )}
         </div>

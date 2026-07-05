@@ -74,11 +74,11 @@ export default function ClaimPrizeModal({
         // Sui wallet and the X handle are required.
         const sendCreds = editing;
         if (sendCreds && (!wallet.trim() || !handle.trim())) {
-            toast.error('Enter your Sui wallet address and X handle.');
+            toast.error('Enter your Sui or Solana wallet address and X handle.');
             return;
         }
         if (sendCreds && !ack) {
-            toast.error('Please confirm your address supports Sui USDC.');
+            toast.error('Please confirm your address supports USDC on Sui or Solana.');
             return;
         }
         setBusy(true);
@@ -121,8 +121,10 @@ export default function ClaimPrizeModal({
                     <Confetti />
                     <div style={{ position: 'relative', zIndex: 1 }}>
                         <div style={{ display: 'inline-block', background: 'rgba(255,255,255,0.16)', color: '#fff', fontSize: 13, fontWeight: 800, letterSpacing: 1, padding: '5px 18px', borderRadius: 20 }}>YOU WON</div>
-                        <div style={{ fontSize: 56, fontWeight: 900, color: '#fff', marginTop: 8, textShadow: '0 4px 18px rgba(0,0,0,0.35)' }}>${prizeShareUsd}</div>
-                        <div style={{ color: 'rgba(255,255,255,0.92)', fontSize: 12.5, fontWeight: 800, letterSpacing: 0.4 }}>paid in USDC on the Sui network</div>
+                        <div style={{ fontSize: 56, fontWeight: 900, color: '#fff', marginTop: 8, textShadow: '0 4px 18px rgba(0,0,0,0.35)' }}>
+                            ${prizeShareUsd}<span style={{ fontSize: 26, fontWeight: 800, marginLeft: 4 }}>USDC</span>
+                        </div>
+                        <div style={{ color: 'rgba(255,255,255,0.92)', fontSize: 12.5, fontWeight: 800, letterSpacing: 0.4 }}>receive it on Sui or Solana</div>
                         {prizePoolUsd > 0 && (
                             <div style={{ color: 'rgba(255,255,255,0.82)', fontSize: 13, fontWeight: 600, marginTop: 2 }}>your share of the ${prizePoolUsd} prize pool</div>
                         )}
@@ -136,10 +138,10 @@ export default function ClaimPrizeModal({
                         <AlertTriangle size={16} /> Wallet Disclaimer
                     </div>
                     <p style={{ margin: '0 0 8px', fontSize: 12.8, lineHeight: 1.5 }}>
-                        Only submit a <b>decentralized wallet address</b> (e.g. Slush Wallet, Suiet, OKX Wallet) that supports <b>Sui USDC</b>.
+                        Only submit a <b>decentralized wallet address</b> (e.g. Slush Wallet, Suiet, Phantom, OKX Wallet) that supports <b>USDC on Sui or Solana</b>.
                     </p>
                     <p style={{ margin: '0 0 8px', fontSize: 12.8, lineHeight: 1.5 }}>
-                        Do <b>NOT</b> submit CEX addresses (Binance, Bybit, Spenda etc.) — most don't support Sui USDC and <b>your prize will be lost, with no refund.</b>
+                        Do <b>NOT</b> submit CEX addresses (Binance, Bybit, Spenda etc.) — most don't support this and <b>your prize will be lost, with no refund.</b>
                     </p>
                     <p style={{ margin: 0, fontSize: 12.8, lineHeight: 1.5 }}>
                         Linq is not responsible for funds sent to unsupported wallets. Double-check before submitting.
@@ -147,7 +149,7 @@ export default function ClaimPrizeModal({
                 </div>
 
                 <label style={fieldLabel}>
-                    <span>Sui wallet address</span>
+                    <span>Sui or Solana wallet address</span>
                     {hasSaved && !editing && (
                         <button style={editBtn} onClick={() => setEditing(true)}><Pencil size={13} /> Edit</button>
                     )}
@@ -155,7 +157,7 @@ export default function ClaimPrizeModal({
                 <input
                     value={wallet}
                     onChange={(e) => setWallet(e.target.value)}
-                    placeholder="Enter sui wallet address"
+                    placeholder="Enter your Sui or Solana wallet address"
                     readOnly={hasSaved && !editing}
                     autoCapitalize="off" autoCorrect="off" spellCheck={false}
                     style={fieldInput(hasSaved && !editing)}
@@ -173,7 +175,7 @@ export default function ClaimPrizeModal({
                 {editing && (
                     <label style={{ display: 'flex', gap: 9, alignItems: 'flex-start', marginTop: 16, fontSize: 13, lineHeight: 1.45, color: 'var(--text-secondary)', cursor: 'pointer' }}>
                         <input type="checkbox" checked={ack} onChange={(e) => setAck(e.target.checked)} style={{ marginTop: 2, width: 17, height: 17, flexShrink: 0, accentColor: '#8A4FFF' }} />
-                        <span>I've double-checked — this address supports <b>Sui USDC</b> and is <b>not</b> a CEX (exchange) address.</span>
+                        <span>I've double-checked — this address supports <b>USDC on Sui or Solana</b> and is <b>not</b> a CEX (exchange) address.</span>
                     </label>
                 )}
 

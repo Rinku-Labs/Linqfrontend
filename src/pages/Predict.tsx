@@ -13,6 +13,7 @@ import {
 } from '../api/predict';
 import { usePredictScores } from '../hooks/usePredictScores';
 import ClaimPrizeModal from '../components/ClaimPrizeModal';
+import ConvertNairaPopup from '../components/ConvertNairaPopup';
 import heroImg from '../assets/predict-hero.jpg';
 
 const LIVE = new Set(['H1', 'HT', 'H2', 'ET1', 'HTET', 'ET2', 'PE', 'WET', 'WPE']);
@@ -153,6 +154,10 @@ export default function Predict() {
     const [loading, setLoading] = useState(true);
     const [modalFixture, setModalFixture] = useState<Fixture | null>(null);
     const [claimFixture, setClaimFixture] = useState<Fixture | null>(null);
+    // "Convert your USDC winnings to Naira" popup — shown occasionally on this page
+    // (to users who have winnings) and always right after a prize is claimed.
+    const [showConvert, setShowConvert] = useState(false);
+    const convertCheckedRef = useRef(false);
     const fixturesRef = useRef<Fixture[]>([]);
 
     const scores = usePredictScores();
@@ -192,6 +197,23 @@ export default function Predict() {
         const refresh = setInterval(loadFixtures, 10 * 60 * 1000);
         return () => clearInterval(refresh);
     }, [loadFixtures, loadHistory]);
+
+    // Show the "Convert to Naira" popup once in a while on the predict page — but
+    // only to users who actually have winnings (otherwise the message is moot), and
+    // only every 5th qualifying visit so it stays a gentle nudge. Runs once per mount
+    // (after history loads); the always-after-claim trigger is separate, below.
+    useEffect(() => {
+        if (convertCheckedRef.current) return;
+        if (Object.keys(myPreds).length === 0) return; // wait for history
+        convertCheckedRef.current = true;
+        const hasWinnings = Object.values(myPreds).some((p) => p.result === 'won');
+        if (!hasWinnings) return;
+        try {
+            const n = (parseInt(localStorage.getItem('linqConvertNairaCount') || '0', 10)) + 1;
+            localStorage.setItem('linqConvertNairaCount', String(n));
+            if (n % 5 === 0) setShowConvert(true);
+        } catch { /* ignore */ }
+    }, [myPreds]);
 
     // Claim a won match — always open the Claim modal, which shows the prize share
     // and prefills (or collects) the payout details.
@@ -314,7 +336,16 @@ export default function Predict() {
                     onClaimed={async () => {
                         setClaimFixture(null);
                         await loadHistory();
+                        // Always nudge the winner to cash out their USDC to Naira.
+                        setShowConvert(true);
                     }}
+                />
+            )}
+
+            {showConvert && (
+                <ConvertNairaPopup
+                    onClose={() => setShowConvert(false)}
+                    onCtaClick={() => { setShowConvert(false); navigate('/send/details'); }}
                 />
             )}
         </div>
