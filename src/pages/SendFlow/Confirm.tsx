@@ -6,7 +6,7 @@ import InlineError from '../../components/ui/InlineError';
 import client from '../../api/client';
 import { fetchRate as fetchCachedRate } from '../../utils/rateCache';
 import { isGasFeeError } from '../../utils/sanitize';
-import { useCurrentAccount, useSignAndExecuteTransaction, useSignTransaction, useSuiClient } from '@mysten/dapp-kit';
+import { useCurrentAccount, useSignAndExecuteTransaction, useSuiClient } from '@mysten/dapp-kit';
 import { Transaction } from '@mysten/sui/transactions';
 import { useWallet } from '@solana/wallet-adapter-react';
 import { useConnection } from '@solana/wallet-adapter-react';
@@ -87,7 +87,6 @@ export default function Confirm() {
     const currentAccount = useCurrentAccount();
     const suiClient = useSuiClient();
     const { mutate: signAndExecuteSuiTransaction } = useSignAndExecuteTransaction();
-    const { mutateAsync: signTransaction } = useSignTransaction();
 
     const { connection } = useConnection();
     const { publicKey: solanaPublicKey, sendTransaction: sendSolanaTransaction } = useWallet();
@@ -171,64 +170,13 @@ export default function Confirm() {
 
 
     // Payment Handlers
-    const handleSuiPayment = async (walletAddress: string, orderId: string, txBytes?: string, sponsorSignature?: string) => {
+    const handleSuiPayment = async (walletAddress: string, orderId: string) => {
         if (!currentAccount) {
             setError("Please connect your Sui wallet");
             return;
         }
 
         try {
-            // --- SPONSORED FLOW: backend built the tx, we just sign + submit ---
-            if (txBytes && sponsorSignature) {
-                setIsLoading(false);
-                setIsSigning(true);
-                setSigningMessage('Please sign in Wallet...');
-
-                // Deserialize the backend's base64 txBytes into a Transaction object.
-                // Transaction.from() preserves all fields: gasOwner, sender, gasPayment, gasBudget.
-                const sponsoredTx = Transaction.from(txBytes);
-
-                const { signature: userSignature } = await signTransaction({ 
-                    transaction: sponsoredTx 
-                });
-
-                setSigningMessage('Submitting transaction...');
-
-                // Submit with BOTH signatures — user + sponsor
-                await suiClient.executeTransactionBlock({
-                    transactionBlock: txBytes,
-                    signature: [userSignature, sponsorSignature],
-                    options: { showEffects: true },
-                });
-
-                setSigningMessage('Payment confirmed! Redirecting...');
-
-                // Log savings entry if applicable
-                const savingsConfig = getSavingsConfig(selectedChain);
-                const hasSavings = savingsConfig.enabled && savingsConfig.savingsAddress && savingsConfig.percentage > 0;
-                if (hasSavings) {
-                    const savingsAmountUSDC = parseFloat((amount * savingsConfig.percentage / 100).toFixed(6));
-                    if (savingsAmountUSDC > 0) {
-                        addEntry({ chain: selectedChain, amount: savingsAmountUSDC, savingsAddress: savingsConfig.savingsAddress, status: 'completed' });
-                        toast.success(`Auto-saved $${savingsAmountUSDC.toFixed(2)} to savings!`);
-                    }
-                }
-
-                setTimeout(() => {
-                    if (window.location.pathname === '/send/confirm') {
-                        navigate('/send/payment', {
-                            state: {
-                                walletAddress, amount, orderId, chain: selectedChain, confirmState: {
-                                    amount, ngnAmount, currency: 'USD', recipientName, recipientUsername, bankName, bankCode, accountNumber, rate: currentRate, bankLogo, description: descriptionText.trim() || undefined
-                                }
-                            }
-                        });
-                    }
-                }, 2000);
-                return;
-            }
-
-            // --- FALLBACK FLOW: user pays own gas (if sponsored tx wasn't available) ---
             // Check savings config before building tx
             const savingsConfig = getSavingsConfig(selectedChain);
             let hasSavings = savingsConfig.enabled && savingsConfig.savingsAddress && savingsConfig.percentage > 0;
@@ -948,7 +896,7 @@ export default function Confirm() {
         }
     };
 
-    const executePayment = async (walletAddress: string, orderId: string, txBytes?: string, sponsorSignature?: string) => {
+    const executePayment = async (walletAddress: string, orderId: string) => {
         if (selectedChain === 'SOLANA') {
             await handleSolanaPayment(walletAddress, orderId);
         } else if (selectedChain === 'APTOS') {
@@ -960,7 +908,7 @@ export default function Confirm() {
         } else if (selectedChain === 'TRON') {
             await handleTronPayment(walletAddress, orderId);
         } else {
-            await handleSuiPayment(walletAddress, orderId, txBytes, sponsorSignature);
+            await handleSuiPayment(walletAddress, orderId);
         }
     };
 
@@ -1034,8 +982,7 @@ export default function Confirm() {
             }
             invalidateOrdersCache(); // Refresh orders list
 
-            // Execute the wallet payment, which handles the redirection upon success
-            await executePayment(wallet, id, data.txBytes, data.sponsorSignature);
+            await executePayment(wallet, id);
 
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
         } catch (error: any) {
