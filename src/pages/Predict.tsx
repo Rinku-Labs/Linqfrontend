@@ -504,9 +504,15 @@ function ResultFooter({
             </div>
             {won && (
                 prediction.claimed ? (
-                    <button disabled style={{ ...btnMuted(), marginTop: 12, background: '#DCFCE7', color: '#15803D', opacity: 1 }}>
-                        Prize claimed ✓{prediction.prizeShareUsd != null ? ` — $${prediction.prizeShareUsd}` : ''}
-                    </button>
+                    prediction.payoutStatus === 'paid' ? (
+                        <button disabled style={{ ...btnMuted(), marginTop: 12, background: '#DCFCE7', color: '#15803D', opacity: 1 }}>
+                            Paid ✓{prediction.prizeShareUsd != null ? ` — $${prediction.prizeShareUsd}` : ''}
+                        </button>
+                    ) : (
+                        <button disabled style={{ ...btnMuted(), marginTop: 12, background: '#FEF3C7', color: '#B45309', opacity: 1 }}>
+                            Awaiting authorization…
+                        </button>
+                    )
                 ) : (
                     <button onClick={onClaim} style={{ ...btnPrimary(false), marginTop: 12 }}>
                         Claim Prize{prediction.prizeShareUsd != null ? ` — $${prediction.prizeShareUsd}` : ''}
