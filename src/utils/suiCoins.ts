@@ -1,4 +1,4 @@
-import type { SuiJsonRpcClient } from '@mysten/sui/jsonRpc';
+import type { SuiGraphQLClient } from '@mysten/sui/graphql';
 
 export interface SuiCoinRef {
     coinObjectId: string;
@@ -6,27 +6,26 @@ export interface SuiCoinRef {
 }
 
 /**
- * Total balance for a coin type, aggregated server-side by the RPC node.
- * Use this for sufficiency checks instead of summing a single getCoins()
- * page — getCoins only returns one page (default 50 objects) per call, so
- * summing it directly undercounts any wallet with more coin objects than
- * that, silently reporting a much lower balance than the wallet actually
- * holds.
+ * Total balance for a coin type, aggregated server-side by the indexer.
+ * Use this for sufficiency checks instead of summing a single listCoins()
+ * page — listCoins only returns one page per call, so summing it directly
+ * undercounts any wallet with more coin objects than that, silently
+ * reporting a much lower balance than the wallet actually holds.
  */
-export async function getTotalBalance(client: SuiJsonRpcClient, owner: string, coinType: string): Promise<number> {
-    const { totalBalance } = await client.getBalance({ owner, coinType });
-    return Number(totalBalance);
+export async function getTotalBalance(client: SuiGraphQLClient, owner: string, coinType: string): Promise<number> {
+    const { balance } = await client.core.getBalance({ owner, coinType });
+    return Number(balance.balance);
 }
 
 /** Fetches every coin object of `coinType` owned by `owner`, following pagination to completion. */
-export async function getAllCoins(client: SuiJsonRpcClient, owner: string, coinType: string): Promise<SuiCoinRef[]> {
+export async function getAllCoins(client: SuiGraphQLClient, owner: string, coinType: string): Promise<SuiCoinRef[]> {
     const coins: SuiCoinRef[] = [];
     let cursor: string | null | undefined;
 
     do {
-        const page = await client.getCoins({ owner, coinType, cursor });
-        coins.push(...page.data);
-        cursor = page.hasNextPage ? page.nextCursor : null;
+        const page = await client.core.listCoins({ owner, coinType, cursor });
+        coins.push(...page.objects.map((o) => ({ coinObjectId: o.objectId, balance: o.balance })));
+        cursor = page.hasNextPage ? page.cursor : null;
     } while (cursor);
 
     return coins;

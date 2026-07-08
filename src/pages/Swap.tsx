@@ -7,6 +7,7 @@ import { useAuth } from '../context/AuthContext';
 import { getQuote, type Token, type QuoteResponse, getSwapStatus } from '../api/swap';
 import { playSuccessSound } from '../utils/audio';
 import { getAllCoins } from '../utils/suiCoins';
+import { suiGraphQLClient } from '../utils/suiGraphqlClient';
 import tokenData from '../data/tokens.json';
 
 // Wallet hooks
@@ -455,8 +456,8 @@ export default function Swap() {
                     const coinType = sourceToken.contractAddress;
                     if (!coinType) throw new Error("CoinType (contract address) missing for this token");
 
-                    // 1. Fetch user's coins of this type (paginated — a single getCoins() page can silently omit coins)
-                    const coins = await getAllCoins(suiClient, suiAccount.address, coinType);
+                    // 1. Fetch user's coins of this type via GraphQL RPC (paginated to completion)
+                    const coins = await getAllCoins(suiGraphQLClient, suiAccount.address, coinType);
 
                     if (!coins || coins.length === 0) throw new Error(`No ${sourceToken.symbol} coins found in wallet`);
 
@@ -470,17 +471,6 @@ export default function Swap() {
                         selectedCoins.push(coin);
                         if (totalBalance >= targetAmount) break;
                     }
-
-                    console.log('[swap-debug]', {
-                        owner: suiAccount.address,
-                        coinType,
-                        amountInput: amount,
-                        targetAmount,
-                        totalBalance,
-                        totalCoinsFetched: coins.length,
-                        selectedCoinCount: selectedCoins.length,
-                        allCoinBalances: coins.map(c => c.balance)
-                    });
 
                     if (totalBalance < targetAmount) throw new Error(`Insufficient ${sourceToken.symbol} balance`);
 

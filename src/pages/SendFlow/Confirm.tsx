@@ -32,6 +32,7 @@ import { useSavings } from '../../context/SavingsContext';
 import { getSavingsConfig } from '../../utils/savingsConfig';
 import { isGaslessEligible, buildGaslessTransferTx, verifyGaslessTransaction, type GaslessTransfer } from '../../utils/gaslessSui';
 import { getTotalBalance, getAllCoins } from '../../utils/suiCoins';
+import { suiGraphQLClient } from '../../utils/suiGraphqlClient';
 
 import { toast } from 'sonner';
 
@@ -183,7 +184,7 @@ export default function Confirm() {
             let savingsAmountUSDC = hasSavings ? parseFloat((amount * savingsConfig.percentage / 100).toFixed(6)) : 0;
             let savingsAmountInMist = hasSavings ? Math.floor(savingsAmountUSDC * 1_000_000) : 0;
 
-            const totalBalance = await getTotalBalance(suiClient, currentAccount.address, SUI_USDC_COIN_TYPE);
+            const totalBalance = await getTotalBalance(suiGraphQLClient, currentAccount.address, SUI_USDC_COIN_TYPE);
 
             if (totalBalance === 0) throw new Error("No USDC coins found in wallet");
 
@@ -228,7 +229,7 @@ export default function Confirm() {
                 const legacyTx = new Transaction();
                 tx = legacyTx;
 
-                const coins = await getAllCoins(suiClient, currentAccount.address, SUI_USDC_COIN_TYPE);
+                const coins = await getAllCoins(suiGraphQLClient, currentAccount.address, SUI_USDC_COIN_TYPE);
                 if (coins.length === 0) throw new Error("No USDC coins found in wallet");
 
                 let primaryCoin = coins.find(c => parseInt(c.balance) >= totalNeeded);
