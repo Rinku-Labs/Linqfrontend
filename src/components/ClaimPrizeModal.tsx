@@ -84,7 +84,7 @@ export default function ClaimPrizeModal({
         setBusy(true);
         try {
             await claimPrize(fixtureId, sendCreds ? wallet.trim() : undefined, sendCreds ? handle.trim() : undefined);
-            toast.success('Prize claimed! 🎉');
+            toast.success('Claimed! Your prize is awaiting authorization.');
             onClaimed();
         } catch (e: unknown) {
             const msg = (e as { response?: { data?: { error?: string } } })?.response?.data?.error || 'Could not claim prize.';

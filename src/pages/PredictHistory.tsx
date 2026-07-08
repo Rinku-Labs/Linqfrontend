@@ -150,9 +150,15 @@ export default function PredictHistory() {
                                 {/* Claim action for a won prize (only when eligible) */}
                                 {won && it.prizeEligible && (
                                     it.claimed ? (
-                                        <div style={{ marginTop: 12, textAlign: 'center', fontSize: 13, fontWeight: 700, color: '#15803d', background: '#dcfce7', borderRadius: 12, padding: '10px 12px' }}>
-                                            Prize claimed ✓{it.prizeShareUsd != null ? ` — $${it.prizeShareUsd}` : ''}
-                                        </div>
+                                        it.payoutStatus === 'paid' ? (
+                                            <div style={{ marginTop: 12, textAlign: 'center', fontSize: 13, fontWeight: 700, color: '#15803d', background: '#dcfce7', borderRadius: 12, padding: '10px 12px' }}>
+                                                Paid ✓{it.prizeShareUsd != null ? ` — $${it.prizeShareUsd}` : ''}
+                                            </div>
+                                        ) : (
+                                            <div style={{ marginTop: 12, textAlign: 'center', fontSize: 13, fontWeight: 700, color: '#b45309', background: '#fef3c7', borderRadius: 12, padding: '10px 12px' }}>
+                                                Awaiting authorization…
+                                            </div>
+                                        )
                                     ) : (
                                         <button
                                             onClick={() => onClaim(it.fixtureId)}

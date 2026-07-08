@@ -63,6 +63,10 @@ export interface HistoryItem {
     prizePoolUsd: number | null;  // the pool the share came from
     claimed: boolean;
     claimedAt: string | null;
+    // Admin-authorized payout. '' = n/a; 'awaiting' = claimed, not yet authorized;
+    // 'paid' = sent (payoutTxHash set).
+    payoutStatus?: string;
+    payoutTxHash?: string;
 }
 
 export interface HistoryResponse {
