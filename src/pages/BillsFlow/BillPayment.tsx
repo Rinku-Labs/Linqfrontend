@@ -29,7 +29,6 @@ import { sanitizeErrorMessage } from '../../utils/sanitize';
 import { addBillBeneficiary, type AddBillBeneficiaryPayload } from '../../api/user';
 import { isGaslessEligible, buildGaslessTransferTx, verifyGaslessTransaction, type GaslessTransfer } from '../../utils/gaslessSui';
 import { getTotalBalance, getAllCoins } from '../../utils/suiCoins';
-import { suiGraphQLClient } from '../../utils/suiGraphqlClient';
 
 const SUI_USDC_COIN_TYPE = "0xdba34672e30cb065b1f93e3ab55318768fd6fef66c15942c9f7cb846e2f900e7::usdc::USDC";
 const SOLANA_USDC_MINT = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v";
@@ -108,7 +107,7 @@ export default function BillPayment() {
         if (!currentSuiAccount) return;
 
         try {
-            const totalBalance = await getTotalBalance(suiGraphQLClient, currentSuiAccount.address, SUI_USDC_COIN_TYPE);
+            const totalBalance = await getTotalBalance(currentSuiAccount.address);
             if (totalBalance === 0) throw new Error("No USDC coins found in wallet");
 
             const amountInMist = Math.floor(parseFloat(amount) * 1_000_000);
@@ -140,7 +139,7 @@ export default function BillPayment() {
                 const legacyTx = new Transaction();
                 tx = legacyTx;
 
-                const coins = await getAllCoins(suiGraphQLClient, currentSuiAccount.address, SUI_USDC_COIN_TYPE);
+                const coins = await getAllCoins(currentSuiAccount.address);
                 if (coins.length === 0) throw new Error("No USDC coins found in wallet");
 
                 let primaryCoin = (coins as any).find((c: SuiCoin) => parseInt(c.balance) >= amountInMist);

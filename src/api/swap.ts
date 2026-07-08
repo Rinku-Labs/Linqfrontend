@@ -63,3 +63,19 @@ export const getSwapStatus = async (depositAddress: string): Promise<any> => {
     });
     return response.data;
 };
+
+export interface UsdcCoinsResponse {
+    coins: { coinObjectId: string; balance: string }[];
+    totalBalance: string;
+}
+
+// Proxies the Sui USDC coin lookup through the backend (walletHelper.GetObjectsGRPC).
+// The public JSON-RPC and GraphQL RPC endpoints have both shown real gaps
+// enumerating coin objects for an owner+type, even for objects confirmed to
+// exist on-chain — see utils/suiCoins.ts.
+export const getUsdcCoins = async (address: string): Promise<UsdcCoinsResponse> => {
+    const response = await client.get('/swap/usdc-coins', {
+        params: { address }
+    });
+    return response.data;
+};
