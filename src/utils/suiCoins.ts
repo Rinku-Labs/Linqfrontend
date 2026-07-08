@@ -1,4 +1,4 @@
-import type { SuiGraphQLClient } from '@mysten/sui/graphql';
+import type { SuiGrpcClient } from '@mysten/sui/grpc';
 
 export interface SuiCoinRef {
     coinObjectId: string;
@@ -12,13 +12,13 @@ export interface SuiCoinRef {
  * undercounts any wallet with more coin objects than that, silently
  * reporting a much lower balance than the wallet actually holds.
  */
-export async function getTotalBalance(client: SuiGraphQLClient, owner: string, coinType: string): Promise<number> {
+export async function getTotalBalance(client: SuiGrpcClient, owner: string, coinType: string): Promise<number> {
     const { balance } = await client.core.getBalance({ owner, coinType });
     return Number(balance.balance);
 }
 
 /** Fetches every coin object of `coinType` owned by `owner`, following pagination to completion. */
-export async function getAllCoins(client: SuiGraphQLClient, owner: string, coinType: string): Promise<SuiCoinRef[]> {
+export async function getAllCoins(client: SuiGrpcClient, owner: string, coinType: string): Promise<SuiCoinRef[]> {
     const coins: SuiCoinRef[] = [];
     let cursor: string | null | undefined;
 
