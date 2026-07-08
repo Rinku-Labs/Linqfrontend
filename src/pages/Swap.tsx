@@ -6,6 +6,7 @@ import Button from '../components/ui/Button';
 import { useAuth } from '../context/AuthContext';
 import { getQuote, type Token, type QuoteResponse, getSwapStatus } from '../api/swap';
 import { playSuccessSound } from '../utils/audio';
+import { getAllCoins } from '../utils/suiCoins';
 import tokenData from '../data/tokens.json';
 
 // Wallet hooks
@@ -454,11 +455,8 @@ export default function Swap() {
                     const coinType = sourceToken.contractAddress;
                     if (!coinType) throw new Error("CoinType (contract address) missing for this token");
 
-                    // 1. Fetch user's coins of this type
-                    const { data: coins } = await suiClient.getCoins({
-                        owner: suiAccount.address,
-                        coinType: coinType
-                    });
+                    // 1. Fetch user's coins of this type (paginated — a single getCoins() page can silently omit coins)
+                    const coins = await getAllCoins(suiClient, suiAccount.address, coinType);
 
                     if (!coins || coins.length === 0) throw new Error(`No ${sourceToken.symbol} coins found in wallet`);
 
