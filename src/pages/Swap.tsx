@@ -471,6 +471,17 @@ export default function Swap() {
                         if (totalBalance >= targetAmount) break;
                     }
 
+                    console.log('[swap-debug]', {
+                        owner: suiAccount.address,
+                        coinType,
+                        amountInput: amount,
+                        targetAmount,
+                        totalBalance,
+                        totalCoinsFetched: coins.length,
+                        selectedCoinCount: selectedCoins.length,
+                        allCoinBalances: coins.map(c => c.balance)
+                    });
+
                     if (totalBalance < targetAmount) throw new Error(`Insufficient ${sourceToken.symbol} balance`);
 
                     // 3. Merge coins if needed (primary coin is the first one)
