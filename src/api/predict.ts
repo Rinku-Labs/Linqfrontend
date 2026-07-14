@@ -77,6 +77,7 @@ export interface HistoryResponse {
     acceptedTerms: boolean;
     suiWallet: string; // saved payout details (own), for prefill + edit
     xHandle: string;
+    shareGate: boolean; // winners must share on X + paste the link to claim
 }
 
 export async function getFixtures(): Promise<Fixture[]> {
@@ -104,6 +105,7 @@ export async function getHistory(): Promise<HistoryResponse> {
         acceptedTerms: !!data?.acceptedTerms,
         suiWallet: data?.suiWallet ?? '',
         xHandle: data?.xHandle ?? '',
+        shareGate: !!data?.shareGate,
     };
 }
 
@@ -121,8 +123,9 @@ export async function claimPrize(
     fixtureId: number,
     suiWallet?: string,
     xHandle?: string,
+    xPostUrl?: string,
 ): Promise<Prediction> {
-    const { data } = await client.post<Prediction>('/predict/claim', { fixtureId, suiWallet, xHandle });
+    const { data } = await client.post<Prediction>('/predict/claim', { fixtureId, suiWallet, xHandle, xPostUrl });
     return data;
 }
 
