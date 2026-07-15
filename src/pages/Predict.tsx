@@ -328,6 +328,7 @@ export default function Predict() {
             {claimFixture && (
                 <ClaimPrizeModal
                     fixtureId={claimFixture.fixtureId}
+                    predictionId={myPreds[claimFixture.fixtureId]?.id}
                     prizeShareUsd={myPreds[claimFixture.fixtureId]?.prizeShareUsd ?? 0}
                     prizePoolUsd={myPreds[claimFixture.fixtureId]?.prizePoolUsd ?? prizePoolUsd}
                     savedWallet={savedWallet}

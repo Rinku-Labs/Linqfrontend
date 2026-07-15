@@ -38,6 +38,7 @@ export interface Prediction {
 }
 
 export interface HistoryItem {
+    id: number; // prediction id — used to build the public win-share URL
     fixtureId: number;
     homeTeam: string;
     awayTeam: string;
@@ -127,6 +128,20 @@ export async function claimPrize(
 ): Promise<Prediction> {
     const { data } = await client.post<Prediction>('/predict/claim', { fixtureId, suiWallet, xHandle, xPostUrl });
     return data;
+}
+
+// winShareURL builds the absolute, public URL of a win's share page (the backend
+// renders the branded card there as an OG/Twitter image). Passed as the link in
+// the X post so the tweet unfurls the card. The optional handle is the sharer's
+// own X handle, shown on the card. Returns '' if VITE_API_URL is unset.
+export function winShareURL(predictionId: number, handle?: string): string {
+    const base = (import.meta.env.VITE_API_URL as string | undefined)?.replace(/\/$/, '');
+    if (!base) {
+        console.warn('VITE_API_URL is not set — win share link unavailable.');
+        return '';
+    }
+    const h = (handle ?? '').trim();
+    return `${base}/predict/share?p=${predictionId}${h ? `&h=${encodeURIComponent(h)}` : ''}`;
 }
 
 // scoresStreamURL builds the absolute URL for the live-scores SSE endpoint from

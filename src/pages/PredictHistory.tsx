@@ -186,6 +186,7 @@ export default function PredictHistory() {
             {claimId != null && (
                 <ClaimPrizeModal
                     fixtureId={claimId}
+                    predictionId={claimItem?.id}
                     prizeShareUsd={claimItem?.prizeShareUsd ?? 0}
                     prizePoolUsd={claimItem?.prizePoolUsd ?? poolFallback}
                     savedWallet={savedWallet}

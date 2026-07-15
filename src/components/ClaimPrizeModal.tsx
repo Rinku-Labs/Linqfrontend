@@ -1,7 +1,7 @@
 import { X, Pencil, AlertTriangle } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
-import { claimPrize } from '../api/predict';
+import { claimPrize, winShareURL } from '../api/predict';
 
 // READ_SECONDS gates the Claim button so the wallet disclaimer can't be skipped —
 // losses to unsupported wallets are unrecoverable, so we force a short read.
@@ -33,6 +33,7 @@ function Confetti() {
 // "Edit" toggle to change them. Used by both the predict page and the history page.
 export default function ClaimPrizeModal({
     fixtureId,
+    predictionId,
     prizeShareUsd,
     prizePoolUsd,
     savedWallet,
@@ -47,6 +48,7 @@ export default function ClaimPrizeModal({
     onClaimed,
 }: {
     fixtureId: number;
+    predictionId?: number; // prediction id — links the X post at the win-card share page
     prizeShareUsd: number;
     prizePoolUsd: number;
     savedWallet?: string;
@@ -94,7 +96,9 @@ export default function ClaimPrizeModal({
         const matchup = homeTeam && awayTeam ? `${homeTeam} ${finalHome ?? ''}-${finalAway ?? ''} ${awayTeam}` : 'my match';
         const text = `I called ${matchup} exactly and won $${prizeShareUsd} USDC on @uselinq Predict & Win!`;
         const tags = ['WorldCup', roundHashtag(), 'Linq', 'FIFA'].filter(Boolean).join(',');
-        const url = 'https://app.uselinq.xyz/predict';
+        // Link the post at the win-card share page so the tweet unfurls the branded
+        // card (winner handle + prize + match). Falls back to the app if unavailable.
+        const url = (predictionId ? winShareURL(predictionId, handle) : '') || 'https://app.uselinq.xyz/predict';
         window.open(`https://x.com/intent/post?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}&hashtags=${tags}`, '_blank', 'noopener');
         setShared(true);
     }
