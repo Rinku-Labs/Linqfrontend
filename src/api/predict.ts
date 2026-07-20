@@ -131,16 +131,16 @@ export async function claimPrize(
     return data;
 }
 
-// winShareURL builds the absolute, public URL of a win's share page (the backend
-// renders the branded card there as an OG/Twitter image). Passed as the link in
-// the X post so the tweet unfurls the card. The optional handle is the sharer's
-// own X handle, shown on the card. Returns '' if VITE_API_URL is unset.
+// winShareURL builds the public URL of a win's share page (the backend renders the
+// branded card there as an OG/Twitter image). Passed as the link in the X post so
+// the tweet unfurls the card. The optional handle is the sharer's own X handle,
+// shown on the card.
+//
+// It uses the app's OWN origin (app.uselinq.xyz), not the backend host: Netlify
+// proxies /predict/share* to the backend (see scripts/gen-redirects.mjs), so the
+// shared link stays on our domain and the backend host never appears.
 export function winShareURL(predictionId: number, handle?: string): string {
-    const base = (import.meta.env.VITE_API_URL as string | undefined)?.replace(/\/$/, '');
-    if (!base) {
-        console.warn('VITE_API_URL is not set — win share link unavailable.');
-        return '';
-    }
+    const base = window.location.origin;
     const h = (handle ?? '').trim();
     return `${base}/predict/share?p=${predictionId}${h ? `&h=${encodeURIComponent(h)}` : ''}`;
 }
