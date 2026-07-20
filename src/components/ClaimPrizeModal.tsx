@@ -102,12 +102,15 @@ export default function ClaimPrizeModal({
     }
     function openShare() {
         const matchup = homeTeam && awayTeam ? `${homeTeam} ${finalHome ?? ''}-${finalAway ?? ''} ${awayTeam}` : 'my match';
-        const text = `I called ${matchup} exactly and won $${prizeShareUsd} USDC on @uselinq Predict & Win!`;
-        const tags = ['WorldCup', ...roundHashtags(), 'Linq', 'FIFA'].filter(Boolean).join(',');
+        // Hashtags go INSIDE the text (before the link) — NOT the hashtags= param,
+        // which X appends AFTER the url. X only reliably renders the link-preview
+        // card when the url is the LAST thing in the post, so the url must come last.
+        const tags = ['WorldCup', ...roundHashtags(), 'Linq', 'FIFA'].map((t) => `#${t}`).join(' ');
+        const text = `I called ${matchup} exactly and won $${prizeShareUsd} USDC on @uselinq Predict & Win! ${tags}`;
         // Link the post at the win-card share page so the tweet unfurls the branded
         // card (winner handle + prize + match). Falls back to the app if unavailable.
         const url = (predictionId ? winShareURL(predictionId, handle) : '') || 'https://app.uselinq.xyz/predict';
-        window.open(`https://x.com/intent/post?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}&hashtags=${tags}`, '_blank', 'noopener');
+        window.open(`https://x.com/intent/post?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}`, '_blank', 'noopener');
         setShared(true);
     }
     const postValid = /^https?:\/\/(www\.)?(x|twitter)\.com\/.+/.test(xPostUrl.trim());
