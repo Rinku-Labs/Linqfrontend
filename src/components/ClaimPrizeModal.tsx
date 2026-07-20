@@ -43,6 +43,7 @@ export default function ClaimPrizeModal({
     finalHome,
     finalAway,
     competition,
+    stage,
     shareGate,
     onClose,
     onClaimed,
@@ -59,6 +60,7 @@ export default function ClaimPrizeModal({
     finalHome?: number | null;
     finalAway?: number | null;
     competition?: string;
+    stage?: string; // override stage code (F/SF/QF/RO16) — drives the round hashtags
     shareGate?: boolean; // when true, winners must share on X + paste the link to claim
     onClose: () => void;
     onClaimed: () => void;
@@ -88,14 +90,20 @@ export default function ClaimPrizeModal({
     const [xPostUrl, setXPostUrl] = useState('');
     const [shared, setShared] = useState(false);
 
-    function roundHashtag(): string {
-        const s = (competition || '').split('>').pop()?.trim().toUpperCase() || '';
-        return s === 'SF' ? 'SemiFinals' : s === 'QF' ? 'QuarterFinals' : s === 'F' ? 'Final' : s === 'RO16' ? 'RoundOf16' : '';
+    // roundHashtags returns the round-specific X hashtags for this match. Prefers the
+    // stage code (from the backend); falls back to parsing the competition string.
+    function roundHashtags(): string[] {
+        const code = (stage || competition?.split('>').pop() || '').trim().toUpperCase();
+        if (code === 'F' || code === 'FINAL') return ['WorldCupFinal', 'Final', 'WorldCup2026Final'];
+        if (code === 'SF' || code === 'SEMI-FINAL') return ['SemiFinals'];
+        if (code === 'QF' || code === 'QUARTER-FINAL') return ['QuarterFinals'];
+        if (code === 'RO16') return ['RoundOf16'];
+        return [];
     }
     function openShare() {
         const matchup = homeTeam && awayTeam ? `${homeTeam} ${finalHome ?? ''}-${finalAway ?? ''} ${awayTeam}` : 'my match';
         const text = `I called ${matchup} exactly and won $${prizeShareUsd} USDC on @uselinq Predict & Win!`;
-        const tags = ['WorldCup', roundHashtag(), 'Linq', 'FIFA'].filter(Boolean).join(',');
+        const tags = ['WorldCup', ...roundHashtags(), 'Linq', 'FIFA'].filter(Boolean).join(',');
         // Link the post at the win-card share page so the tweet unfurls the branded
         // card (winner handle + prize + match). Falls back to the app if unavailable.
         const url = (predictionId ? winShareURL(predictionId, handle) : '') || 'https://app.uselinq.xyz/predict';

@@ -45,6 +45,7 @@ export interface HistoryItem {
     homeFlag: string;
     awayFlag: string;
     competition: string;
+    stage: string; // override stage code: '' | RO16 | QF | SF | F | 3P
     kickoff: string;
     predHome: number;
     predAway: number;

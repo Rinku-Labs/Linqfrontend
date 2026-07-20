@@ -196,6 +196,7 @@ export default function PredictHistory() {
                     finalHome={claimItem?.finalHome}
                     finalAway={claimItem?.finalAway}
                     competition={claimItem?.competition}
+                    stage={claimItem?.stage}
                     shareGate={shareGate}
                     onClose={() => setClaimId(null)}
                     onClaimed={async () => { setClaimId(null); await load(); setShowConvert(true); }}

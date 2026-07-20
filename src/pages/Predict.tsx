@@ -338,6 +338,7 @@ export default function Predict() {
                     finalHome={myPreds[claimFixture.fixtureId]?.finalHome}
                     finalAway={myPreds[claimFixture.fixtureId]?.finalAway}
                     competition={myPreds[claimFixture.fixtureId]?.competition ?? claimFixture.competition}
+                    stage={myPreds[claimFixture.fixtureId]?.stage}
                     shareGate={shareGate}
                     onClose={() => setClaimFixture(null)}
                     onClaimed={async () => {
