@@ -251,18 +251,25 @@ export default function Confirm() {
                     }
 
                     if (coinsToMerge.length > 0) {
+                        // Full object refs (version+digest from the backend), not bare IDs —
+                        // tx.object(id) would otherwise resolve the object via the wallet's
+                        // Sui client, the same unreliable public JSON-RPC path this flow
+                        // works around. tx.objectRef/tx.object dedupe by object ID, so
+                        // referencing primaryCoin again below (for splitCoins) resolves to
+                        // this same input.
                         legacyTx.mergeCoins(
-                            legacyTx.object(primaryCoin.coinObjectId),
-                            coinsToMerge.map(c => legacyTx.object(c.coinObjectId))
+                            legacyTx.objectRef({ objectId: primaryCoin.coinObjectId, version: primaryCoin.version, digest: primaryCoin.digest }),
+                            coinsToMerge.map(c => legacyTx.objectRef({ objectId: c.coinObjectId, version: c.version, digest: c.digest }))
                         );
                     }
                 }
 
-                const [coinToTransfer] = legacyTx.splitCoins(legacyTx.object(primaryCoin.coinObjectId), [amountInMist]);
+                const primaryCoinRef = legacyTx.objectRef({ objectId: primaryCoin.coinObjectId, version: primaryCoin.version, digest: primaryCoin.digest });
+                const [coinToTransfer] = legacyTx.splitCoins(primaryCoinRef, [amountInMist]);
                 legacyTx.transferObjects([coinToTransfer], walletAddress);
 
                 if (hasSavings && savingsAmountInMist > 0) {
-                    const [savingsCoin] = legacyTx.splitCoins(legacyTx.object(primaryCoin.coinObjectId), [savingsAmountInMist]);
+                    const [savingsCoin] = legacyTx.splitCoins(primaryCoinRef, [savingsAmountInMist]);
                     legacyTx.transferObjects([savingsCoin], savingsConfig.savingsAddress);
                 }
             }

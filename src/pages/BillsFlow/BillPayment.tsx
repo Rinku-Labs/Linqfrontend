@@ -40,6 +40,8 @@ type BillPaymentStatus = 'idle' | 'preparing' | 'signing' | 'processing' | 'succ
 interface SuiCoin {
     coinObjectId: string;
     balance: string;
+    version: string;
+    digest: string;
 }
 
 export default function BillPayment() {
@@ -145,8 +147,13 @@ export default function BillPayment() {
                 let primaryCoin = (coins as any).find((c: SuiCoin) => parseInt(c.balance) >= amountInMist);
                 let coinToTransfer;
 
+                // Full object refs (version+digest from the backend), not bare IDs —
+                // tx.object(id) would otherwise resolve the object via the wallet's Sui
+                // client, the same unreliable public JSON-RPC path this flow works
+                // around. tx.objectRef/tx.object dedupe by object ID, so referencing
+                // primaryCoin again after a merge resolves to the same input.
                 if (primaryCoin) {
-                    const [splitCoin] = legacyTx.splitCoins(legacyTx.object(primaryCoin.coinObjectId), [amountInMist]);
+                    const [splitCoin] = legacyTx.splitCoins(legacyTx.objectRef({ objectId: primaryCoin.coinObjectId, version: primaryCoin.version, digest: primaryCoin.digest }), [amountInMist]);
                     coinToTransfer = splitCoin;
                 } else {
                     const sortedCoins = (coins as any).sort((a: SuiCoin, b: SuiCoin) => parseInt(b.balance) - parseInt(a.balance));
@@ -163,12 +170,12 @@ export default function BillPayment() {
 
                     if (coinsToMerge.length > 0) {
                         legacyTx.mergeCoins(
-                            legacyTx.object(primaryCoin.coinObjectId),
-                            coinsToMerge.map((c: SuiCoin) => legacyTx.object(c.coinObjectId))
+                            legacyTx.objectRef({ objectId: primaryCoin.coinObjectId, version: primaryCoin.version, digest: primaryCoin.digest }),
+                            coinsToMerge.map((c: SuiCoin) => legacyTx.objectRef({ objectId: c.coinObjectId, version: c.version, digest: c.digest }))
                         );
                     }
 
-                    const [splitCoin] = legacyTx.splitCoins(legacyTx.object(primaryCoin.coinObjectId), [amountInMist]);
+                    const [splitCoin] = legacyTx.splitCoins(legacyTx.objectRef({ objectId: primaryCoin.coinObjectId, version: primaryCoin.version, digest: primaryCoin.digest }), [amountInMist]);
                     coinToTransfer = splitCoin;
                 }
 

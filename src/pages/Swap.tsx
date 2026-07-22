@@ -473,17 +473,25 @@ export default function Swap() {
 
                     if (totalBalance < targetAmount) throw new Error(`Insufficient ${sourceToken.symbol} balance`);
 
-                    // 3. Merge coins if needed (primary coin is the first one)
-                    const primaryCoin = selectedCoins[0].coinObjectId;
+                    // 3. Merge coins if needed (primary coin is the first one).
+                    // Pass full object refs (version+digest from the backend) instead of
+                    // a bare object ID — tx.object(id) would otherwise need to resolve the
+                    // object itself via the wallet's Sui client, which goes through the
+                    // same unreliable public JSON-RPC path this whole flow works around.
+                    const primaryCoin = tx.objectRef({
+                        objectId: selectedCoins[0].coinObjectId,
+                        version: selectedCoins[0].version,
+                        digest: selectedCoins[0].digest,
+                    });
                     if (selectedCoins.length > 1) {
                         tx.mergeCoins(
-                            tx.object(primaryCoin),
-                            selectedCoins.slice(1).map(c => tx.object(c.coinObjectId))
+                            primaryCoin,
+                            selectedCoins.slice(1).map(c => tx.objectRef({ objectId: c.coinObjectId, version: c.version, digest: c.digest }))
                         );
                     }
 
                     // 4. Split the exact amount
-                    const [splitCoin] = tx.splitCoins(tx.object(primaryCoin), [tx.pure.u64(targetAmount)]);
+                    const [splitCoin] = tx.splitCoins(primaryCoin, [tx.pure.u64(targetAmount)]);
 
                     // 5. Transfer to deposit address
                     tx.transferObjects([splitCoin], tx.pure.address(depositAddress));

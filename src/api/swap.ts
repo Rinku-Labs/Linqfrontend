@@ -65,7 +65,7 @@ export const getSwapStatus = async (depositAddress: string): Promise<any> => {
 };
 
 export interface UsdcCoinsResponse {
-    coins: { coinObjectId: string; balance: string }[];
+    coins: { coinObjectId: string; balance: string; version: string; digest: string }[];
     totalBalance: string;
 }
 

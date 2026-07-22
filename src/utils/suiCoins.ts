@@ -3,6 +3,8 @@ import { getUsdcCoins } from '../api/swap';
 export interface SuiCoinRef {
     coinObjectId: string;
     balance: string;
+    version: string;
+    digest: string;
 }
 
 /**
