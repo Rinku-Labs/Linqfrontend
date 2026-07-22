@@ -38,12 +38,14 @@ export interface Prediction {
 }
 
 export interface HistoryItem {
+    id: number; // prediction id — used to build the public win-share URL
     fixtureId: number;
     homeTeam: string;
     awayTeam: string;
     homeFlag: string;
     awayFlag: string;
     competition: string;
+    stage: string; // override stage code: '' | RO16 | QF | SF | F | 3P
     kickoff: string;
     predHome: number;
     predAway: number;
@@ -77,6 +79,7 @@ export interface HistoryResponse {
     acceptedTerms: boolean;
     suiWallet: string; // saved payout details (own), for prefill + edit
     xHandle: string;
+    shareGate: boolean; // winners must share on X + paste the link to claim
 }
 
 export async function getFixtures(): Promise<Fixture[]> {
@@ -104,6 +107,7 @@ export async function getHistory(): Promise<HistoryResponse> {
         acceptedTerms: !!data?.acceptedTerms,
         suiWallet: data?.suiWallet ?? '',
         xHandle: data?.xHandle ?? '',
+        shareGate: !!data?.shareGate,
     };
 }
 
@@ -121,9 +125,24 @@ export async function claimPrize(
     fixtureId: number,
     suiWallet?: string,
     xHandle?: string,
+    xPostUrl?: string,
 ): Promise<Prediction> {
-    const { data } = await client.post<Prediction>('/predict/claim', { fixtureId, suiWallet, xHandle });
+    const { data } = await client.post<Prediction>('/predict/claim', { fixtureId, suiWallet, xHandle, xPostUrl });
     return data;
+}
+
+// winShareURL builds the public URL of a win's share page (the backend renders the
+// branded card there as an OG/Twitter image). Passed as the link in the X post so
+// the tweet unfurls the card. The optional handle is the sharer's own X handle,
+// shown on the card.
+//
+// It uses the app's OWN origin (app.uselinq.xyz), not the backend host: Netlify
+// proxies /predict/share* to the backend (see scripts/gen-redirects.mjs), so the
+// shared link stays on our domain and the backend host never appears.
+export function winShareURL(predictionId: number, handle?: string): string {
+    const base = window.location.origin;
+    const h = (handle ?? '').trim();
+    return `${base}/predict/share?p=${predictionId}${h ? `&h=${encodeURIComponent(h)}` : ''}`;
 }
 
 // scoresStreamURL builds the absolute URL for the live-scores SSE endpoint from

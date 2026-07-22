@@ -46,6 +46,7 @@ export default function PredictHistory() {
     const [savedWallet, setSavedWallet] = useState('');
     const [savedHandle, setSavedHandle] = useState('');
     const [poolFallback, setPoolFallback] = useState(0);
+    const [shareGate, setShareGate] = useState(false);
     const [loading, setLoading] = useState(true);
     const [claimId, setClaimId] = useState<number | null>(null); // fixture whose modal is open
     const [showConvert, setShowConvert] = useState(false); // "Convert to Naira" popup, shown after a claim
@@ -57,6 +58,7 @@ export default function PredictHistory() {
             setSavedWallet(res.suiWallet);
             setSavedHandle(res.xHandle);
             setPoolFallback(res.prizePoolUsd);
+            setShareGate(res.shareGate);
         } catch {
             /* keep existing */
         } finally {
@@ -184,10 +186,18 @@ export default function PredictHistory() {
             {claimId != null && (
                 <ClaimPrizeModal
                     fixtureId={claimId}
+                    predictionId={claimItem?.id}
                     prizeShareUsd={claimItem?.prizeShareUsd ?? 0}
                     prizePoolUsd={claimItem?.prizePoolUsd ?? poolFallback}
                     savedWallet={savedWallet}
                     savedHandle={savedHandle}
+                    homeTeam={claimItem?.homeTeam}
+                    awayTeam={claimItem?.awayTeam}
+                    finalHome={claimItem?.finalHome}
+                    finalAway={claimItem?.finalAway}
+                    competition={claimItem?.competition}
+                    stage={claimItem?.stage}
+                    shareGate={shareGate}
                     onClose={() => setClaimId(null)}
                     onClaimed={async () => { setClaimId(null); await load(); setShowConvert(true); }}
                 />

@@ -150,6 +150,7 @@ export default function Predict() {
     const [savedHandle, setSavedHandle] = useState('');
     const [prizePoolUsd, setPrizePoolUsd] = useState(0);
     const [maxWinners, setMaxWinners] = useState(5);
+    const [shareGate, setShareGate] = useState(false);
     const [acceptedTerms, setAcceptedTerms] = useState(true); // assume until history says otherwise (avoids a flash)
     const [loading, setLoading] = useState(true);
     const [modalFixture, setModalFixture] = useState<Fixture | null>(null);
@@ -173,6 +174,7 @@ export default function Predict() {
             setPrizePoolUsd(res.prizePoolUsd);
             setMaxWinners(res.maxWinners);
             setAcceptedTerms(res.acceptedTerms);
+            setShareGate(res.shareGate);
         } catch {
             /* keep existing */
         }
@@ -326,10 +328,18 @@ export default function Predict() {
             {claimFixture && (
                 <ClaimPrizeModal
                     fixtureId={claimFixture.fixtureId}
+                    predictionId={myPreds[claimFixture.fixtureId]?.id}
                     prizeShareUsd={myPreds[claimFixture.fixtureId]?.prizeShareUsd ?? 0}
                     prizePoolUsd={myPreds[claimFixture.fixtureId]?.prizePoolUsd ?? prizePoolUsd}
                     savedWallet={savedWallet}
                     savedHandle={savedHandle}
+                    homeTeam={claimFixture.homeTeam}
+                    awayTeam={claimFixture.awayTeam}
+                    finalHome={myPreds[claimFixture.fixtureId]?.finalHome}
+                    finalAway={myPreds[claimFixture.fixtureId]?.finalAway}
+                    competition={myPreds[claimFixture.fixtureId]?.competition ?? claimFixture.competition}
+                    stage={myPreds[claimFixture.fixtureId]?.stage}
+                    shareGate={shareGate}
                     onClose={() => setClaimFixture(null)}
                     onClaimed={async () => {
                         setClaimFixture(null);

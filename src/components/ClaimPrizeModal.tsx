@@ -1,7 +1,7 @@
 import { X, Pencil, AlertTriangle } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
-import { claimPrize } from '../api/predict';
+import { claimPrize, winShareURL } from '../api/predict';
 
 // READ_SECONDS gates the Claim button so the wallet disclaimer can't be skipped —
 // losses to unsupported wallets are unrecoverable, so we force a short read.
@@ -33,18 +33,35 @@ function Confetti() {
 // "Edit" toggle to change them. Used by both the predict page and the history page.
 export default function ClaimPrizeModal({
     fixtureId,
+    predictionId,
     prizeShareUsd,
     prizePoolUsd,
     savedWallet,
     savedHandle,
+    homeTeam,
+    awayTeam,
+    finalHome,
+    finalAway,
+    competition,
+    stage,
+    shareGate,
     onClose,
     onClaimed,
 }: {
     fixtureId: number;
+    predictionId?: number; // prediction id — links the X post at the win-card share page
     prizeShareUsd: number;
     prizePoolUsd: number;
     savedWallet?: string;
     savedHandle?: string;
+    // Match details, used to compose the "Share on X" post.
+    homeTeam?: string;
+    awayTeam?: string;
+    finalHome?: number | null;
+    finalAway?: number | null;
+    competition?: string;
+    stage?: string; // override stage code (F/SF/QF/RO16) — drives the round hashtags
+    shareGate?: boolean; // when true, winners must share on X + paste the link to claim
     onClose: () => void;
     onClaimed: () => void;
 }) {
@@ -68,6 +85,37 @@ export default function ClaimPrizeModal({
         return () => clearTimeout(t);
     }, [readLeft]);
 
+    // Share gate: winners share their win on X, then paste the post link. The admin
+    // verifies the post before authorizing the payout.
+    const [xPostUrl, setXPostUrl] = useState('');
+    const [shared, setShared] = useState(false);
+
+    // roundHashtags returns the round-specific X hashtags for this match. Prefers the
+    // stage code (from the backend); falls back to parsing the competition string.
+    function roundHashtags(): string[] {
+        const code = (stage || competition?.split('>').pop() || '').trim().toUpperCase();
+        if (code === 'F' || code === 'FINAL') return ['WorldCupFinal', 'Final', 'WorldCup2026Final'];
+        if (code === 'SF' || code === 'SEMI-FINAL') return ['SemiFinals'];
+        if (code === 'QF' || code === 'QUARTER-FINAL') return ['QuarterFinals'];
+        if (code === 'RO16') return ['RoundOf16'];
+        return [];
+    }
+    function openShare() {
+        const matchup = homeTeam && awayTeam ? `${homeTeam} ${finalHome ?? ''}-${finalAway ?? ''} ${awayTeam}` : 'my match';
+        // Hashtags go INSIDE the text (before the link) — NOT the hashtags= param,
+        // which X appends AFTER the url. X only reliably renders the link-preview
+        // card when the url is the LAST thing in the post, so the url must come last.
+        const tags = ['WorldCup', ...roundHashtags(), 'Linq', 'FIFA'].map((t) => `#${t}`).join(' ');
+        const text = `I called ${matchup} exactly and won $${prizeShareUsd} USDC on @uselinq Predict & Win! ${tags}`;
+        // Link the post at the win-card share page so the tweet unfurls the branded
+        // card (winner handle + prize + match). Falls back to the app if unavailable.
+        const url = (predictionId ? winShareURL(predictionId, handle) : '') || 'https://app.uselinq.xyz/predict';
+        window.open(`https://x.com/intent/post?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}`, '_blank', 'noopener');
+        setShared(true);
+    }
+    const postValid = /^https?:\/\/(www\.)?(x|twitter)\.com\/.+/.test(xPostUrl.trim());
+    const shareBlocked = !!shareGate && !postValid;
+
     async function submit() {
         // Only send wallet/handle when the user is entering or editing them; a plain
         // confirm of saved details sends nothing and reuses what's on file. Both the
@@ -81,9 +129,13 @@ export default function ClaimPrizeModal({
             toast.error('Please confirm your address supports USDC on Sui or Solana.');
             return;
         }
+        if (shareGate && !postValid) {
+            toast.error('Share your win on X and paste the post link.');
+            return;
+        }
         setBusy(true);
         try {
-            await claimPrize(fixtureId, sendCreds ? wallet.trim() : undefined, sendCreds ? handle.trim() : undefined);
+            await claimPrize(fixtureId, sendCreds ? wallet.trim() : undefined, sendCreds ? handle.trim() : undefined, shareGate ? xPostUrl.trim() : undefined);
             toast.success('Claimed! Your prize is awaiting authorization.');
             onClaimed();
         } catch (e: unknown) {
@@ -179,12 +231,37 @@ export default function ClaimPrizeModal({
                     </label>
                 )}
 
+                {shareGate && (
+                    <div style={{ marginTop: 20, borderTop: '1px solid var(--border, #e5e7eb)', paddingTop: 18 }}>
+                        <div style={{ fontSize: 15, fontWeight: 800, color: 'var(--text-main)' }}>Share your win to unlock it</div>
+                        <div style={{ fontSize: 12.5, color: 'var(--text-secondary)', margin: '4px 0 12px', lineHeight: 1.45 }}>
+                            Post your win on X, then paste the link below. We verify the post before your payout.
+                        </div>
+                        <button
+                            onClick={openShare}
+                            style={{ display: 'inline-flex', alignItems: 'center', gap: 8, background: '#000', color: '#fff', border: 'none', borderRadius: 14, fontSize: 14, fontWeight: 800, padding: '11px 18px', cursor: 'pointer' }}
+                        >
+                            <span style={{ fontWeight: 900, fontSize: 15 }}>𝕏</span> Share on X
+                        </button>
+                        <input
+                            value={xPostUrl}
+                            onChange={(e) => setXPostUrl(e.target.value)}
+                            placeholder="Paste the link to your X post"
+                            autoCapitalize="off" autoCorrect="off" spellCheck={false}
+                            style={{ ...fieldInput(false), marginTop: 12 }}
+                        />
+                        {shared && xPostUrl.trim() !== '' && !postValid && (
+                            <div style={{ fontSize: 12, color: '#B45309', marginTop: 6 }}>That doesn't look like an X post link — paste the link to the post you just made.</div>
+                        )}
+                    </div>
+                )}
+
                 <button
                     onClick={submit}
-                    disabled={busy || readLeft > 0 || (editing && !ack)}
-                    style={{ width: '100%', padding: 16, borderRadius: 18, border: 'none', fontSize: 15, fontWeight: 800, color: '#fff', cursor: busy || readLeft > 0 || (editing && !ack) ? 'default' : 'pointer', background: PURPLE_GRAD, opacity: busy || readLeft > 0 || (editing && !ack) ? 0.6 : 1, marginTop: 20 }}
+                    disabled={busy || readLeft > 0 || (editing && !ack) || shareBlocked}
+                    style={{ width: '100%', padding: 16, borderRadius: 18, border: 'none', fontSize: 15, fontWeight: 800, color: '#fff', cursor: busy || readLeft > 0 || (editing && !ack) || shareBlocked ? 'default' : 'pointer', background: PURPLE_GRAD, opacity: busy || readLeft > 0 || (editing && !ack) || shareBlocked ? 0.6 : 1, marginTop: 20 }}
                 >
-                    {busy ? 'Claiming…' : readLeft > 0 ? `Please read the disclaimer… ${readLeft}s` : 'Claim prize'}
+                    {busy ? 'Claiming…' : readLeft > 0 ? `Please read the disclaimer… ${readLeft}s` : shareBlocked ? 'Share on X to unlock' : 'Claim prize'}
                 </button>
             </div>
         </div>
