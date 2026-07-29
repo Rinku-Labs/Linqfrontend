@@ -1,7 +1,9 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 
-import { useSignAndExecuteTransaction, useCurrentAccount, useSuiClient, ConnectButton } from '@mysten/dapp-kit';
+import { useCurrentAccount, useSuiClient, ConnectButton } from '@mysten/dapp-kit';
+import type { SuiGrpcClient } from '@mysten/sui/grpc';
+import { useSignAndExecuteSuiTransaction } from '../../hooks/useSignAndExecuteSui';
 import { Transaction } from '@mysten/sui/transactions';
 import { useConnection, useWallet } from '@solana/wallet-adapter-react';
 import { WalletMultiButton } from '@solana/wallet-adapter-react-ui';
@@ -50,8 +52,10 @@ export default function BillPayment() {
 
     // Sui Hooks
     const currentSuiAccount = useCurrentAccount();
-    const suiClient = useSuiClient();
-    const { mutate: signAndExecuteSuiTransaction } = useSignAndExecuteTransaction();
+    // main.tsx installs a SuiGrpcClient through SuiClientProvider's `createClient`;
+    // dapp-kit@1.1.3 still types the context client as the (now dead) JSON-RPC one.
+    const suiClient = useSuiClient() as unknown as SuiGrpcClient;
+    const { mutate: signAndExecuteSuiTransaction } = useSignAndExecuteSuiTransaction();
 
     // Solana Hooks
     const { connection } = useConnection();

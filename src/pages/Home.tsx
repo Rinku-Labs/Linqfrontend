@@ -9,7 +9,8 @@ import Button from '../components/ui/Button';
 import ThemeToggle from '../components/ui/ThemeToggle';
 import { useNavigate } from 'react-router-dom';
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { useCurrentAccount, useSuiClientQuery } from '@mysten/dapp-kit';
+import { useCurrentAccount } from '@mysten/dapp-kit';
+import { useSuiCoinBalance, toDecimal } from '../hooks/useSuiBalance';
 import { useAuth } from '../context/AuthContext';
 import { useWebSocket } from '../hooks/useWebSocket';
 import TransactionPopup, { formatStatus, getStatusStyle } from '../components/TransactionPopup';
@@ -115,13 +116,10 @@ export default function Home() {
 
 
     // Get USDC wallet balance if connected
-    const { data: balanceData, isPending: isBalanceLoading } = useSuiClientQuery(
-        'getBalance',
-        {
-            owner: currentAccount?.address || '',
-            coinType: USDC_COIN_TYPE
-        },
-        { enabled: !!currentAccount?.address && selectedChain === 'SUI' }
+    const { data: balanceData, isPending: isBalanceLoading } = useSuiCoinBalance(
+        currentAccount?.address,
+        USDC_COIN_TYPE,
+        selectedChain === 'SUI',
     );
 
     // Get Solana USDC balance
@@ -268,9 +266,8 @@ export default function Home() {
         if (selectedChain === 'SUI') {
             if (!currentAccount) return '0.00';
             if (isBalanceLoading) return '...';
-            if (!balanceData) return '0.00';
-            const usdcBalance = Number(balanceData.totalBalance) / 1_000_000;
-            return usdcBalance.toFixed(2);
+            if (balanceData === undefined) return '0.00';
+            return toDecimal(balanceData).toFixed(2);
         } else if (selectedChain === 'SOLANA') {
             if (!solanaPublicKey) return '0.00';
             if (isSolanaLoading) return '...';
@@ -298,8 +295,8 @@ export default function Home() {
     const formatNairaBalance = () => {
         let usdcBalance = 0;
         if (selectedChain === 'SUI') {
-            if (!currentAccount || isBalanceLoading || !balanceData) return '0.00';
-            usdcBalance = Number(balanceData.totalBalance) / 1_000_000;
+            if (!currentAccount || isBalanceLoading || balanceData === undefined) return '0.00';
+            usdcBalance = toDecimal(balanceData);
         } else if (selectedChain === 'SOLANA') {
             if (!solanaPublicKey) return '0.00';
             usdcBalance = solanaBalance || 0;

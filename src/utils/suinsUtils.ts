@@ -1,11 +1,10 @@
 import { suins } from '@mysten/suins';
-import { SuiJsonRpcClient, getJsonRpcFullnodeUrl } from '@mysten/sui/jsonRpc';
+import { createSuiGrpcClient } from './suiClient';
 
-// Initialize Sui Client extended with SuiNS resolution
-const suinsClient = new SuiJsonRpcClient({
-    url: getJsonRpcFullnodeUrl('mainnet'),
-    network: 'mainnet',
-}).$extend(suins());
+// Initialize Sui Client extended with SuiNS resolution. gRPC, not JSON-RPC —
+// the public full nodes stopped serving JSON-RPC, so name lookups threw
+// "Method not found" and every .sui recipient failed to resolve.
+const suinsClient = createSuiGrpcClient().$extend(suins());
 
 export const resolveSuinsName = async (name: string): Promise<string | null> => {
     try {

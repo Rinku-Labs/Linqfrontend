@@ -6,7 +6,9 @@ import InlineError from '../../components/ui/InlineError';
 import client from '../../api/client';
 import { fetchRate as fetchCachedRate } from '../../utils/rateCache';
 import { isGasFeeError } from '../../utils/sanitize';
-import { useCurrentAccount, useSignAndExecuteTransaction, useSuiClient } from '@mysten/dapp-kit';
+import { useCurrentAccount, useSuiClient } from '@mysten/dapp-kit';
+import type { SuiGrpcClient } from '@mysten/sui/grpc';
+import { useSignAndExecuteSuiTransaction } from '../../hooks/useSignAndExecuteSui';
 import { Transaction } from '@mysten/sui/transactions';
 import { useWallet } from '@solana/wallet-adapter-react';
 import { useConnection } from '@solana/wallet-adapter-react';
@@ -85,8 +87,10 @@ export default function Confirm() {
     const [signingMessage, setSigningMessage] = useState('');
 
     const currentAccount = useCurrentAccount();
-    const suiClient = useSuiClient();
-    const { mutate: signAndExecuteSuiTransaction } = useSignAndExecuteTransaction();
+    // main.tsx installs a SuiGrpcClient through SuiClientProvider's `createClient`;
+    // dapp-kit@1.1.3 still types the context client as the (now dead) JSON-RPC one.
+    const suiClient = useSuiClient() as unknown as SuiGrpcClient;
+    const { mutate: signAndExecuteSuiTransaction } = useSignAndExecuteSuiTransaction();
 
     const { connection } = useConnection();
     const { publicKey: solanaPublicKey, sendTransaction: sendSolanaTransaction } = useWallet();

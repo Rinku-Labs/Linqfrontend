@@ -10,17 +10,22 @@ export interface SuiCoinRef {
 /**
  * Total USDC balance for a Sui address, via the backend (GET /swap/usdc-coins).
  *
- * This used to call Sui's public JSON-RPC / GraphQL RPC / gRPC endpoints
- * directly from the browser. All three showed real, reproducible gaps
- * enumerating coin objects for an owner+type — including cases where a coin
- * object was confirmed to exist on-chain (via a block explorer, and via the
- * aggregate balance field on the same endpoint) but never showed up in a
- * "list objects owned by X" query. Direct browser gRPC also isn't viable:
- * Sui's public full node doesn't support gRPC-Web the way a browser client
- * needs (confirmed by inspecting the raw network response — undecoded
- * gRPC-Web frames the client couldn't parse). The backend's gRPC client
- * (walletHelper.GetObjectsGRPC, Go) already handles this reliably — it's
- * what fixed the same class of bug in the offramp/onramp payout path.
+ * Historical note, corrected: an earlier version of this comment claimed the
+ * public full node "doesn't support gRPC-Web the way a browser client needs".
+ * That was wrong. `fullnode.mainnet.sui.io` answers
+ * `sui.rpc.v2.StateService/ListOwnedObjects` over `application/grpc-web+proto`
+ * with `access-control-allow-origin: *`; the earlier attempt was a hand-rolled
+ * client that couldn't parse the frame format.
+ *
+ * The real cause of the "no coins found for a wallet that visibly holds coins"
+ * bug — on both sides — was a missing gRPC **read mask**. `ListOwnedObjects`
+ * defaults to returning only `object_id,version,object_type`, so `digest` and
+ * `balance` came back empty and every object was discarded by the parser. The
+ * backend (walletHelper.GetObjectsGRPC) now sets that mask explicitly.
+ *
+ * These helpers stay on the backend proxy so coin selection has one
+ * implementation; see utils/suiClient.ts for the browser's own gRPC client,
+ * which handles balances, simulation, and execution.
  */
 export async function getTotalBalance(owner: string): Promise<number> {
     const { totalBalance } = await getUsdcCoins(owner);

@@ -10,7 +10,9 @@ import { getAllCoins } from '../utils/suiCoins';
 import tokenData from '../data/tokens.json';
 
 // Wallet hooks
-import { useCurrentAccount, useSignAndExecuteTransaction, useSuiClient } from '@mysten/dapp-kit';
+import { useCurrentAccount, useSuiClient } from '@mysten/dapp-kit';
+import type { SuiGrpcClient } from '@mysten/sui/grpc';
+import { useSignAndExecuteSuiTransaction } from '../hooks/useSignAndExecuteSui';
 import { Transaction } from '@mysten/sui/transactions';
 import { useWallet as useSolanaWallet, useConnection } from '@solana/wallet-adapter-react';
 import { WalletMultiButton } from '@solana/wallet-adapter-react-ui';
@@ -37,7 +39,9 @@ import tronLogo from '../assets/tron-logo.png';
 export default function Swap() {
     const navigate = useNavigate();
     const { isAuthenticated } = useAuth();
-    const suiClient = useSuiClient();
+    // main.tsx installs a SuiGrpcClient through SuiClientProvider's `createClient`;
+    // dapp-kit@1.1.3 still types the context client as the (now dead) JSON-RPC one.
+    const suiClient = useSuiClient() as unknown as SuiGrpcClient;
 
     // State
     const [tokens, setTokens] = useState<Token[]>([]);
@@ -81,7 +85,7 @@ export default function Swap() {
     // Wallet State
     const suiAccount = useCurrentAccount();
 
-    const { mutate: signAndExecuteSui } = useSignAndExecuteTransaction();
+    const { mutate: signAndExecuteSui } = useSignAndExecuteSuiTransaction();
 
     const { publicKey: solanaPublicKey, sendTransaction: sendSolanaTransaction } = useSolanaWallet();
     const { connection } = useConnection();
@@ -185,9 +189,9 @@ export default function Swap() {
                     // Real app needs exact coinType from tokenData
                     const coinType = sourceToken.symbol === 'SUI' ? '0x2::sui::SUI' : sourceToken.contractAddress;
                     if (coinType) {
-                        const bal = await suiClient.getBalance({ owner: suiAccount.address, coinType });
+                        const { balance } = await suiClient.getBalance({ owner: suiAccount.address, coinType });
                         const decimals = sourceToken.decimals || 9;
-                        setBalance((parseInt(bal.totalBalance) / Math.pow(10, decimals)).toString());
+                        setBalance((Number(balance.balance) / Math.pow(10, decimals)).toString());
                     }
                 } else if (sourceChain === 'APTOS') {
                     if (!aptosAccount) { setBalance('0'); return; }

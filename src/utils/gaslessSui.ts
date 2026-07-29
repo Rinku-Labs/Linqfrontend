@@ -1,5 +1,5 @@
 import { Transaction } from '@mysten/sui/transactions';
-import type { SuiJsonRpcClient } from '@mysten/sui/jsonRpc';
+import type { SuiGrpcClient } from '@mysten/sui/grpc';
 
 /**
  * Stablecoins eligible for Sui's native gasless transfer feature
@@ -36,10 +36,9 @@ export interface GaslessTransfer {
  * so funds are sourced from address balance or owned coin objects
  * automatically, with no manual getCoins/mergeCoins/splitCoins needed.
  *
- * gasPrice/gasPayment are set explicitly per the documented JSON-RPC fallback
- * recipe (this app's SuiClient is JSON-RPC only) rather than relying on the
- * SDK to auto-detect eligibility during build. Callers must only invoke this
- * for transfers that already passed `isGaslessEligible`.
+ * gasPrice/gasPayment are set explicitly rather than relying on the SDK to
+ * auto-detect eligibility during build. Callers must only invoke this for
+ * transfers that already passed `isGaslessEligible`.
  */
 export function buildGaslessTransferTx(sender: string, transfers: GaslessTransfer[]): Transaction {
     const tx = new Transaction();
@@ -71,10 +70,13 @@ export function buildGaslessTransferTx(sender: string, transfers: GaslessTransfe
  * not to qualify for gasless treatment), so the caller can fall back to the
  * legacy self-pay flow without ever requesting a second signature.
  */
-export async function verifyGaslessTransaction(client: SuiJsonRpcClient, tx: Transaction): Promise<void> {
-    const transactionBlock = await tx.build({ client });
-    const dryRun = await client.dryRunTransactionBlock({ transactionBlock });
-    if (dryRun.effects.status.status !== 'success') {
-        throw new Error(dryRun.effects.status.error || 'Gasless transfer simulation failed');
+export async function verifyGaslessTransaction(client: SuiGrpcClient, tx: Transaction): Promise<void> {
+    // `simulateTransaction` is the gRPC equivalent of the retired JSON-RPC
+    // `dryRunTransactionBlock`. It takes the Transaction directly — no separate
+    // `tx.build({ client })` step.
+    const result = await client.simulateTransaction({ transaction: tx });
+    if (result.$kind === 'FailedTransaction') {
+        const { error } = result.FailedTransaction.status;
+        throw new Error(error?.message || 'Gasless transfer simulation failed');
     }
 }

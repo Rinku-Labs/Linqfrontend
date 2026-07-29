@@ -5,7 +5,8 @@ import Button from '../../components/ui/Button';
 import InlineError from '../../components/ui/InlineError';
 import { ArrowUpDown, Delete } from 'lucide-react';
 import { fetchRate as fetchCachedRate } from '../../utils/rateCache';
-import { useCurrentAccount, useSuiClientQuery } from '@mysten/dapp-kit';
+import { useCurrentAccount } from '@mysten/dapp-kit';
+import { useSuiCoinBalance, toDecimal } from '../../hooks/useSuiBalance';
 import { useConnection, useWallet } from '@solana/wallet-adapter-react';
 import { TOKEN_PROGRAM_ID } from '@solana/spl-token';
 import { useAccount, useReadContract } from 'wagmi';
@@ -64,13 +65,10 @@ export default function InputAmount() {
     const BSC_USDC_CONTRACT = '0x8AC76a51cc950d9822D68b83fE1Ad97B32Cd580d';
 
     // Get Sui USDC balance
-    const { data: suiBalanceData, isPending: isSuiBalanceLoading } = useSuiClientQuery(
-        'getBalance',
-        {
-            owner: currentAccount?.address || '',
-            coinType: SUI_USDC_COIN_TYPE
-        },
-        { enabled: !!currentAccount?.address && selectedChain === 'SUI' }
+    const { data: suiBalanceData, isPending: isSuiBalanceLoading } = useSuiCoinBalance(
+        currentAccount?.address,
+        SUI_USDC_COIN_TYPE,
+        selectedChain === 'SUI',
     );
 
     // Get EVM USDC balance
@@ -160,9 +158,8 @@ export default function InputAmount() {
         if (selectedChain === 'SUI') {
             if (!currentAccount) return '0.00';
             if (isSuiBalanceLoading) return '...';
-            if (!suiBalanceData) return '0.00';
-            const usdcBalance = Number(suiBalanceData.totalBalance) / 1_000_000;
-            return usdcBalance.toFixed(2);
+            if (suiBalanceData === undefined) return '0.00';
+            return toDecimal(suiBalanceData).toFixed(2);
         } else if (selectedChain === 'SOLANA') {
             if (!solanaPublicKey) return '0.00';
             if (isSolanaLoading) return '...';
@@ -186,8 +183,8 @@ export default function InputAmount() {
     // Get numeric balance for percentage calculations
     const getNumericBalance = () => {
         if (selectedChain === 'SUI') {
-            if (!currentAccount || !suiBalanceData) return 0;
-            return Number(suiBalanceData.totalBalance) / 1_000_000;
+            if (!currentAccount || suiBalanceData === undefined) return 0;
+            return toDecimal(suiBalanceData);
         } else if (selectedChain === 'SOLANA') {
             if (!solanaPublicKey) return 0;
             return solanaBalance || 0;
