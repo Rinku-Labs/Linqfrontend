@@ -220,7 +220,7 @@ export default function Confirm() {
                     if (hasSavings && savingsAmountInMist > 0) {
                         transfers.push({ coinType: SUI_USDC_COIN_TYPE, amountRaw: BigInt(savingsAmountInMist), recipient: savingsConfig.savingsAddress });
                     }
-                    const gaslessTx = buildGaslessTransferTx(currentAccount.address, transfers);
+                    const gaslessTx = await buildGaslessTransferTx(suiClient, currentAccount.address, transfers);
                     await verifyGaslessTransaction(suiClient, gaslessTx);
                     tx = gaslessTx;
                 } catch (gaslessError) {

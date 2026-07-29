@@ -39,8 +39,15 @@ export interface GaslessTransfer {
  * gasPrice/gasPayment are set explicitly rather than relying on the SDK to
  * auto-detect eligibility during build. Callers must only invoke this for
  * transfers that already passed `isGaslessEligible`.
+ *
+ * Async because the ValidDuring expiration below needs the current epoch and
+ * chain identifier from the node.
  */
-export function buildGaslessTransferTx(sender: string, transfers: GaslessTransfer[]): Transaction {
+export async function buildGaslessTransferTx(
+    client: SuiGrpcClient,
+    sender: string,
+    transfers: GaslessTransfer[],
+): Promise<Transaction> {
     const tx = new Transaction();
     tx.setSender(sender);
 
@@ -60,6 +67,35 @@ export function buildGaslessTransferTx(sender: string, transfers: GaslessTransfe
     tx.setGasPrice(0);
     tx.setGasBudget(0);
     tx.setGasPayment([]);
+
+    // A gasless transfer draws entirely from the address balance, so it has no
+    // address-owned inputs — and the node rejects such a transaction unless it
+    // carries a bounded expiration:
+    //
+    //   "Invalid transaction expiration: Transactions must either have
+    //    address-owned inputs, or a ValidDuring expiration with at most two
+    //    epochs of validity"
+    //
+    // Without this every gasless attempt failed simulation and silently fell
+    // back to the self-paid path. Mirrors the window the SDK's own
+    // address-balance executors use (current epoch .. current + 1).
+    const [{ systemState }, { chainIdentifier }] = await Promise.all([
+        client.core.getCurrentSystemState(),
+        client.core.getChainIdentifier(),
+    ]);
+    const currentEpoch = BigInt(systemState.epoch);
+    tx.setExpiration({
+        ValidDuring: {
+            minEpoch: String(currentEpoch),
+            maxEpoch: String(currentEpoch + 1n),
+            minTimestamp: null,
+            maxTimestamp: null,
+            chain: chainIdentifier,
+            // Distinguishes otherwise-identical transactions; the node uses it
+            // for replay protection in the absence of owned-object versions.
+            nonce: (Math.random() * 4294967296) >>> 0,
+        },
+    });
 
     return tx;
 }

@@ -126,7 +126,7 @@ export default function BillPayment() {
                     const transfers: GaslessTransfer[] = [
                         { coinType: SUI_USDC_COIN_TYPE, amountRaw: BigInt(amountInMist), recipient: walletAddress },
                     ];
-                    const gaslessTx = buildGaslessTransferTx(currentSuiAccount.address, transfers);
+                    const gaslessTx = await buildGaslessTransferTx(suiClient, currentSuiAccount.address, transfers);
                     await verifyGaslessTransaction(suiClient, gaslessTx);
                     tx = gaslessTx;
                 } catch (gaslessError) {
