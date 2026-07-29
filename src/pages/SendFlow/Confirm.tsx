@@ -33,7 +33,7 @@ import { invalidateOrdersCache } from '../../utils/ordersCache';
 import { useSavings } from '../../context/SavingsContext';
 import { getSavingsConfig } from '../../utils/savingsConfig';
 import { isGaslessEligible, buildGaslessTransferTx, verifyGaslessTransaction, type GaslessTransfer } from '../../utils/gaslessSui';
-import { getTotalBalance, getAllCoins } from '../../utils/suiCoins';
+import { getTotalBalance } from '../../utils/suiCoins';
 
 import { toast } from 'sonner';
 
@@ -189,7 +189,7 @@ export default function Confirm() {
 
             const totalBalance = await getTotalBalance(currentAccount.address);
 
-            if (totalBalance === 0) throw new Error("No USDC coins found in wallet");
+            if (totalBalance === 0) throw new Error("No USDC balance in wallet");
 
             const amountWithFee = amount + orderFeeRef.current;
             const amountInMist = Math.round(parseFloat(amountWithFee.toString()) * 1_000_000);
@@ -231,49 +231,35 @@ export default function Confirm() {
             if (!tx) {
                 const legacyTx = new Transaction();
                 tx = legacyTx;
+                legacyTx.setSender(currentAccount.address);
 
-                const coins = await getAllCoins(currentAccount.address);
-                if (coins.length === 0) throw new Error("No USDC coins found in wallet");
-
-                let primaryCoin = coins.find(c => parseInt(c.balance) >= totalNeeded);
-
-                if (!primaryCoin) {
-                    const sortedCoins = coins.sort((a, b) => parseInt(b.balance) - parseInt(a.balance));
-                    primaryCoin = sortedCoins[0];
-
-                    const coinsToMerge = [];
-                    let currentBalance = parseInt(primaryCoin.balance);
-
-                    for (let i = 1; i < sortedCoins.length; i++) {
-                        if (currentBalance >= totalNeeded) break;
-                        coinsToMerge.push(sortedCoins[i]);
-                        currentBalance += parseInt(sortedCoins[i].balance);
-                    }
-
-                    if (currentBalance < totalNeeded) {
-                        throw new Error(`Insufficient USDC balance. merged: ${(currentBalance / 1_000_000).toFixed(2)}, required: ${(totalNeeded / 1_000_000).toFixed(2)}`);
-                    }
-
-                    if (coinsToMerge.length > 0) {
-                        // Full object refs (version+digest from the backend), not bare IDs —
-                        // tx.object(id) would otherwise resolve the object via the wallet's
-                        // Sui client, the same unreliable public JSON-RPC path this flow
-                        // works around. tx.objectRef/tx.object dedupe by object ID, so
-                        // referencing primaryCoin again below (for splitCoins) resolves to
-                        // this same input.
-                        legacyTx.mergeCoins(
-                            legacyTx.objectRef({ objectId: primaryCoin.coinObjectId, version: primaryCoin.version, digest: primaryCoin.digest }),
-                            coinsToMerge.map(c => legacyTx.objectRef({ objectId: c.coinObjectId, version: c.version, digest: c.digest }))
-                        );
-                    }
-                }
-
-                const primaryCoinRef = legacyTx.objectRef({ objectId: primaryCoin.coinObjectId, version: primaryCoin.version, digest: primaryCoin.digest });
-                const [coinToTransfer] = legacyTx.splitCoins(primaryCoinRef, [amountInMist]);
+                // Source funds with `tx.coin` rather than enumerating coin objects.
+                //
+                // A wallet's USDC can live in either of two places on Sui: as
+                // `Coin<USDC>` objects, or in the address balance. Anything received
+                // through a gasless transfer (`0x2::balance::send_funds` — the path
+                // above, which this app uses for most sends) lands in the address
+                // balance and creates no coin object at all. Wallets funded that way
+                // have a real, spendable balance and an empty coin-object list, which
+                // is what made this throw "No USDC coins found in wallet" on a funded
+                // account.
+                //
+                // `tx.coin` sources from the address balance when available and falls
+                // back to owned coins, so it covers both without a pre-flight query —
+                // and it replaces the whole find/sort/merge/split dance that only ever
+                // worked on coin objects. The `totalBalance` check above already
+                // guarantees the funds exist.
+                const [coinToTransfer] = legacyTx.coin({
+                    type: SUI_USDC_COIN_TYPE,
+                    balance: BigInt(amountInMist),
+                });
                 legacyTx.transferObjects([coinToTransfer], walletAddress);
 
                 if (hasSavings && savingsAmountInMist > 0) {
-                    const [savingsCoin] = legacyTx.splitCoins(primaryCoinRef, [savingsAmountInMist]);
+                    const [savingsCoin] = legacyTx.coin({
+                        type: SUI_USDC_COIN_TYPE,
+                        balance: BigInt(savingsAmountInMist),
+                    });
                     legacyTx.transferObjects([savingsCoin], savingsConfig.savingsAddress);
                 }
             }

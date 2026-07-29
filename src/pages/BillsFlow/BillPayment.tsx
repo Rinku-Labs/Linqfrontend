@@ -30,7 +30,7 @@ import { useAuth } from '../../context/AuthContext';
 import { sanitizeErrorMessage } from '../../utils/sanitize';
 import { addBillBeneficiary, type AddBillBeneficiaryPayload } from '../../api/user';
 import { isGaslessEligible, buildGaslessTransferTx, verifyGaslessTransaction, type GaslessTransfer } from '../../utils/gaslessSui';
-import { getTotalBalance, getAllCoins } from '../../utils/suiCoins';
+import { getTotalBalance } from '../../utils/suiCoins';
 
 const SUI_USDC_COIN_TYPE = "0xdba34672e30cb065b1f93e3ab55318768fd6fef66c15942c9f7cb846e2f900e7::usdc::USDC";
 const SOLANA_USDC_MINT = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v";
@@ -38,13 +38,6 @@ const BSC_USDC_ADDRESS = "0x8AC76a51cc950d9822D68b83fE1Ad97B32Cd580d" as `0x${st
 const BASE_USDC_ADDRESS = "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913" as `0x${string}`;
 
 type BillPaymentStatus = 'idle' | 'preparing' | 'signing' | 'processing' | 'success' | 'completed' | 'failed' | 'cancelled';
-
-interface SuiCoin {
-    coinObjectId: string;
-    balance: string;
-    version: string;
-    digest: string;
-}
 
 export default function BillPayment() {
     const location = useLocation();
@@ -114,7 +107,7 @@ export default function BillPayment() {
 
         try {
             const totalBalance = await getTotalBalance(currentSuiAccount.address);
-            if (totalBalance === 0) throw new Error("No USDC coins found in wallet");
+            if (totalBalance === 0) throw new Error("No USDC balance in wallet");
 
             const amountInMist = Math.floor(parseFloat(amount) * 1_000_000);
 
@@ -145,43 +138,19 @@ export default function BillPayment() {
                 const legacyTx = new Transaction();
                 tx = legacyTx;
 
-                const coins = await getAllCoins(currentSuiAccount.address);
-                if (coins.length === 0) throw new Error("No USDC coins found in wallet");
+                legacyTx.setSender(currentSuiAccount.address);
 
-                let primaryCoin = (coins as any).find((c: SuiCoin) => parseInt(c.balance) >= amountInMist);
-                let coinToTransfer;
-
-                // Full object refs (version+digest from the backend), not bare IDs —
-                // tx.object(id) would otherwise resolve the object via the wallet's Sui
-                // client, the same unreliable public JSON-RPC path this flow works
-                // around. tx.objectRef/tx.object dedupe by object ID, so referencing
-                // primaryCoin again after a merge resolves to the same input.
-                if (primaryCoin) {
-                    const [splitCoin] = legacyTx.splitCoins(legacyTx.objectRef({ objectId: primaryCoin.coinObjectId, version: primaryCoin.version, digest: primaryCoin.digest }), [amountInMist]);
-                    coinToTransfer = splitCoin;
-                } else {
-                    const sortedCoins = (coins as any).sort((a: SuiCoin, b: SuiCoin) => parseInt(b.balance) - parseInt(a.balance));
-                    primaryCoin = sortedCoins[0];
-
-                    const coinsToMerge: SuiCoin[] = [];
-                    let currentBalance = parseInt(primaryCoin.balance);
-
-                    for (let i = 1; i < sortedCoins.length; i++) {
-                        if (currentBalance >= amountInMist) break;
-                        coinsToMerge.push(sortedCoins[i]);
-                        currentBalance += parseInt(sortedCoins[i].balance);
-                    }
-
-                    if (coinsToMerge.length > 0) {
-                        legacyTx.mergeCoins(
-                            legacyTx.objectRef({ objectId: primaryCoin.coinObjectId, version: primaryCoin.version, digest: primaryCoin.digest }),
-                            coinsToMerge.map((c: SuiCoin) => legacyTx.objectRef({ objectId: c.coinObjectId, version: c.version, digest: c.digest }))
-                        );
-                    }
-
-                    const [splitCoin] = legacyTx.splitCoins(legacyTx.objectRef({ objectId: primaryCoin.coinObjectId, version: primaryCoin.version, digest: primaryCoin.digest }), [amountInMist]);
-                    coinToTransfer = splitCoin;
-                }
+                // `tx.coin` sources from the address balance first and falls back to
+                // owned coin objects. USDC received through a gasless transfer
+                // (`0x2::balance::send_funds`, the path attempted above) lands in the
+                // address balance and creates no coin object, so enumerating coin
+                // objects reported an empty wallet for accounts that were genuinely
+                // funded. This covers both storage forms and removes the
+                // find/sort/merge/split handling that only ever worked on coins.
+                const [coinToTransfer] = legacyTx.coin({
+                    type: SUI_USDC_COIN_TYPE,
+                    balance: BigInt(amountInMist),
+                });
 
                 legacyTx.transferObjects([coinToTransfer], walletAddress);
             }

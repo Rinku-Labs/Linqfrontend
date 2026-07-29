@@ -6,7 +6,6 @@ import Button from '../components/ui/Button';
 import { useAuth } from '../context/AuthContext';
 import { getQuote, type Token, type QuoteResponse, getSwapStatus } from '../api/swap';
 import { playSuccessSound } from '../utils/audio';
-import { getAllCoins } from '../utils/suiCoins';
 import tokenData from '../data/tokens.json';
 
 // Wallet hooks
@@ -449,6 +448,7 @@ export default function Swap() {
                 if (!suiAccount) throw new Error("Sui wallet not connected");
 
                 const tx = new Transaction();
+                tx.setSender(suiAccount.address);
                 const amountVal = Math.floor(parseFloat(amount) * Math.pow(10, sourceToken.decimals || 9));
 
                 if (sourceToken.symbol === 'SUI') {
@@ -459,43 +459,17 @@ export default function Swap() {
                     const coinType = sourceToken.contractAddress;
                     if (!coinType) throw new Error("CoinType (contract address) missing for this token");
 
-                    // 1. Fetch user's coins of this type via the backend (see utils/suiCoins.ts)
-                    const coins = await getAllCoins(suiAccount.address);
-
-                    if (!coins || coins.length === 0) throw new Error(`No ${sourceToken.symbol} coins found in wallet`);
-
-                    // 2. Select coins to cover the amount
-                    let totalBalance = 0;
+                    // Source the amount with `tx.coin`, which draws from the address
+                    // balance first and falls back to owned coin objects. Tokens
+                    // received via a gasless transfer (`0x2::balance::send_funds`) live
+                    // in the address balance and produce no coin object at all, so
+                    // enumerating coin objects reported an empty wallet for accounts
+                    // that were genuinely funded.
                     const targetAmount = amountVal;
-                    const selectedCoins = [];
-
-                    for (const coin of coins) {
-                        totalBalance += parseInt(coin.balance);
-                        selectedCoins.push(coin);
-                        if (totalBalance >= targetAmount) break;
-                    }
-
-                    if (totalBalance < targetAmount) throw new Error(`Insufficient ${sourceToken.symbol} balance`);
-
-                    // 3. Merge coins if needed (primary coin is the first one).
-                    // Pass full object refs (version+digest from the backend) instead of
-                    // a bare object ID — tx.object(id) would otherwise need to resolve the
-                    // object itself via the wallet's Sui client, which goes through the
-                    // same unreliable public JSON-RPC path this whole flow works around.
-                    const primaryCoin = tx.objectRef({
-                        objectId: selectedCoins[0].coinObjectId,
-                        version: selectedCoins[0].version,
-                        digest: selectedCoins[0].digest,
+                    const [splitCoin] = tx.coin({
+                        type: coinType,
+                        balance: BigInt(targetAmount),
                     });
-                    if (selectedCoins.length > 1) {
-                        tx.mergeCoins(
-                            primaryCoin,
-                            selectedCoins.slice(1).map(c => tx.objectRef({ objectId: c.coinObjectId, version: c.version, digest: c.digest }))
-                        );
-                    }
-
-                    // 4. Split the exact amount
-                    const [splitCoin] = tx.splitCoins(primaryCoin, [tx.pure.u64(targetAmount)]);
 
                     // 5. Transfer to deposit address
                     tx.transferObjects([splitCoin], tx.pure.address(depositAddress));
