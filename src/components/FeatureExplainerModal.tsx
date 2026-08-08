@@ -9,8 +9,6 @@ interface ExplainerContent {
     steps: string[];
 }
 
-// 'predict' is intentionally omitted — the Predict & Win page has its own hero
-// and product tour, so it navigates without a step-by-step explainer.
 const EXPLAINER_CONTENT: Partial<Record<FeatureKey, ExplainerContent>> = {
     invite: {
         title: 'How to Invite & Earn',

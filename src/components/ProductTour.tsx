@@ -12,7 +12,6 @@ const TOUR_STEPS: TourStep[] = [
     { targetId: 'tour-deposit', text: 'Buy crypto with naira' },
     { targetId: 'tour-topup', text: 'Buy airtime, data, electricity and TV subscriptions' },
     { targetId: 'tour-swap', text: 'Swap and bridge your crypto across chains' },
-    { targetId: 'tour-predict', text: '🏆 Call the exact World Cup 2026 scoreline and win big — free to play, glory up for grabs!' },
 ];
 
 const PADDING = 10;
