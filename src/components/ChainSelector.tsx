@@ -60,6 +60,11 @@ const ChainSelector = ({ allowedChains }: ChainSelectorProps) => {
             name: 'Base',
             logo: 'https://avatars.githubusercontent.com/u/108554348?s=200&v=4'
         },
+        {
+            id: 'STELLAR',
+            name: 'Stellar',
+            logo: 'https://cryptologos.cc/logos/stellar-xlm-logo.png'
+        },
         // Only include TRON if not hidden
         ...(!HIDE_TRON ? [{
             id: 'TRON' as Chain,

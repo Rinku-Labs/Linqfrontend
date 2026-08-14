@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState } from 'react';
 
-export type Chain = 'SUI' | 'SOLANA' | 'APTOS' | 'BSC' | 'BASE' | 'TRON';
+export type Chain = 'SUI' | 'SOLANA' | 'APTOS' | 'BSC' | 'BASE' | 'TRON' | 'STELLAR';
 
 export const HIDE_APTOS = true;
 export const HIDE_TRON = true;
@@ -20,7 +20,7 @@ export function ChainProvider({ children }: { children: React.ReactNode }) {
         const isHidden = (saved === 'APTOS' && HIDE_APTOS) || (saved === 'TRON' && HIDE_TRON);
         if (isHidden) return 'SUI';
 
-        const isValid = ['SUI', 'SOLANA', 'APTOS', 'BSC', 'BASE', 'TRON'].includes(saved);
+        const isValid = ['SUI', 'SOLANA', 'APTOS', 'BSC', 'BASE', 'TRON', 'STELLAR'].includes(saved);
         return isValid ? saved : 'SUI';
     });
 
