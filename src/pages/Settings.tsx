@@ -9,6 +9,7 @@ import { useWallet as useAptosWallet } from '@aptos-labs/wallet-adapter-react';
 import { useWallet as useTronWallet } from '@tronweb3/tronwallet-adapter-react-hooks';
 import { useAccount, useConnect, useDisconnect, useSwitchChain } from 'wagmi';
 import { useAuth } from '../context/AuthContext';
+import { useStellarWallet } from '../context/StellarWalletProvider';
 import Button from '../components/ui/Button';
 import suiLogo from '../assets/sui-logo.png';
 import solanaLogo from '../assets/solana-logo.png';
@@ -18,8 +19,8 @@ import tronLogo from '../assets/tron-logo.png';
 
 
 interface NetworkSelectorProps {
-    activeTab: 'SUI' | 'SOLANA' | 'APTOS' | 'BSC' | 'BASE' | 'TRON';
-    onSelect: (tab: 'SUI' | 'SOLANA' | 'APTOS' | 'BSC' | 'BASE' | 'TRON') => void;
+    activeTab: 'SUI' | 'SOLANA' | 'APTOS' | 'BSC' | 'BASE' | 'TRON' | 'STELLAR';
+    onSelect: (tab: 'SUI' | 'SOLANA' | 'APTOS' | 'BSC' | 'BASE' | 'TRON' | 'STELLAR') => void;
     logos: { [key: string]: string };
 }
 
@@ -45,6 +46,7 @@ const NetworkSelector = ({ activeTab, onSelect, logos }: NetworkSelectorProps) =
         { id: 'APTOS', name: 'Aptos', logo: logos.APTOS },
         { id: 'BSC', name: 'BNB Chain', logo: logos.BSC },
         { id: 'BASE', name: 'Base', logo: logos.BASE },
+        { id: 'STELLAR', name: 'Stellar', logo: logos.STELLAR },
         { id: 'TRON', name: 'Tron', logo: logos.TRON },
     ] as const;
 
@@ -157,6 +159,13 @@ export default function Settings() {
 
     // Tron wallet hooks
     const { address: tronAddress, connected: tronConnected, disconnect: disconnectTron, select: selectTronWallet, wallets: tronWallets } = useTronWallet();
+    const {
+        address: stellarAddress,
+        isConnected: stellarConnected,
+        isConnecting: isStellarConnecting,
+        connect: connectStellar,
+        disconnect: disconnectStellar,
+    } = useStellarWallet();
 
     // Redirect logic
     const hasInitialConnectionRef = useRef(false);
@@ -213,7 +222,7 @@ export default function Settings() {
         reader.readAsDataURL(file);
     };
 
-    const [activeTab, setActiveTab] = useState<'SUI' | 'SOLANA' | 'APTOS' | 'BSC' | 'BASE' | 'TRON'>('SUI');
+    const [activeTab, setActiveTab] = useState<'SUI' | 'SOLANA' | 'APTOS' | 'BSC' | 'BASE' | 'TRON' | 'STELLAR'>('SUI');
 
     const prevConnections = useRef({
         sui: false,
@@ -265,6 +274,7 @@ export default function Settings() {
     const APTOS_LOGO = aptosLogo;
     const BSC_LOGO = bnbLogo;
     const BASE_LOGO = 'https://avatars.githubusercontent.com/u/108554348?s=200&v=4';
+    const STELLAR_LOGO = 'https://cryptologos.cc/logos/stellar-xlm-logo.png';
     const TRON_LOGO = tronLogo;
 
     const renderConnectionStatus = (isConnected: boolean, address?: string) => (
@@ -649,6 +659,7 @@ export default function Settings() {
                             APTOS: APTOS_LOGO,
                             BSC: BSC_LOGO,
                             BASE: BASE_LOGO,
+                            STELLAR: STELLAR_LOGO,
                             TRON: TRON_LOGO
                         }}
                     />
@@ -738,6 +749,34 @@ export default function Settings() {
 
                 {activeTab === 'BASE' && (
                     renderEvmConnectionSection(8453, 'Base')
+                )}
+
+                {activeTab === 'STELLAR' && (
+                    <>
+                        {renderConnectionStatus(stellarConnected, stellarAddress || undefined)}
+                        {stellarConnected ? (
+                            renderDisconnectButton(() => disconnectStellar())
+                        ) : (
+                            <button
+                                onClick={() => connectStellar()}
+                                disabled={isStellarConnecting}
+                                style={{
+                                    width: '100%',
+                                    padding: '14px',
+                                    borderRadius: '12px',
+                                    background: 'var(--primary)',
+                                    border: 'none',
+                                    color: 'white',
+                                    fontSize: '14px',
+                                    fontWeight: 600,
+                                    cursor: isStellarConnecting ? 'not-allowed' : 'pointer',
+                                    opacity: isStellarConnecting ? 0.6 : 1,
+                                }}
+                            >
+                                {isStellarConnecting ? 'Connecting...' : 'Connect Stellar Wallet'}
+                            </button>
+                        )}
+                    </>
                 )}
 
                 {activeTab === 'TRON' && (

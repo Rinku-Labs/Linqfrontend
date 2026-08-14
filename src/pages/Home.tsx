@@ -437,7 +437,7 @@ export default function Home() {
                 }}>
                     <div style={{ textAlign: 'center', marginBottom: '32px' }}>
                         <p style={{ fontSize: '10px', color: 'rgba(255,255,255,0.8)', marginBottom: '8px' }}>
-                            {(currentAccount || solanaPublicKey || aptosAccount || evmAddress || tronAddress) ? 'USDC Balance' : 'Wallet Balance'}
+                            {(currentAccount || solanaPublicKey || aptosAccount || evmAddress || tronAddress || stellarAddress) ? 'USDC Balance' : 'Wallet Balance'}
                         </p>
                         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
                             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
@@ -463,7 +463,7 @@ export default function Home() {
                                 </p>
                             )}
                         </div>
-                        {!(currentAccount || solanaPublicKey || aptosAccount || evmAddress || tronAddress) && showBalance && (
+                        {!(currentAccount || solanaPublicKey || aptosAccount || evmAddress || tronAddress || stellarAddress) && showBalance && (
                             <button
                                 onClick={() => navigate('/settings')}
                                 style={{
