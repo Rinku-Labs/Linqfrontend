@@ -34,6 +34,8 @@ import { useWallet as useAptosWallet } from '@aptos-labs/wallet-adapter-react';
 import { useAccount, useReadContract } from 'wagmi';
 import { useWallet as useTronWallet } from '@tronweb3/tronwallet-adapter-react-hooks';
 import { useChain } from '../context/ChainContext';
+import { useStellarWallet } from '../context/StellarWalletProvider';
+import { getStellarUsdcBalance } from '../utils/stellarUtils';
 import ChainSelector from '../components/ChainSelector';
 import { aptos, APTOS_USDC_ADDRESS } from '../utils/aptosClient';
 
@@ -60,6 +62,28 @@ export default function Home() {
 
     const username = user?.username || localStorage.getItem('linqUsername') || 'Guest';
     const { selectedChain } = useChain();
+
+    const { address: stellarAddress } = useStellarWallet();
+    const [stellarBalance, setStellarBalance] = useState<number | null>(null);
+    const [isStellarLoading, setIsStellarLoading] = useState(false);
+
+    // Get Stellar USDC balance
+    useEffect(() => {
+        const fetchStellarBalance = async () => {
+            if (selectedChain !== 'STELLAR' || !stellarAddress) return;
+            setIsStellarLoading(true);
+            try {
+                setStellarBalance(await getStellarUsdcBalance(stellarAddress));
+            } catch (error) {
+                console.error("Error fetching Stellar balance:", error);
+                setStellarBalance(null);
+            } finally {
+                setIsStellarLoading(false);
+            }
+        };
+
+        fetchStellarBalance();
+    }, [selectedChain, stellarAddress]);
 
     // Sui Wallet
     const currentAccount = useCurrentAccount();
@@ -282,6 +306,10 @@ export default function Home() {
             const decimals = selectedChain === 'BASE' ? 6 : 18;
             const balance = evmBalanceData ? Number(evmBalanceData) / Math.pow(10, decimals) : 0;
             return balance.toFixed(2);
+        } else if (selectedChain === 'STELLAR') {
+            if (!stellarAddress) return '0.00';
+            if (isStellarLoading) return '...';
+            return (stellarBalance || 0).toFixed(2);
         } else if (selectedChain === 'TRON') {
             if (!tronAddress) return '0.00';
             if (isTronLoading) return '...';
@@ -306,6 +334,10 @@ export default function Home() {
             if (!evmAddress) return '0.00';
             const decimals = selectedChain === 'BASE' ? 6 : 18;
             usdcBalance = evmBalanceData ? Number(evmBalanceData) / Math.pow(10, decimals) : 0;
+        } else if (selectedChain === 'STELLAR') {
+            if (!stellarAddress) return '0.00';
+            if (isStellarLoading) return '...';
+            return (stellarBalance || 0).toFixed(2);
         } else if (selectedChain === 'TRON') {
             if (!tronAddress) return '0.00';
             usdcBalance = tronBalance || 0;
@@ -405,7 +437,7 @@ export default function Home() {
                 }}>
                     <div style={{ textAlign: 'center', marginBottom: '32px' }}>
                         <p style={{ fontSize: '10px', color: 'rgba(255,255,255,0.8)', marginBottom: '8px' }}>
-                            {(currentAccount || solanaPublicKey || aptosAccount || evmAddress || tronAddress) ? 'USDC Balance' : 'Wallet Balance'}
+                            {(currentAccount || solanaPublicKey || aptosAccount || evmAddress || tronAddress || stellarAddress) ? 'USDC Balance' : 'Wallet Balance'}
                         </p>
                         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
                             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
@@ -431,7 +463,7 @@ export default function Home() {
                                 </p>
                             )}
                         </div>
-                        {!(currentAccount || solanaPublicKey || aptosAccount || evmAddress || tronAddress) && showBalance && (
+                        {!(currentAccount || solanaPublicKey || aptosAccount || evmAddress || tronAddress || stellarAddress) && showBalance && (
                             <button
                                 onClick={() => navigate('/settings')}
                                 style={{

@@ -14,6 +14,8 @@ import { useWallet as useTronWallet } from '@tronweb3/tronwallet-adapter-react-h
 import { formatUnits } from 'viem';
 import ChainSelector from '../../components/ChainSelector';
 import { useChain } from '../../context/ChainContext';
+import { useStellarWallet } from '../../context/StellarWalletProvider';
+import { getStellarUsdcBalance } from '../../utils/stellarUtils';
 import { getSavingsConfig } from '../../utils/savingsConfig';
 import nairaLogo from '../../assets/naira.png';
 
@@ -26,6 +28,28 @@ export default function InputAmount() {
     const [exchangeRate, setExchangeRate] = useState<number>(1460); // Default fallback
     const [justSwitched, setJustSwitched] = useState(false); // Track if currency was just switched
     const { selectedChain } = useChain();
+
+    const { address: stellarAddress } = useStellarWallet();
+    const [stellarBalance, setStellarBalance] = useState<number | null>(null);
+    const [isStellarLoading, setIsStellarLoading] = useState(false);
+
+    // Get Stellar USDC balance
+    useEffect(() => {
+        const fetchStellarBalance = async () => {
+            if (selectedChain !== 'STELLAR' || !stellarAddress) return;
+            setIsStellarLoading(true);
+            try {
+                setStellarBalance(await getStellarUsdcBalance(stellarAddress));
+            } catch (error) {
+                console.error("Error fetching Stellar balance:", error);
+                setStellarBalance(null);
+            } finally {
+                setIsStellarLoading(false);
+            }
+        };
+
+        fetchStellarBalance();
+    }, [selectedChain, stellarAddress]);
 
     // Sui Wallet
     const currentAccount = useCurrentAccount();
@@ -172,6 +196,10 @@ export default function InputAmount() {
             const decimals = selectedChain === 'BASE' ? 6 : 18;
             const bal = Number(formatUnits(evmBalanceData as bigint, decimals));
             return bal.toFixed(2);
+        } else if (selectedChain === 'STELLAR') {
+            if (!stellarAddress) return '0.00';
+            if (isStellarLoading) return '...';
+            return (stellarBalance || 0).toFixed(2);
         } else if (selectedChain === 'TRON') {
             if (!tronAddress) return '0.00';
             if (isTronLoading) return '...';
@@ -192,6 +220,9 @@ export default function InputAmount() {
             if (!evmAddress || evmBalanceData === undefined) return 0;
             const decimals = selectedChain === 'BASE' ? 6 : 18;
             return Number(formatUnits(evmBalanceData as bigint, decimals));
+        } else if (selectedChain === 'STELLAR') {
+            if (!stellarAddress) return 0;
+            return stellarBalance || 0;
         } else if (selectedChain === 'TRON') {
             if (!tronAddress) return 0;
             return tronBalance || 0;

@@ -28,6 +28,8 @@ import { wagmiConfig } from '../../context/BscWalletProvider';
 import { aptos, APTOS_USDC_ADDRESS } from '../../utils/aptosClient';
 import { useWallet as useTronWallet } from '@tronweb3/tronwallet-adapter-react-hooks';
 import { useChain } from '../../context/ChainContext';
+import { useStellarWallet } from '../../context/StellarWalletProvider';
+import { buildStellarUsdcPayment, describeStellarError, getStellarUsdcBalance } from '../../utils/stellarUtils';
 import { useAuth } from '../../context/AuthContext';
 import { invalidateOrdersCache } from '../../utils/ordersCache';
 import { useSavings } from '../../context/SavingsContext';
@@ -101,6 +103,8 @@ export default function Confirm() {
     const { sendTransactionAsync: sendBscTransaction } = useBscSendTransaction();
 
     const { address: tronAddress } = useTronWallet();
+
+    const { address: stellarAddress, signTransaction: signStellarTransaction } = useStellarWallet();
 
     const { selectedChain } = useChain();
     const { activeWalletSource, validatePin, isVerified, trialVolumeUsed, checkVerificationStatus } = useAuth();
@@ -893,6 +897,70 @@ export default function Confirm() {
         }
     };
 
+    const handleStellarPayment = async (walletAddress: string, orderId: string) => {
+        if (!stellarAddress) {
+            setError("Please connect your Stellar wallet");
+            return;
+        }
+
+        try {
+            const savingsConfigStellar = getSavingsConfig(selectedChain);
+            let hasSavings = savingsConfigStellar.enabled && savingsConfigStellar.savingsAddress && savingsConfigStellar.percentage > 0;
+            let savingsAmountUSDC = hasSavings ? parseFloat((amount * savingsConfigStellar.percentage / 100).toFixed(7)) : 0;
+
+            const amountWithFee = amount + orderFeeRef.current;
+            const balance = await getStellarUsdcBalance(stellarAddress);
+
+            if (balance < amountWithFee + savingsAmountUSDC) {
+                if (balance >= amountWithFee) {
+                    hasSavings = false;
+                    savingsAmountUSDC = 0;
+                } else {
+                    throw new Error(`Insufficient USDC balance. Required: ${(amountWithFee + savingsAmountUSDC).toFixed(2)}, Available: ${balance.toFixed(2)}`);
+                }
+            }
+
+            setIsLoading(false);
+            setIsSigning(true);
+            setSigningMessage('Please sign in Stellar Wallet...');
+
+            // Stellar applies every operation in a transaction atomically, so the
+            // savings transfer rides along with the payment: one signature, and no
+            // possibility of the savings half failing on its own.
+            await buildStellarUsdcPayment({
+                from: stellarAddress,
+                to: walletAddress,
+                amount: amountWithFee,
+                savingsAddress: hasSavings ? savingsConfigStellar.savingsAddress : undefined,
+                savingsAmount: hasSavings ? savingsAmountUSDC : undefined,
+                signXdr: signStellarTransaction,
+            });
+
+            setSigningMessage('Payment confirmed! Redirecting...');
+            if (hasSavings && savingsAmountUSDC > 0) {
+                addEntry({ chain: selectedChain, amount: savingsAmountUSDC, savingsAddress: savingsConfigStellar.savingsAddress, status: 'completed' });
+                toast.success(`Auto-saved $${savingsAmountUSDC.toFixed(2)} to savings!`);
+            }
+            setTimeout(() => {
+                if (window.location.pathname === '/send/confirm') {
+                    navigate('/send/payment', {
+                        state: {
+                            walletAddress, amount, orderId, chain: selectedChain, confirmState: {
+                                amount, ngnAmount, currency: 'USD', recipientName, recipientUsername, bankName, bankCode, accountNumber, rate: currentRate, bankLogo, description: descriptionText.trim() || undefined
+                            }
+                        }
+                    });
+                }
+            }, 2000);
+
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        } catch (error: any) {
+            setIsLoading(false);
+            setIsSigning(false);
+            setError(describeStellarError(error));
+        }
+    };
+
     const executePayment = async (walletAddress: string, orderId: string) => {
         if (selectedChain === 'SOLANA') {
             await handleSolanaPayment(walletAddress, orderId);
@@ -904,6 +972,8 @@ export default function Confirm() {
             await handleBasePayment(walletAddress, orderId);
         } else if (selectedChain === 'TRON') {
             await handleTronPayment(walletAddress, orderId);
+        } else if (selectedChain === 'STELLAR') {
+            await handleStellarPayment(walletAddress, orderId);
         } else {
             await handleSuiPayment(walletAddress, orderId);
         }
@@ -953,6 +1023,8 @@ export default function Confirm() {
                             ? (bscAddress ?? '')
                             : selectedChain === 'TRON'
                                 ? (tronAddress ?? '')
+                                : selectedChain === 'STELLAR'
+                                    ? (stellarAddress ?? '')
                                 : (currentAccount?.address ?? ''),
                 coin: {
                     sui: selectedChain === 'SUI',
@@ -961,7 +1033,8 @@ export default function Confirm() {
                     ethereum: false,
                     aptos: selectedChain === 'APTOS',
                     bsc: selectedChain === 'BSC',
-                    tron: selectedChain === 'TRON'
+                    tron: selectedChain === 'TRON',
+                    stellar: selectedChain === 'STELLAR'
                 },
                 description: descriptionText.trim() ? descriptionText.trim() : (recipientUsername ? `Transfer to @${recipientUsername}` : `Transfer to ${recipientName}`)
             };

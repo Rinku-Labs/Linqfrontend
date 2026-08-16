@@ -7,6 +7,7 @@ import { ThemeProvider } from './context/ThemeContext.tsx'
 import { AuthProvider } from './context/AuthContext.tsx'
 import { ChainProvider } from './context/ChainContext.tsx'
 import { SolanaWalletProvider } from './context/SolanaWalletProvider.tsx'
+import { StellarWalletProvider } from './context/StellarWalletProvider.tsx'
 import { AptosWalletProvider } from './context/AptosWalletProvider.tsx'
 import { BscWalletProvider } from './context/BscWalletProvider.tsx'
 import { TronWalletProvider } from './context/TronWalletProvider.tsx'
@@ -55,9 +56,11 @@ createRoot(document.getElementById('root')!).render(
                   <SavingsProvider>
                     <TronWalletProvider>
                       <SolanaWalletProvider>
-                        <ThemeProvider>
-                          <App />
-                        </ThemeProvider>
+                        <StellarWalletProvider>
+                          <ThemeProvider>
+                            <App />
+                          </ThemeProvider>
+                        </StellarWalletProvider>
                       </SolanaWalletProvider>
                     </TronWalletProvider>
                   </SavingsProvider>
