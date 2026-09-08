@@ -15,6 +15,7 @@ import {
     WalletConnectTargetChain,
 } from '@creit.tech/stellar-wallets-kit/modules/wallet-connect';
 import { STELLAR_NETWORK_PASSPHRASE } from '../utils/stellarUtils';
+import { authenticateStellar, clearStellarToken, getStellarToken } from '../utils/stellarAuth';
 
 const STORAGE_KEY = 'stellarAddress';
 const WC_PROJECT_ID = import.meta.env.VITE_WALLETCONNECT_PROJECT_ID;
@@ -26,6 +27,10 @@ interface StellarWalletContextType {
     connect: () => Promise<string | null>;
     disconnect: () => Promise<void>;
     signTransaction: (xdr: string) => Promise<string>;
+    /** SEP-10 session token, once the wallet has authenticated. */
+    authToken: string | null;
+    /** Runs SEP-10 against the connected wallet. */
+    authenticate: () => Promise<string | null>;
 }
 
 const StellarWalletContext = createContext<StellarWalletContextType | undefined>(undefined);
@@ -85,6 +90,7 @@ const initKit = () => {
 export function StellarWalletProvider({ children }: { children: React.ReactNode }) {
     const [address, setAddress] = useState<string | null>(() => localStorage.getItem(STORAGE_KEY));
     const [isConnecting, setIsConnecting] = useState(false);
+    const [authToken, setAuthToken] = useState<string | null>(() => getStellarToken());
 
     useEffect(() => {
         initKit();
@@ -139,6 +145,10 @@ export function StellarWalletProvider({ children }: { children: React.ReactNode 
         }
         setAddress(null);
         localStorage.removeItem(STORAGE_KEY);
+        // The session belongs to the account that just disconnected; leaving it
+        // behind would present a stale identity to the next wallet.
+        clearStellarToken();
+        setAuthToken(null);
     };
 
     const signTransaction = async (xdr: string): Promise<string> => {
@@ -150,6 +160,16 @@ export function StellarWalletProvider({ children }: { children: React.ReactNode 
         return signedTxXdr;
     };
 
+    // SEP-10 is opt-in rather than automatic on connect: it puts a signature
+    // prompt in front of the user, and connecting a wallet to check a balance
+    // should not demand one.
+    const authenticate = async (): Promise<string | null> => {
+        if (!address) return null;
+        const { token } = await authenticateStellar(address, signTransaction);
+        setAuthToken(token);
+        return token;
+    };
+
     return (
         <StellarWalletContext.Provider
             value={{
@@ -159,6 +179,8 @@ export function StellarWalletProvider({ children }: { children: React.ReactNode 
                 connect,
                 disconnect,
                 signTransaction,
+                authToken,
+                authenticate,
             }}
         >
             {children}

@@ -165,7 +165,11 @@ export default function Settings() {
         isConnecting: isStellarConnecting,
         connect: connectStellar,
         disconnect: disconnectStellar,
+        authToken: stellarAuthToken,
+        authenticate: authenticateStellarWallet,
     } = useStellarWallet();
+    const [stellarAuthBusy, setStellarAuthBusy] = useState(false);
+    const [stellarAuthError, setStellarAuthError] = useState('');
 
     // Redirect logic
     const hasInitialConnectionRef = useRef(false);
@@ -754,6 +758,53 @@ export default function Settings() {
                 {activeTab === 'STELLAR' && (
                     <>
                         {renderConnectionStatus(stellarConnected, stellarAddress || undefined)}
+                        {/* SEP-10 verification. Offered only once a wallet is
+                            connected, and only while unverified: it costs the
+                            user a signature prompt, so re-offering it after it
+                            has succeeded would just be noise. */}
+                        {stellarConnected && !stellarAuthToken ? (
+                            <div style={{ marginBottom: '12px' }}>
+                                <button
+                                    onClick={async () => {
+                                        setStellarAuthError('');
+                                        setStellarAuthBusy(true);
+                                        try {
+                                            await authenticateStellarWallet();
+                                        } catch (error) {
+                                            setStellarAuthError(
+                                                error instanceof Error ? error.message : 'Verification failed.',
+                                            );
+                                        } finally {
+                                            setStellarAuthBusy(false);
+                                        }
+                                    }}
+                                    disabled={stellarAuthBusy}
+                                    style={{
+                                        width: '100%',
+                                        padding: '12px',
+                                        borderRadius: '12px',
+                                        border: '1px solid var(--border)',
+                                        background: 'transparent',
+                                        color: 'var(--text-main)',
+                                        fontWeight: 600,
+                                        cursor: stellarAuthBusy ? 'default' : 'pointer',
+                                        opacity: stellarAuthBusy ? 0.6 : 1,
+                                    }}
+                                >
+                                    {stellarAuthBusy ? 'Verifying…' : 'Verify wallet with Linq (SEP-10)'}
+                                </button>
+                                {stellarAuthError ? (
+                                    <p style={{ marginTop: '8px', fontSize: '12px', color: 'var(--danger, #e5484d)' }}>
+                                        {stellarAuthError}
+                                    </p>
+                                ) : null}
+                            </div>
+                        ) : null}
+                        {stellarConnected && stellarAuthToken ? (
+                            <p style={{ marginBottom: '12px', fontSize: '12px', color: 'var(--text-secondary)' }}>
+                                Wallet verified with Linq
+                            </p>
+                        ) : null}
                         {stellarConnected ? (
                             renderDisconnectButton(() => disconnectStellar())
                         ) : (

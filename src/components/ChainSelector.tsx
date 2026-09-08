@@ -7,6 +7,7 @@ import solanaLogo from '../assets/solana-logo.png';
 import aptosLogo from '../assets/aptos-logo.png';
 import bnbLogo from '../assets/bnb-logo.png';
 import tronLogo from '../assets/tron-logo.png';
+import stellarLogo from '../assets/stellar-logo.png';
 
 interface ChainSelectorProps {
     allowedChains?: Chain[];
@@ -34,6 +35,13 @@ const ChainSelector = ({ allowedChains }: ChainSelectorProps) => {
     }, [isOpen]);
 
     const chains: { id: Chain; name: string; logo: string }[] = [
+        // Stellar first: it is the newest rail and the only zero-fee one, so it
+        // leads rather than sitting sixth where nobody scrolls to it.
+        {
+            id: 'STELLAR',
+            name: 'Stellar',
+            logo: stellarLogo
+        },
         {
             id: 'SUI',
             name: 'Sui',
@@ -59,11 +67,6 @@ const ChainSelector = ({ allowedChains }: ChainSelectorProps) => {
             id: 'BASE',
             name: 'Base',
             logo: 'https://avatars.githubusercontent.com/u/108554348?s=200&v=4'
-        },
-        {
-            id: 'STELLAR',
-            name: 'Stellar',
-            logo: 'https://cryptologos.cc/logos/stellar-xlm-logo.png'
         },
         // Only include TRON if not hidden
         ...(!HIDE_TRON ? [{
