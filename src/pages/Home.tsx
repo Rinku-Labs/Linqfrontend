@@ -35,6 +35,7 @@ import { useAccount, useReadContract } from 'wagmi';
 import { useWallet as useTronWallet } from '@tronweb3/tronwallet-adapter-react-hooks';
 import { useChain } from '../context/ChainContext';
 import { useStellarWallet } from '../context/StellarWalletProvider';
+import StellarLiveBanner from '../components/StellarLiveBanner';
 import { getStellarUsdcBalance } from '../utils/stellarUtils';
 import ChainSelector from '../components/ChainSelector';
 import { aptos, APTOS_USDC_ADDRESS } from '../utils/aptosClient';
@@ -350,6 +351,7 @@ export default function Home() {
     return (
         <div className="page-enter" style={{ paddingBottom: '20px' }} {...pullHandlers}>
             <PullToRefreshIndicator pullDistance={pullDistance} isRefreshing={isRefreshing} />
+            <StellarLiveBanner />
             {/* Header */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px', gap: '12px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flex: 1, minWidth: 0 }}>
